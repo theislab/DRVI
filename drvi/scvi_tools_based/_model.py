@@ -72,11 +72,7 @@ class DRVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass):
         else:
             raise ValueError("Only AnnData and MerlinData is supported")
 
-        # TODO: remove this
-        if not isinstance(categorical_covariates, FeatureInfoList):
-            categorical_covariates_info = FeatureInfoList(categorical_covariates, axis='obs', default_dim=10)
-        else:
-            categorical_covariates_info = categorical_covariates
+        categorical_covariates_info = FeatureInfoList(categorical_covariates, axis='obs', default_dim=10)
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
             n_cats_per_cov = cat_cov_stats.n_cats_per_key
