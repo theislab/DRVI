@@ -16,7 +16,7 @@ scipy = "1.11.3"
 scvi-tools = "1.0.4"
 anndata = "0.10.2"
 numpy = "1.26.1"
-pandas = "2.1.1"
+pandas = ">=1.2.0"
 merlin-dataloader = "23.8.0"
 # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so poetry resolution takes forever
 # TODO: update this when this resolved: https://github.com/boto/botocore/issues/2926
