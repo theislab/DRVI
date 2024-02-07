@@ -1,0 +1,13 @@
+.idea/
+__pycache__/
+*.pyc
+.ipynb_checkpoints
+datasets/
+lightning_logs/
+docs/_build
+own_tests/
+*.egg-info
+build/
+dist/
+.venv/
+.vscode
