@@ -7,7 +7,7 @@ You can install the project with
 ``
 git clone https://gitlab.com/moinfar/drvi.git
 cd drvi
-pip install . 
+pip install -e . 
 ``
 
 ## Contributing
