@@ -304,9 +304,13 @@ class FCLayers(nn.Module):
                 elif self.covariate_vector_modeling == "one_hot":
                     assert self.covariate_projection_modeling in ["cat", "linear"]
                     # Freeze everything but linears right after one_hot (new weights)
-                    if layer in self.injectable_layers or layer in self.linear_batch_projections:
+                    if (
+                            (self.covariate_projection_modeling == "cat" and layer in self.injectable_layers)
+                            or
+                            (self.covariate_projection_modeling == "linear" and layer in self.linear_batch_projections)
+                    ):
                         layer.weight.requires_grad = True
-                        print(f"Registering backward hook parameter with shape {layer.weight.size()}")
+                        print(f"Unfreezing and registering backward hook parameter with shape {layer.weight.size()}")
                         layer.weight.register_hook(make_hook_function(layer.weight))
                         if layer.bias is not None:
                             assert not layer.bias.requires_grad

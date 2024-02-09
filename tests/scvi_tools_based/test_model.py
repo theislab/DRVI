@@ -202,3 +202,16 @@ class TestDRVIModel:
         adata_query = adata[adata.obs['batch'] == 'batch_0'].copy()
         for n_split_latent in [1, 4, 32]:
             self._general_query_to_reference(adata_reference, adata_query, n_split_latent=n_split_latent)
+
+    def test_query_to_reference_mapping_with_different_splits_and_different_cov_models(self):
+        adata = self.make_test_adata()
+        adata_reference = adata[adata.obs['batch'] != 'batch_0'].copy()
+        adata_query = adata[adata.obs['batch'] == 'batch_0'].copy()
+        for cms in [
+            'one_hot', 'emb_shared', 'emb',
+            'one_hot_linear', 'emb_shared', 'emb_linear'
+        ]:
+            for n_split_latent in [1, 4, 32]:
+                self._general_query_to_reference(adata_reference, adata_query,
+                                                 n_split_latent=n_split_latent,
+                                                 covariate_modeling_strategy=cms)
