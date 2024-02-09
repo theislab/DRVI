@@ -11,6 +11,7 @@ from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
 from drvi.scvi_tools_based._module import DRVIModule
+from drvi.scvi_tools_based._archesmixin import DRVIArchesMixin
 from drvi.scvi_tools_based.merlin_data import (
     MerlinCategoricalJointObsField, MerlinCategoricalObsField, MerlinData,
     MerlinDataManager, MerlinDataSplitter, MerlinLayerField,
@@ -20,7 +21,7 @@ from drvi.module.feature_interface import FeatureInfoList
 logger = logging.getLogger(__name__)
 
 
-class DRVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass):
+class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass):
     """
     DRVI model based on scvi-tools skelethon
 

@@ -10,7 +10,7 @@ class TestDRVIModel:
     n = 1_000
     g = 200
     c = 2
-    b = 3
+    b = 5
 
     def make_test_adata(self, is_sparse=True):
         N, G, C, B = self.n, self.g, self.c, self.b
@@ -59,6 +59,7 @@ class TestDRVIModel:
             n_latent=32, encoder_dims=[128], decoder_dims=[128],
             gene_likelihood='normal',
             categorical_covariates=['batch'],
+            decoder_reuse_weights='everywhere',
         )
         DRVI.setup_anndata(adata, **{**setup_anndata_default_params, **(data_kwargs or {})})
         model = DRVI(adata, **{**default_args, **kwargs})
@@ -145,3 +146,59 @@ class TestDRVIModel:
             adata, categorical_covariates=['batch', 'batch_2'],
             data_kwargs=dict(categorical_covariate_keys=['batch', 'batch_2']),
             prior='vamp_5', prior_init_obs=adata.obs.index.to_series().sample(5),)
+    
+    def _general_query_to_reference(self, adata_reference, adata_query, layer='lognorm', data_kwargs=None, **kwargs):
+        is_count_data = layer == 'counts'
+        setup_anndata_default_params = dict(
+            categorical_covariate_keys=['batch'],
+            layer=layer, is_count_data=is_count_data,
+        )
+        default_args = dict(
+            n_latent=32, encoder_dims=[128], decoder_dims=[128],
+            gene_likelihood='normal',
+            categorical_covariates=['batch'],
+            decoder_reuse_weights='everywhere',
+            encode_covariates=True,
+        )
+        DRVI.setup_anndata(adata_reference, **{**setup_anndata_default_params, **(data_kwargs or {})})
+        model = DRVI(adata_reference, **{**default_args, **kwargs})
+        model.train(accelerator="cpu", max_epochs=10)
+
+        latent_reference = model.get_latent_representation(adata_reference)
+        
+        DRVI.prepare_query_anndata(adata_query, model)
+        transfer_model = model.load_query_data(adata_query, model)
+        transfer_model.train(accelerator="cpu", max_epochs=1, plan_kwargs={"weight_decay": 0.0})
+        latent_query = transfer_model.get_latent_representation(adata_query)
+        transfer_model.train(accelerator="cpu", max_epochs=10, plan_kwargs={"weight_decay": 0.0})
+        latent_reference_after_train = transfer_model.get_latent_representation(adata_reference)
+        latent_query_after_train = transfer_model.get_latent_representation(adata_query)
+
+        assert np.sum((latent_reference - latent_reference_after_train) ** 2) < 1e-8
+        assert np.sum((latent_query - latent_query_after_train) ** 2) > 1e-3
+        assert latent_query_after_train.shape[0] == adata_query.n_obs
+
+    def test_simple_query_to_reference_mapping(self):
+        adata = self.make_test_adata()
+        adata_reference = adata[adata.obs['batch'] != 'batch_0'].copy()
+        adata_query = adata[adata.obs['batch'] == 'batch_0'].copy()
+        self._general_query_to_reference(adata_reference, adata_query)
+
+    def test_query_to_reference_mapping_with_different_cov_models(self):
+        adata = self.make_test_adata()
+        adata_reference = adata[adata.obs['batch'] != 'batch_0'].copy()
+        adata_query = adata[adata.obs['batch'] == 'batch_0'].copy()
+        for cms in [
+            'one_hot', 'emb_shared', 'emb',
+            'one_hot_linear', 'emb_shared', 'emb_linear',
+            # scArches on adapter is not implemented yet
+            # 'emb_adapter', 'one_hot_adapter', 'emb_shared_adapter',
+        ]:
+            self._general_query_to_reference(adata_reference, adata_query, covariate_modeling_strategy=cms)
+
+    def test_query_to_reference_mapping_with_different_splits(self):
+        adata = self.make_test_adata()
+        adata_reference = adata[adata.obs['batch'] != 'batch_0'].copy()
+        adata_query = adata[adata.obs['batch'] == 'batch_0'].copy()
+        for n_split_latent in [1, 4, 32]:
+            self._general_query_to_reference(adata_reference, adata_query, n_split_latent=n_split_latent)

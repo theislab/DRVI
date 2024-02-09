@@ -116,6 +116,14 @@ class MultiEmbedding(nn.Module):
             if freeze_old:
                 self_emb.freeze(other_emb.num_embeddings, other_emb.embedding_dim)
 
+    def freeze_top_embs(self, n_freeze_list):
+        for emb, n_freeze in zip(self.emb_list, n_freeze_list):
+            emb.freeze(n_freeze, emb.embedding_dim)
+
+    @property
+    def num_embeddings(self):
+        return [emb.num_embeddings for emb in self.emb_list]
+
     @property
     def embedding_dim(self):
         return sum(emb.embedding_dim for emb in self.emb_list)

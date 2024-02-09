@@ -9,6 +9,7 @@ from torch.distributions import Normal
 from torch.nn import functional as F
 
 from drvi.module.embedding import MultiEmbedding
+from drvi.module.freezable import FreezableBatchNorm1d, FreezableLayerNorm
 from drvi.module.layer.factory import LayerFactory, FCLayerFactory
 from drvi.module.layer.linear_layer import StackedLinearLayer
 from drvi.module.noise_model import NoiseModel
@@ -147,6 +148,10 @@ class FCLayers(nn.Module):
             if layers_location == "last" and i == len(layers_dim) - 2:
                 return False
             return True
+        
+        def inject_into_layer(layer_num):
+            user_cond = layer_num == 0 or (layer_num > 0 and self.inject_covariates)
+            return user_cond
 
         def get_projection_layer(n_in, n_out, i):
             output = []
@@ -157,7 +162,7 @@ class FCLayers(nn.Module):
                     # cannot reuse adapters
                     raise NotImplementedError()
 
-            if len(self.n_cat_list) > 0 and self.inject_into_layer(i):
+            if len(self.n_cat_list) > 0 and inject_into_layer(i):
                 layer_needs_injection = True
                 cat_dim = sum(covariate_embs_dim)
                 if self.covariate_vector_modeling == "emb":
@@ -205,17 +210,17 @@ class FCLayers(nn.Module):
             if split_size == -1:
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
-                    output.append(nn.BatchNorm1d(n_out, momentum=0.01, eps=0.001,
-                                                 affine=affine_batch_norm))
+                    output.append(FreezableBatchNorm1d(n_out, momentum=0.01, eps=0.001,
+                                                       affine=affine_batch_norm))
                 if use_layer_norm:
-                    output.append(nn.LayerNorm(n_out, elementwise_affine=False))
+                    output.append(FreezableLayerNorm(n_out, elementwise_affine=False))
             else:
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
-                    output.append(nn.BatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001,
-                                                 affine=affine_batch_norm))
+                    output.append(FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001,
+                                                       affine=affine_batch_norm))
                 if use_layer_norm:
-                    output.append(nn.LayerNorm(split_size, n_out, elementwise_affine=False))
+                    output.append(FreezableLayerNorm(split_size, n_out, elementwise_affine=False))
             return output
 
         self.fc_layers = nn.Sequential(
@@ -237,38 +242,76 @@ class FCLayers(nn.Module):
             )
         )
 
-    def inject_into_layer(self, layer_num) -> bool:
-        """Helper to determine if covariates should be injected."""
-        user_cond = layer_num == 0 or (layer_num > 0 and self.inject_covariates)
-        return user_cond
+    def set_online_update_hooks(self, previous_n_cats_per_cov, n_cats_per_cov):
+        """Set online update hooks."""
+        if sum(previous_n_cats_per_cov) == sum(n_cats_per_cov):
+            print("Nothing to make hook for!")
+            return
 
-    # For arches mixin. We can disable it for now
-    # def set_online_update_hooks(self, hook_first_layer=True):
-    #     """Set online update hooks."""
-    #     self.hooks = []
-    #
-    #     def _hook_fn_weight(grad):
-    #         categorical_dims = sum(self.n_cat_list)
-    #         new_grad = torch.zeros_like(grad)
-    #         if categorical_dims > 0:
-    #             new_grad[:, -categorical_dims:] = grad[:, -categorical_dims:]
-    #         return new_grad
-    #
-    #     def _hook_fn_zero_out(grad):
-    #         return grad * 0
-    #
-    #     for i, layers in enumerate(self.fc_layers):
-    #         for layer in layers:
-    #             if i == 0 and not hook_first_layer:
-    #                 continue
-    #             if isinstance(layer, nn.Linear):
-    #                 if self.inject_into_layer(i):
-    #                     w = layer.weight.register_hook(_hook_fn_weight)
-    #                 else:
-    #                     w = layer.weight.register_hook(_hook_fn_zero_out)
-    #                 self.hooks.append(w)
-    #                 b = layer.bias.register_hook(_hook_fn_zero_out)
-    #                 self.hooks.append(b)
+        def make_hook_function(weight):
+            w_size = weight.size()
+            if weight.dim() == 2:
+                # 2D tensors
+                with torch.no_grad():
+                    # Freeze gradients for normal nodes
+                    if w_size[1] == sum(n_cats_per_cov):
+                        transfer_mask = []
+                    else:
+                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov)], device=weight.device)]
+                    # Iterate over the categories and Freeze old caterogies and make new ones trainable
+                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
+                        transfer_mask.append(torch.zeros([w_size[0], n_cat_old], device=weight.device))
+                        if n_cat_new > n_cat_old:
+                            transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old], device=weight.device))
+                    transfer_mask = torch.cat(transfer_mask, dim=1)
+            elif weight.dim() == 3:                        
+                # 3D tensors
+                with torch.no_grad():
+                    # Freeze gradients for normal nodes
+                    if w_size[1] == sum(n_cats_per_cov):
+                        transfer_mask = []
+                    else:
+                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov), w_size[2]], device=weight.device)]
+                    # Iterate over the categories and Freeze old caterogies and make new ones trainable
+                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
+                        transfer_mask.append(torch.zeros([w_size[0], n_cat_old, w_size[2]], device=weight.device))
+                        if n_cat_new > n_cat_old:
+                            transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old, w_size[2]], device=weight.device))
+                    transfer_mask = torch.cat(transfer_mask, dim=1)
+            else:
+                raise NotImplementedError()
+
+            def _hook_fn_injectable(grad):
+                return grad * transfer_mask
+            
+            return _hook_fn_injectable
+
+        if self.covariate_projection_modeling == "adapter":
+            raise NotImplementedError()
+
+        for i, layers in enumerate(self.fc_layers):
+            for layer in layers:
+                if self.covariate_vector_modeling == "emb_shared":
+                    # Nothing to do here :)
+                    pass
+                elif self.covariate_vector_modeling == "emb":
+                    # Freeze everything but embs (new embs)
+                    if isinstance(layer, MultiEmbedding):
+                        assert tuple(layer.num_embeddings) == tuple(n_cats_per_cov)
+                        print(f"Freezing old categories for {layer}")
+                        layer.freeze_top_embs(previous_n_cats_per_cov)
+                    # No need to handle others. For them required_grad is already set to False
+                elif self.covariate_vector_modeling == "one_hot":
+                    assert self.covariate_projection_modeling in ["cat", "linear"]
+                    # Freeze everything but linears right after one_hot (new weights)
+                    if layer in self.injectable_layers or layer in self.linear_batch_projections:
+                        layer.weight.requires_grad = True
+                        print(f"Registering backward hook parameter with shape {layer.weight.size()}")
+                        layer.weight.register_hook(make_hook_function(layer.weight))
+                        if layer.bias is not None:
+                            assert not layer.bias.requires_grad
+                else:
+                    raise NotImplementedError()
 
     def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor):
         """Forward computation on ``x``.
