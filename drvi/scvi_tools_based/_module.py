@@ -265,7 +265,9 @@ class DRVIModule(BaseModuleClass):
     def _input_pre_processing(self, x, cont_covs=None, cat_covs=None):
         # log the input to the variational distribution for numerical stability
         x_, gene_likelihood_additional_info = self.gene_likelihood_module.initial_transformation(x)
-        library = torch.log(x.sum(1))
+        # Note: this is different from scvi implementation of library size that is log transformed
+        # All our noise models accept non-normalized library to work
+        library = x.sum(1)
 
         # Covariate Modeling
         if cont_covs is not None and self.encode_covariates:
