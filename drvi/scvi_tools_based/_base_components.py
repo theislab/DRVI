@@ -220,7 +220,7 @@ class FCLayers(nn.Module):
                     output.append(FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001,
                                                        affine=affine_batch_norm))
                 if use_layer_norm:
-                    output.append(FreezableLayerNorm(split_size, n_out, elementwise_affine=False))
+                    output.append(FreezableLayerNorm([split_size, n_out], elementwise_affine=False))
             return output
 
         self.fc_layers = nn.Sequential(
@@ -309,8 +309,8 @@ class FCLayers(nn.Module):
                             or
                             (self.covariate_projection_modeling == "linear" and layer in self.linear_batch_projections)
                     ):
-                        layer.weight.requires_grad = True
-                        print(f"Unfreezing and registering backward hook parameter with shape {layer.weight.size()}")
+                        assert layer.weight.requires_grad
+                        print(f"Registering backward hook parameter with shape {layer.weight.size()}")
                         layer.weight.register_hook(make_hook_function(layer.weight))
                         if layer.bias is not None:
                             assert not layer.bias.requires_grad

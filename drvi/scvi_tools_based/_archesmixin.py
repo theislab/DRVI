@@ -34,7 +34,10 @@ class DRVIArchesMixin(ArchesMixin):
         freeze_shared_emb: bool = True,
         freeze_encoder: bool = True,
         freeze_decoder: bool = True,
-        freeze_batchnorm: bool = True,
+        reset_encoder: bool = False,
+        reset_decoder: bool = False,
+        freeze_batchnorm_encoder: bool = True,
+        freeze_batchnorm_decoder: bool = False,
     ):
         """Online update of a reference model with scArches algorithm :cite:p:`Lotfollahi21`.
 
@@ -62,8 +65,10 @@ class DRVIArchesMixin(ArchesMixin):
             Whether to freeze encoder
         freeze_decoder
             Whether to freeze decoder
-        freeze_batchnorm
-            Whether to freeze batchnorm weight and bias during transfer
+        freeze_batchnorm_encoder
+            Whether to freeze encoder batchnorms' weight and bias during transfer
+        freeze_batchnorm_decoder
+            Whether to freeze decoder batchnorms' weight and bias during transfer
         """
         _, _, device = parse_device_args(
             accelerator=accelerator,
@@ -113,11 +118,23 @@ class DRVIArchesMixin(ArchesMixin):
 
         model.to_device(device)
 
-        extended_tensor_keys = []
+        reloaded_tensor_keys = []
         # model tweaking
         new_state_dict = model.module.state_dict()
         for key, load_ten in load_state_dict.items():
             new_ten = new_state_dict[key]
+            if reset_decoder and "decoder" in key:
+                assert not freeze_decoder
+                print(f"Resetting {key} in decoder")
+                load_state_dict[key] = new_ten
+                reloaded_tensor_keys.append(key)
+                continue
+            if reset_encoder and "z_encoder" in key:
+                assert not freeze_encoder
+                print(f"Resetting {key} in encoder")
+                load_state_dict[key] = new_ten
+                reloaded_tensor_keys.append(key)
+                continue
             if new_ten.size() == load_ten.size():
                 continue
             # new categoricals changed size
@@ -129,7 +146,7 @@ class DRVIArchesMixin(ArchesMixin):
                     assert new_ten.size()[1] == load_ten.size()[1]
                     fixed_ten = torch.cat([load_ten, new_ten[-dim_diff:, :]], dim=0)
                     load_state_dict[key] = fixed_ten
-                    extended_tensor_keys.append(key)
+                    reloaded_tensor_keys.append(key)
                 else:
                     if new_ten.dim() == load_ten.dim() == 2:
                         # 2D tensors
@@ -150,6 +167,7 @@ class DRVIArchesMixin(ArchesMixin):
                         # Concat and set as init tensor
                         fixed_ten = torch.cat([t.to(device) for t in fixed_ten], dim=1)
                         load_state_dict[key] = fixed_ten
+                        reloaded_tensor_keys.append(key)
                     elif new_ten.dim() == load_ten.dim() == 3:                        
                         # 3D tensors
                         # extend weight of stacked linears along dim 1 (input)
@@ -170,6 +188,7 @@ class DRVIArchesMixin(ArchesMixin):
                         # Concat and set as init tensor
                         fixed_ten = torch.cat([t.to(device) for t in fixed_ten], dim=1)
                         load_state_dict[key] = fixed_ten
+                        reloaded_tensor_keys.append(key)
                     else:
                         raise NotImplementedError()
 
@@ -179,7 +198,7 @@ class DRVIArchesMixin(ArchesMixin):
         # Make hooks to make gradients zero while training
         _set_params_online_update(
             model.module,
-            extended_tensor_keys,
+            reloaded_tensor_keys,
             unfrozen=unfrozen,
             previous_n_cats_per_cov=previous_n_cats_per_cov,
             n_cats_per_cov=n_cats_per_cov,
@@ -187,7 +206,8 @@ class DRVIArchesMixin(ArchesMixin):
             freeze_shared_emb=freeze_shared_emb,
             freeze_encoder=freeze_encoder,
             freeze_decoder=freeze_decoder,
-            freeze_batchnorm=freeze_batchnorm,
+            freeze_batchnorm_encoder=freeze_batchnorm_encoder,
+            freeze_batchnorm_decoder=freeze_batchnorm_decoder,
         )
         model.is_trained_ = False
 
@@ -196,7 +216,7 @@ class DRVIArchesMixin(ArchesMixin):
 
 def _set_params_online_update(
     module,
-    extended_tensor_keys,
+    reloaded_tensor_keys,
     unfrozen,
     previous_n_cats_per_cov,
     n_cats_per_cov,
@@ -204,7 +224,8 @@ def _set_params_online_update(
     freeze_shared_emb,
     freeze_encoder,
     freeze_decoder,
-    freeze_batchnorm,
+    freeze_batchnorm_encoder,
+    freeze_batchnorm_decoder,
 ):
     """Freeze parts of network for scArches."""
     # do nothing if unfrozen
@@ -223,7 +244,7 @@ def _set_params_online_update(
         if not freeze_encoder and "z_encoder" in key:
             return True
         # Extended tensors should have gradients but we put some gradients to zero by online hooks
-        if key in extended_tensor_keys:
+        if key in reloaded_tensor_keys:
             return True
         return False
         
@@ -254,8 +275,8 @@ def _set_params_online_update(
         elif isinstance(mod, (nn.BatchNorm1d, nn.LayerNorm)):
             assert hasattr(mod, "freeze")
             freeze_batchnorm = (
-                ("decoder" in key and freeze_batchnorm and freeze_decoder) or 
-                ("z_encoder" in key and freeze_batchnorm and freeze_encoder)
+                ("decoder" in key and freeze_batchnorm_decoder) or 
+                ("z_encoder" in key and freeze_batchnorm_encoder)
             )
             if freeze_batchnorm:
                 print(f"Freezing normalization layer {key}")
