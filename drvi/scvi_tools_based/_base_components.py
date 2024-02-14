@@ -220,7 +220,9 @@ class FCLayers(nn.Module):
                     output.append(FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001,
                                                        affine=affine_batch_norm))
                 if use_layer_norm:
-                    output.append(FreezableLayerNorm([split_size, n_out], elementwise_affine=False))
+                    output.append(FreezableLayerNorm(n_out, elementwise_affine=False))
+                    # The following logic is wrong
+                    # output.append(FreezableLayerNorm([split_size, n_out], elementwise_affine=False))
             return output
 
         self.fc_layers = nn.Sequential(

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from drvi.scvi_tools_based._base_components import DecoderDRVI, Encoder
 from drvi.module.embedding import MultiEmbedding
 from drvi.module.layer.factory import LayerFactory
-from drvi.module.noise_model import NormalNoiseModel, LogNormalNoiseModel, PoissonNoiseModel, \
+from drvi.module.noise_model import NormalNoiseModel, PoissonNoiseModel, \
     NegativeBinomialNoiseModel, LogNegativeBinomialNoiseModel
 from drvi.module.prior import StandardPrior, GaussianMixtureModelPrior, VampPrior
 
@@ -199,16 +199,26 @@ class DRVIModule(BaseModuleClass):
             return NormalNoiseModel(model_var='dynamic')
         elif gene_likelihood == 'normal_sv':
             return NormalNoiseModel(model_var='feature')
-        elif gene_likelihood == 'lognormal':
-            return LogNormalNoiseModel()
         elif gene_likelihood == 'poisson':
-            return PoissonNoiseModel()
+            return PoissonNoiseModel(mean_transformation='exp', library_normalization='none')
+        elif gene_likelihood == 'poisson_orig':
+            return PoissonNoiseModel(mean_transformation='softmax', library_normalization='none')
         elif gene_likelihood in ['nb', 'nb_sv']:
-            return NegativeBinomialNoiseModel(dispersion='feature')
+            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='none')
+        elif gene_likelihood in ['nb_libnorm']:
+            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_lib')
+        elif gene_likelihood in ['nb_loglib_rec']:
+            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_loglib')
+        elif gene_likelihood in ['nb_libnorm_loglib_rec']:
+            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='div_lib_x_loglib')
+        elif gene_likelihood in ['nb_loglibnorm_all']:
+            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_loglib_all')
         elif gene_likelihood == 'nb_orig':
-            return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax')
+            return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='none')
+        elif gene_likelihood == 'nb_orig_libnorm':
+            return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='x_lib')
         elif gene_likelihood in ['pnb', 'pnb_sv']:
-            return LogNegativeBinomialNoiseModel(dispersion='feature')
+            return LogNegativeBinomialNoiseModel(dispersion='feature', library_normalization='none')
         else:
             raise NotImplementedError()
 
