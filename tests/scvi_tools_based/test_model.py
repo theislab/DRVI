@@ -215,3 +215,16 @@ class TestDRVIModel:
                 self._general_query_to_reference(adata_reference, adata_query,
                                                  n_split_latent=n_split_latent,
                                                  covariate_modeling_strategy=cms)
+
+    def test_continues_covariates(self):
+        adata = self.make_test_adata()
+        adata.obs['log_library_size_as_cont_cov'] = np.log1p(adata.layers['counts'].sum(-1))
+        for encode_covariates in [False, True]:
+            self._general_integration_test(
+                adata,
+                gene_likelihood='nb',
+                layer='counts',
+                encode_covariates=encode_covariates,
+                data_kwargs=dict(continuous_covariate_keys=['log_library_size_as_cont_cov']),
+            )
+    

@@ -81,6 +81,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
         else:
             n_cats_per_cov = []
             assert len(categorical_covariates_info) == 0
+        n_continuous_cov = self.summary_stats.get("n_extra_continuous_covs", 0)
 
         prior_init_dataloader = None
         if prior_init_obs is not None:
@@ -96,6 +97,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
             encoder_dims=encoder_dims,
             decoder_dims=decoder_dims,
             n_cats_per_cov=n_cats_per_cov,
+            n_continuous_cov=n_continuous_cov,
             prior=prior,
             prior_init_dataloader=prior_init_dataloader,
             categorical_covariate_dims=categorical_covariates_info.dims,
@@ -134,7 +136,6 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
         -------
         %(returns)s
         """
-        assert continuous_covariate_keys is None
         setup_method_args = cls._get_setup_method_args(**locals())
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
@@ -157,7 +158,6 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
         continuous_covariate_keys: Optional[List[str]] = None,
         **kwargs
     ):
-        assert continuous_covariate_keys is None
         setup_method_args = cls._get_setup_method_args(**locals())
 
         fields = [

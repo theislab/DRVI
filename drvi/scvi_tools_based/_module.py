@@ -48,6 +48,8 @@ class DRVIModule(BaseModuleClass):
         Number of nodes in hidden layers of the decoder.
     n_cats_per_cov
         Number of categories for each categorical covariate
+    n_continuous_cov
+        Number of continuous covariates
     encode_covariates
         Whether to concatenate covariates to expression in encoder
     deeply_inject_covariates
@@ -98,6 +100,7 @@ class DRVIModule(BaseModuleClass):
             encoder_dims: Sequence[int] = tuple([128, 128]),
             decoder_dims: Sequence[int] = tuple([128, 128]),
             n_cats_per_cov: Optional[Iterable[int]] = tuple([]),
+            n_continuous_cov: int = 0,
             encode_covariates: bool = False,
             deeply_inject_covariates: bool = False,
             categorical_covariate_dims: Sequence[int] = tuple([]),
@@ -158,6 +161,7 @@ class DRVIModule(BaseModuleClass):
             input_dropout_rate=input_dropout_rate,
             dropout_rate=encoder_dropout_rate,
             n_cat_list=n_cats_per_cov if self.encode_covariates else [],
+            n_continuous_cov=n_continuous_cov if self.encode_covariates else 0,
             inject_covariates=deeply_inject_covariates,
             use_batch_norm=use_batch_norm_encoder,
             affine_batch_norm=affine_batch_norm_encoder,
@@ -168,7 +172,6 @@ class DRVIModule(BaseModuleClass):
             categorical_covariate_dims=categorical_covariate_dims if self.encode_covariates else [],
             **(extra_encoder_kwargs or {})
         )
-
         self.decoder = DecoderDRVI(
             n_latent,
             n_input,
@@ -180,6 +183,7 @@ class DRVIModule(BaseModuleClass):
             layers_dim=decoder_dims,
             dropout_rate=decoder_dropout_rate,
             n_cat_list=n_cats_per_cov,
+            n_continuous_cov=n_continuous_cov,
             inject_covariates=deeply_inject_covariates,
             use_batch_norm=use_batch_norm_decoder,
             affine_batch_norm=affine_batch_norm_decoder,
@@ -279,15 +283,12 @@ class DRVIModule(BaseModuleClass):
         # All our noise models accept non-normalized library to work
         library = x.sum(1)
 
-        # Covariate Modeling
-        if cont_covs is not None and self.encode_covariates:
-            encoder_input = torch.cat((x_, cont_covs), dim=-1)
-        else:
-            encoder_input = x_
+        encoder_input = x_
 
         return dict(
             encoder_input=encoder_input,
             cat_full_tensor=cat_covs if self.encode_covariates else None,
+            cont_full_tensor=cont_covs if self.encode_covariates else None,
             library=library,
             gene_likelihood_additional_info=gene_likelihood_additional_info,
         )
@@ -318,7 +319,11 @@ class DRVIModule(BaseModuleClass):
                 pre_processed_input['cat_full_tensor'].int())
 
         # get variational parameters via the encoder networks
-        qz_m, qz_v, z = self.z_encoder(x_, cat_full_tensor=pre_processed_input['cat_full_tensor'])
+        qz_m, qz_v, z = self.z_encoder(
+            x_, 
+            cat_full_tensor=pre_processed_input['cat_full_tensor'],
+            cont_full_tensor=pre_processed_input['cont_full_tensor'],
+        )
 
         outputs = dict(z=z, qz_m=qz_m, qz_v=qz_v,
                        library=pre_processed_input['library'], x_mask=x_mask,
@@ -345,18 +350,11 @@ class DRVIModule(BaseModuleClass):
     @auto_move_data
     def generative(self, z, library, gene_likelihood_additional_info, cont_covs=None, cat_covs=None):
         """Runs the generative model."""
-        # Covariate Modeling
-        if cont_covs is None:
-            decoder_input = z
-        else:
-            assert z.dim() == cont_covs.dim()
-            decoder_input = torch.cat([z, cont_covs], dim=-1)
-
         if self.shared_covariate_emb is not None:
             cat_covs = self.shared_covariate_emb(cat_covs.int())
         # form the likelihood
         px, params, original_params = self.decoder(
-            decoder_input, cat_full_tensor=cat_covs,
+            z, cat_full_tensor=cat_covs, cont_full_tensor=cont_covs,
             library=library, gene_likelihood_additional_info=gene_likelihood_additional_info
         )
 

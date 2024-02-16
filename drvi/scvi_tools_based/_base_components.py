@@ -414,6 +414,8 @@ class Encoder(nn.Module):
         A list containing the number of categories
         for each category of interest. Each category will be
         included using a one-hot encoding
+    n_continuous_cov
+        The number of continuous covariates
     inject_covariates
         Whether to inject covariates in each layer, or just the first (default).
     use_batch_norm
@@ -452,6 +454,7 @@ class Encoder(nn.Module):
             n_output: int,
             layers_dim: Sequence[int] = tuple([128]),
             n_cat_list: Iterable[int] = None,
+            n_continuous_cov: int = 0,
             inject_covariates: bool = True,
             use_batch_norm: bool = True,
             affine_batch_norm: bool = True,
@@ -475,7 +478,7 @@ class Encoder(nn.Module):
         self.var_eps = var_eps
         self.input_dropout = nn.Dropout(p=input_dropout_rate)
 
-        all_layers_dim = [n_input] + list(layers_dim) + [n_output]
+        all_layers_dim = [n_input + n_continuous_cov] + list(layers_dim) + [n_output]
         if len(layers_dim) >= 1:
             self.encoder = FCLayers(
                 layers_dim=all_layers_dim[:-1],
@@ -536,7 +539,7 @@ class Encoder(nn.Module):
             assert callable(var_activation)
             self.var_activation = var_activation
 
-    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor):
+    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor, cont_full_tensor: torch.Tensor = None):
         r"""The forward computation for a single sample.
 
          #. Encodes the data into latent space using the encoder network
@@ -556,6 +559,8 @@ class Encoder(nn.Module):
             tensors of shape ``(n_latent,)`` for mean and var, and sample
 
         """
+        if cont_full_tensor is not None:
+            x = torch.cat((x, cont_full_tensor), dim=-1)
         # Parameters for latent distribution
         q = self.encoder(self.input_dropout(x), cat_full_tensor) if self.encoder is not None else x
         q_m = self.mean_encoder(q, cat_full_tensor)
@@ -585,6 +590,8 @@ class DecoderDRVI(nn.Module):
         A list containing the number of categories
         for each category of interest. Each category will be
         included using a one-hot encoding
+    n_continuous_cov
+        The number of continuous covariates
     n_split
         The number of splits for latent dim
     split_aggregation
@@ -618,6 +625,7 @@ class DecoderDRVI(nn.Module):
             n_output: int,
             gene_likelihood_module: NoiseModel,
             n_cat_list: Iterable[int] = None,
+            n_continuous_cov: int = 0,
             n_split: int = 1,
             split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
             split_method: Literal["split", "power", "split_map"] = "split",
@@ -667,7 +675,7 @@ class DecoderDRVI(nn.Module):
         intermediate_layers_reuse_weights = reuse_weights in ["everywhere", "intermediate"]
         last_layers_reuse_weights = reuse_weights in ["everywhere", "last"]
 
-        all_layers_dim = [effective_dim] + list(layers_dim) + [n_output]
+        all_layers_dim = [effective_dim + n_continuous_cov] + list(layers_dim) + [n_output]
         if len(layers_dim) >= 1:
             self.px_shared_decoder = FCLayers(
                 layers_dim=all_layers_dim[:-1],
@@ -722,6 +730,7 @@ class DecoderDRVI(nn.Module):
             self,
             z: torch.Tensor,
             cat_full_tensor: torch.Tensor,
+            cont_full_tensor: torch.Tensor,
             library: torch.Tensor,
             gene_likelihood_additional_info: Dict,
     ):
@@ -753,6 +762,11 @@ class DecoderDRVI(nn.Module):
             z = torch.reshape(z, (batch_size, self.n_split, -1))
             if self.split_method == "split_map":
                 z = torch.einsum('bsd,sdn->bsn', z, self.split_transformation_weight)
+        
+        if cont_full_tensor is not None:
+            if self.n_split > 1:
+                cont_full_tensor = cont_full_tensor.unsqueeze(1).expand(-1, self.n_split, -1)
+            z = torch.cat((z, cont_full_tensor), dim=-1)
 
         last_tensor = self.px_shared_decoder(z, cat_full_tensor) if self.px_shared_decoder is not None else z
         original_params = {}
