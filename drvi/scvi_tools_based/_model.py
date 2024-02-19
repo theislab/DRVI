@@ -5,11 +5,12 @@ import numpy as np
 from anndata import AnnData
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
-from scvi.data.fields import (CategoricalJointObsField, CategoricalObsField,
+from scvi.data.fields import (CategoricalObsField,
                               LayerField, NumericalJointObsField)
 from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
+from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
 from drvi.scvi_tools_based._module import DRVIModule
 from drvi.scvi_tools_based._archesmixin import DRVIArchesMixin
 from drvi.scvi_tools_based.merlin_data import (
@@ -140,7 +141,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
             CategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
-            CategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
+            FixedCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
             NumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
         ]
         adata_manager = AnnDataManager(fields=anndata_fields, setup_method_args=setup_method_args)

@@ -2,6 +2,7 @@ from typing import Union
 
 from scvi.data.fields import (CategoricalJointObsField, CategoricalObsField,
                               LayerField, NumericalJointObsField)
+from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
 
 from drvi.scvi_tools_based.merlin_data._data import MerlinData
 
@@ -79,7 +80,7 @@ class MerlinCategoricalObsField(CategoricalObsField):
         }
 
 
-class MerlinCategoricalJointObsField(CategoricalJointObsField):
+class MerlinCategoricalJointObsField(FixedCategoricalJointObsField):
     def validate_field(self, adata: MerlinData) -> None:
         merlin_data = adata
         for key in self.attr_keys:
