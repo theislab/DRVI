@@ -12,7 +12,7 @@ def make_generative_samples_to_inspect(
         noise_stds = 0.5,
         span_limit = 3,
         n_steps = 10 * 2 + 1,
-        n_baseline_samples = 100,
+        n_samples = 100,
     ):
     n_latent = model.module.n_latent
     if model.adata_manager.get_state_registry(scvi.REGISTRY_KEYS.CAT_COVS_KEY):
@@ -27,7 +27,7 @@ def make_generative_samples_to_inspect(
     else:
         dim_stds = noise_stds * torch.ones(n_latent)
 
-    random_small_samples = torch.randn(1, 1, n_baseline_samples, n_latent) * dim_stds
+    random_small_samples = torch.randn(1, 1, n_samples, n_latent) * dim_stds
     per_dim_perturbations = (
             torch.arange(-span_limit, span_limit + 1e-3, 2 * span_limit / (n_steps - 1)).unsqueeze(0).unsqueeze(0) * 
             torch.eye(n_latent).unsqueeze(-1)
@@ -37,7 +37,7 @@ def make_generative_samples_to_inspect(
     effect_data = random_small_samples + 1 * per_dim_perturbations
 
     if n_cats_per_key is not None:
-        random_cats = torch.from_numpy(np.stack([np.random.randint(0, n_cat, size=n_baseline_samples) for n_cat in n_cats_per_key], axis=1))
+        random_cats = torch.from_numpy(np.stack([np.random.randint(0, n_cat, size=n_samples) for n_cat in n_cats_per_key], axis=1))
         random_cats = random_cats.reshape(1, 1, *random_cats.shape).expand(*(per_dim_perturbations.shape[:-2]), -1, -1)
     else:
         random_cats = None
@@ -161,4 +161,17 @@ def sort_and_filter_effect_adata(effect_adata, optimal_dim_ordering, min_lfc=2.)
 
     effect_adata = effect_adata[:, effect_adata.var.sort_values(["max_effect_order", "max_effect_dim_plus", "max_effect_sign", "max_effect"], ascending=[True, True, True, False]).index].copy()
 
+    return effect_adata
+
+
+def iterate_and_make_effect_adata(model, adata, n_samples=100, noise_stds=0.5, span_limit=3, n_steps=10 * 2 + 1, min_lfc=1.):
+    control_data, effect_data, random_cats = make_generative_samples_to_inspect(
+        model, noise_stds=noise_stds, span_limit=span_limit, n_steps=n_steps, n_samples=n_samples,
+    )
+    print("Input Latent shapes:", control_data.shape, effect_data.shape)
+    control_mean_param = get_generative_output(model, control_data, cat_key=random_cats)
+    effect_mean_param = get_generative_output(model, effect_data, cat_key=random_cats)
+    print("Output shapes:", control_mean_param.shape, effect_mean_param.shape)
+    effect_adata = make_effect_adata(control_mean_param, effect_mean_param, adata.var, span_limit)
+    find_effective_vars(effect_adata, min_lfc=min_lfc)
     return effect_adata
