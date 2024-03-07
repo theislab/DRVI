@@ -217,12 +217,14 @@ class DRVIModule(BaseModuleClass):
             return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='div_lib_x_loglib')
         elif gene_likelihood in ['nb_loglibnorm_all']:
             return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_loglib_all')
-        elif gene_likelihood == 'nb_orig':
+        elif gene_likelihood in ['nb_orig', 'nb_softmax']:
             return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='none')
         elif gene_likelihood == 'nb_orig_libnorm':
             return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='x_lib')
         elif gene_likelihood in ['pnb', 'pnb_sv']:
             return LogNegativeBinomialNoiseModel(dispersion='feature', library_normalization='none')
+        elif gene_likelihood in ['pnb_softmax']:
+            return LogNegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='none')
         else:
             raise NotImplementedError()
 

@@ -19,6 +19,8 @@ def make_generative_samples_to_inspect(
         n_cats_per_key = model.adata_manager.get_state_registry(scvi.REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
     else:
         n_cats_per_key = None
+    if isinstance(model, scvi.model.SCVI) and model.summary_stats.n_batch > 0:
+        n_cats_per_key = [model.summary_stats.n_batch] + (n_cats_per_key if n_cats_per_key is not None else [])
 
     if isinstance(noise_stds, torch.Tensor):
         dim_stds = noise_stds
@@ -56,15 +58,19 @@ def get_generative_output(model, z, cat_key=None, cont_key=None, batch_size=256)
         for slice in torch.split(torch.arange(z.shape[0]), batch_size):
             if isinstance(model, DRVI):
                 lib_tensor = torch.tensor([1e4] * slice.shape[0])
+                cat_tensor = cat_key[slice] if cat_key is not None else None
+                batch_tensor = None
             elif isinstance(model, scvi.model.SCVI):
                 lib_tensor = torch.log(torch.tensor([1e4] * slice.shape[0])).reshape(-1, 1)
+                cat_tensor = cat_key[slice, 1:] if cat_key is not None else None
+                batch_tensor = cat_key[slice, 0:0] if cat_key is not None else None
             
             gen_input = model.module._get_generative_input(
                 tensors={
-                    scvi.REGISTRY_KEYS.BATCH_KEY: None,
+                    scvi.REGISTRY_KEYS.BATCH_KEY: batch_tensor,
                     scvi.REGISTRY_KEYS.LABELS_KEY: None,
                     scvi.REGISTRY_KEYS.CONT_COVS_KEY: torch.log(lib_tensor).unsqueeze(-1) if model.summary_stats.get("n_extra_continuous_covs", 0) == 1 else None,
-                    scvi.REGISTRY_KEYS.CAT_COVS_KEY: cat_key[slice] if cat_key is not None else None,
+                    scvi.REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                 },
                 inference_outputs={
                     'z': z[slice],
@@ -82,18 +88,18 @@ def get_generative_output(model, z, cat_key=None, cont_key=None, batch_size=256)
 def make_effect_adata(control_mean_param, effect_mean_param, var_info_df, span_limit):
     n_latent, n_steps, n_random_samples, n_vars = effect_mean_param.shape
 
-    average_reahape_numpy = lambda x: x.mean(dim=-2).reshape(n_latent * n_steps, n_vars).numpy(force=True)
+    average_reshape_numpy = lambda x: x.mean(dim=-2).reshape(n_latent * n_steps, n_vars).numpy(force=True)
 
     epsilon = 1
-    diff_considering_small_values = average_reahape_numpy(
-        torch.log(torch.exp(effect_mean_param) + epsilon) - 
-        torch.log(torch.exp(control_mean_param) + epsilon)
+    diff_considering_small_values = average_reshape_numpy(
+        torch.logsumexp(torch.stack([effect_mean_param, torch.ones_like(effect_mean_param) * epsilon]), dim=0) -
+        torch.logsumexp(torch.stack([control_mean_param, torch.ones_like(control_mean_param) * epsilon]), dim=0)
     )
 
     effect_adata = ad.AnnData(diff_considering_small_values, var=var_info_df)
-    effect_adata.layers['diff'] = average_reahape_numpy(effect_mean_param - control_mean_param)
-    effect_adata.layers['effect'] = average_reahape_numpy(effect_mean_param)
-    effect_adata.layers['control'] = average_reahape_numpy(control_mean_param)
+    effect_adata.layers['diff'] = average_reshape_numpy(effect_mean_param - control_mean_param)
+    effect_adata.layers['effect'] = average_reshape_numpy(effect_mean_param)
+    effect_adata.layers['control'] = average_reshape_numpy(control_mean_param)
     effect_adata.obs['dummy'] = 'X'
     effect_adata.var['dummy'] = 'X'
     effect_adata.obs['dim'] = [f"dim_{i // n_steps}" for i in range(n_latent * n_steps)]

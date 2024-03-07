@@ -219,9 +219,10 @@ class LogNegativeBinomial(Distribution):
 
 
 class LogNegativeBinomialNoiseModel(NoiseModel):
-    def __init__(self, dispersion='feature', library_normalization='x_lib'):
+    def __init__(self, dispersion='feature', mean_transformation='none', library_normalization='x_lib'):
         super().__init__()
         self.dispersion = dispersion
+        self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
 
     @property
@@ -248,6 +249,12 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         r = 1. + parameters['r']
         library_size = lib_y
 
-        trans_mean = library_size_correction(mean, library_size, self.library_normalization, log_space=True)
+        if self.mean_transformation == 'none':
+            trans_mean = library_size_correction(mean, library_size, self.library_normalization, log_space=True)
+        elif self.mean_transformation == 'softmax':
+            trans_mean = mean - torch.logsumexp(mean, dim=-1, keepdim=True)
+            trans_mean = torch.log(library_size).unsqueeze(-1) + trans_mean
+        else:
+            raise NotImplementedError()
         trans_r = r
         return LogNegativeBinomial(log_m=trans_mean, log_r=trans_r)
