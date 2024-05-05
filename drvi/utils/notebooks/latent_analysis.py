@@ -87,3 +87,19 @@ def sorted_heatmap(
     )
     del adata.obs["_tmp_pertpy_grna_plot_dummy_group"]
     return axis_group
+
+
+def plot_latent_dims_in_umap(embed_adata, max_cells_to_plot=None, optimal_order=False, **kwargs):
+    if max_cells_to_plot is not None and embed_adata.n_obs > max_cells_to_plot:
+        embed_adata = sc.pp.subsample(embed_adata, n_obs=max_cells_to_plot, copy=True)
+    obs_original = embed_adata.obs.copy()
+    for i in range(embed_adata.n_vars):
+        embed_adata.obs[f'Dim {i}'] = embed_adata.X[:, i]
+    try:
+        color_cols = [f'Dim {i}' for i in
+                      (embed_adata.uns['optimal_var_order'] if optimal_order else 
+                       range(embed_adata.n_vars))]
+        pl = sc.pl.umap(embed_adata, color=color_cols, **kwargs)
+    finally:
+        embed_adata.obs = obs_original
+    return pl

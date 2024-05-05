@@ -20,7 +20,7 @@ def make_generative_samples_to_inspect(
     else:
         n_cats_per_key = None
     if isinstance(model, scvi.model.SCVI) and model.summary_stats.n_batch > 0:
-        n_cats_per_key = [model.summary_stats.n_batch] + (n_cats_per_key if n_cats_per_key is not None else [])
+        n_cats_per_key = [model.summary_stats.n_batch] + list(n_cats_per_key if n_cats_per_key is not None else [])
 
     if isinstance(noise_stds, torch.Tensor):
         dim_stds = noise_stds
