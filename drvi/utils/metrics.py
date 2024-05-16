@@ -15,6 +15,11 @@ def latent_matching_score(result_matrix):
     return result_matrix[row_ind, col_ind].sum() / result_matrix.shape[1]
 
 
+def most_similar_gap_score(result_matrix):
+    sorted_values = np.sort(result_matrix, axis=0)[::-1, :]
+    return np.mean(sorted_values[0, :] - sorted_values[1, :])
+
+
 def nn_alignment_score_per_dim(var_continues, ct_cat_series):
     order = var_continues.argsort()
     ct_cat_series = ct_cat_series[order]
