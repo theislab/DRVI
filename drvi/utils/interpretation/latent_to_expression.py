@@ -102,7 +102,7 @@ def make_effect_adata(control_mean_param, effect_mean_param, var_info_df, span_l
     effect_adata.layers['control'] = average_reshape_numpy(control_mean_param)
     effect_adata.obs['dummy'] = 'X'
     effect_adata.var['dummy'] = 'X'
-    effect_adata.obs['dim'] = [f"dim_{i // n_steps}" for i in range(n_latent * n_steps)]
+    effect_adata.obs['dim'] = [f"Dim {1 + i // n_steps}" for i in range(n_latent * n_steps)]
     effect_adata.obs['value'] = [-span_limit + (i % n_steps) * 2 * span_limit / (n_steps - 1) for i in range(n_latent * n_steps)]
     effect_adata.uns['n_latent'] = n_latent
     effect_adata.uns['n_steps'] = n_steps
@@ -133,9 +133,9 @@ def find_effective_vars(effect_adata, min_lfc=1.):
 
 
 def sort_and_filter_effect_adata(effect_adata, optimal_dim_ordering, min_lfc=2.):
-    dim_order_mapping = {f"dim_{o}": i for i, o in enumerate(optimal_dim_ordering)}
+    dim_order_mapping = {f"Dim {1 + o}": i for i, o in enumerate(optimal_dim_ordering)}
     effect_adata.obs['optimal_order'] = effect_adata.obs['dim'].apply(lambda x: dim_order_mapping[x]).astype(int).astype('category')
-    effect_adata.obs['dim_id'] = effect_adata.obs['optimal_order'].apply(lambda x: f"dim_{optimal_dim_ordering[x]}")
+    effect_adata.obs['dim_id'] = effect_adata.obs['optimal_order'].apply(lambda x: f"Dim {1 + optimal_dim_ordering[x]}")
     effect_adata = effect_adata[effect_adata.obs.sort_values(['optimal_order', 'value']).index].copy()
     effect_adata.obs['dim_id_plus'] = np.where(effect_adata.obs['value'] > 0,
                                                effect_adata.obs['dim_id'].astype(str) + ' +',
