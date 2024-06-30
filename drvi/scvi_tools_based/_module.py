@@ -115,7 +115,7 @@ class DRVIModule(BaseModuleClass):
             encoder_dropout_rate: float = 0.,
             decoder_dropout_rate: float = 0.,
             gene_likelihood: Literal[
-                "nb", "nb_sv", "nb_orig", "pnb", "pnv_sv", "poisson", "lognormal",
+                "nb", "nb_sv", "nb_orig", "pnb", "pnb_sv", "poisson", "lognormal",
                 "normal", "normal_v", "normal_sv"] = 'nb',
             prior: Literal["normal", "gmm_x", "vamp_x"] = 'normal',
             prior_init_dataloader: Optional[DataLoader] = None,
