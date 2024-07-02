@@ -141,7 +141,7 @@ def mark_differential_vars(effect_adata, layer=None, min_lfc=1.):
     change_sign_array = np.sign(change_array)  # n_latent x n_steps x 1
     effect_array = effect_adata.X if layer is None else effect_adata.layers[layer]
     effect_array = (
-        effect_adata.X.reshape(effect_adata.uns['n_latent'], effect_adata.uns['n_steps'], effect_adata.uns['n_vars'])
+        effect_array.reshape(effect_adata.uns['n_latent'], effect_adata.uns['n_steps'], effect_adata.uns['n_vars'])
     )  # n_latent x n_steps x n_vars
     for change_sign in ['-', '+']:
         sig_genes = {}
@@ -252,6 +252,6 @@ def iterate_and_make_effect_adata(model, adata, n_samples=100, noise_stds=0.5, s
     print("Output shapes:", control_mean_param.shape, effect_mean_param.shape)
     effect_adata = make_effect_adata(control_mean_param, effect_mean_param, adata.var, span_limit)
 
-    find_differential_vars(effect_adata, method='log1p', added_layer='effect', add_to_counts=1.)
-    mark_differential_vars(effect_adata, layer='effect', min_lfc=min_lfc)
+    # find_differential_vars(effect_adata, method='log1p', added_layer='effect', add_to_counts=1.)
+    # mark_differential_vars(effect_adata, layer='effect', min_lfc=min_lfc)
     return effect_adata
