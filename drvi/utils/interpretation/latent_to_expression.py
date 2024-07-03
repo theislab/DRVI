@@ -12,9 +12,10 @@ def make_generative_samples_to_inspect(
         model,
         noise_stds = 0.5,
         span_limit = 3,
-        n_steps = 10 * 2 + 1,
+        n_steps = 10 * 2,
         n_samples = 100,
     ):
+    assert n_steps % 2 == 0
     n_latent = model.module.n_latent
     if model.adata_manager.get_state_registry(scvi.REGISTRY_KEYS.CAT_COVS_KEY):
         n_cats_per_key = model.adata_manager.get_state_registry(scvi.REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
@@ -30,20 +31,27 @@ def make_generative_samples_to_inspect(
     else:
         dim_stds = noise_stds * torch.ones(n_latent)
 
-    random_small_samples = torch.randn(1, 1, n_samples, n_latent) * dim_stds
+    random_small_samples = torch.randn(1, 1, n_samples, n_latent) * dim_stds  # 1 x 1 x n_samples x n_latent
     if isinstance(span_limit, (int, float)):
-        per_dim_perturbations = (
-                torch.arange(-span_limit, span_limit + 1e-3, 2 * span_limit / (n_steps - 1)).unsqueeze(0).unsqueeze(0) * 
-                torch.eye(n_latent).unsqueeze(-1)
-        ).transpose(-1, -2).unsqueeze(-2)
-    else:
-        latent_min = torch.from_numpy(span_limit[0])
-        latent_max = torch.from_numpy(span_limit[1])
+        span_limit = [-span_limit * np.ones(n_latent), +span_limit * np.ones(n_latent)]
+    assert (span_limit[0] < 0).all() and (span_limit[1] > 0).all()
+    latent_min = torch.from_numpy(span_limit[0])
+    latent_max = torch.from_numpy(span_limit[1]) 
 
-        per_dim_perturbations = (
-            torch.linspace(0, 1, n_steps).unsqueeze(0).unsqueeze(0) * 
-            torch.diag(latent_max - latent_min).unsqueeze(-1) + torch.diag(latent_min).unsqueeze(-1)
-        ).transpose(-1, -2).unsqueeze(-2)
+    per_dim_perturbations_neg = (
+        torch.linspace(1, 0, int(n_steps // 2)).unsqueeze(0).unsqueeze(0)  # 1 x 1 x n_steps/2
+        * 
+        torch.diag(latent_min).unsqueeze(-1)  # n_latent x n_latent x 1
+    )  # n_latent x n_latent x n_steps/2
+    per_dim_perturbations_pos = (
+        torch.linspace(0, 1, int(n_steps // 2)).unsqueeze(0).unsqueeze(0)  # 1 x 1 x n_steps/2
+        * 
+        torch.diag(latent_max).unsqueeze(-1)  # n_latent x n_latent x 1
+    )  # n_latent x n_latent x n_steps/2
+    per_dim_perturbations = (
+        torch.concat([per_dim_perturbations_neg, per_dim_perturbations_pos], dim=-1)  # n_latent x n_latent x n_steps
+        .transpose(-1, -2).unsqueeze(-2)
+    )  # n_latent x n_steps x 1 x n_latent
 
     control_data = random_small_samples + 0 * per_dim_perturbations
     effect_data = random_small_samples + 1 * per_dim_perturbations
@@ -117,9 +125,11 @@ def make_effect_adata(control_mean_param, effect_mean_param, var_info_df, span_l
     effect_adata.obs['dim_int'] = [1 + i // n_steps for i in range(n_latent * n_steps)]
     effect_adata.obs['dim'] = "Dim " + effect_adata.obs['dim_int'].astype(str)
     if isinstance(span_limit, (int, float)):
-        effect_adata.obs['value'] = [-span_limit + (i % n_steps) * 2 * span_limit / (n_steps - 1) for i in range(n_latent * n_steps)]
-    else:
-        effect_adata.obs['value'] = np.linspace(span_limit[0], span_limit[1], num=n_steps).T.reshape(-1)
+        span_limit = [-span_limit * np.ones(n_latent), +span_limit * np.ones(n_latent)]
+    effect_adata.obs['value'] = np.concatenate([
+        np.linspace(span_limit[0], span_limit[0]*0., num=int(n_steps / 2)),
+        np.linspace(span_limit[1]*0., span_limit[1], num=int(n_steps / 2)),
+    ], axis=0).T.reshape(-1)
 
     effect_adata.uns['effect_mean_param'] = effect_mean_param.numpy(force=True)
     effect_adata.uns['control_mean_param'] = control_mean_param.numpy(force=True)
@@ -131,9 +141,9 @@ def make_effect_adata(control_mean_param, effect_mean_param, var_info_df, span_l
     return effect_adata
 
 
-def mark_differential_vars(effect_adata, layer=None, min_lfc=1.):
+def mark_differential_vars(effect_adata, layer=None, key_added='affected_vars', min_lfc=1.):
     original_effect_adata = effect_adata
-    original_effect_adata.uns[f'affected_vars'] = {}
+    original_effect_adata.uns[key_added] = {}
     effect_adata = effect_adata[effect_adata.obs.sort_values(['original_order']).index].copy()
     effect_adata = effect_adata[:, effect_adata.var.sort_values(['original_order']).index].copy()
     change_array = np.expand_dims(effect_adata.obs['value'].values.reshape(effect_adata.uns['n_latent'], effect_adata.uns['n_steps']), 
@@ -155,11 +165,10 @@ def mark_differential_vars(effect_adata, layer=None, min_lfc=1.):
                 for i, n in enumerate(num_sig_indices)
             ]
         for dim in range(effect_adata.uns['n_latent']):
-            original_effect_adata.uns[f'affected_vars'][f'Dim {dim+1}{change_sign}'] = {
+            original_effect_adata.uns[key_added][f'Dim {dim+1}{change_sign}'] = {
                 'up': sig_genes['up'][dim],
                 'down': sig_genes['down'][dim],
             }
-    return effect_adata
 
 
 def find_differential_vars(effect_adata, method='log1p', added_layer='effect', add_to_counts=1., relax_max_by=1.):
