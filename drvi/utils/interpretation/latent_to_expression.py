@@ -97,8 +97,11 @@ def get_generative_output(model, z, cat_key=None, cont_key=None, batch_size=256)
                 },
             )
             gen_output = model.module.generative(**gen_input)
-            # output = gen_output['px'].mean.detach().cpu()
-            output = gen_output['params']['mean'].detach().cpu()  # mean in log space
+            if isinstance(model, DRVI):
+                output = gen_output['params']['mean'].detach().cpu()  # mean in log space
+            elif isinstance(model, scvi.model.SCVI):
+                output = np.log1p(gen_output['px'].mean.detach().cpu())
+            
             mean_param.append(output)
     mean_param = torch.cat(mean_param, dim=0)
     mean_param = mean_param.reshape(*z_shape[:-1], mean_param.shape[-1])
@@ -137,7 +140,7 @@ def make_effect_adata(control_mean_param, effect_mean_param, var_info_df, span_l
     effect_adata.uns['n_latent'] = n_latent
     effect_adata.uns['n_steps'] = n_steps
     effect_adata.uns['n_vars'] = n_vars
-    effect_adata.uns['span_limit'] = span_limit
+    effect_adata.uns['span_limit'] = list(span_limit)  # convert tuple to list to be able to save as h5ad
     return effect_adata
 
 
