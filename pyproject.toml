@@ -11,7 +11,7 @@ python = ">=3.9,<3.12"
 torch = "2.1.0"
 lightning = "<2.1,>=2.0"
 scanpy = "1.9.5"
-scikit-learn = ">=1.3.2"
+scikit-learn = ">=1.5.1"
 scipy = ">=1.11.3"
 scvi-tools = "1.0.4"
 # TODO: Remove when scvi-tools and jax become ok again

@@ -42,7 +42,7 @@ def nn_alignment_score(all_vars_continues, ct_cat_series):
 
 
 def local_mutual_info_score_per_binary_ct(all_vars_continues, ct_binary):
-    mi_score = mutual_info_classif(all_vars_continues, ct_binary)
+    mi_score = mutual_info_classif(all_vars_continues, ct_binary, n_jobs=-1)
     ct_prob = np.sum(ct_binary == 1) / ct_binary.shape[0]
     ct_entropy = stats.entropy([ct_prob, 1-ct_prob])
     return mi_score / ct_entropy
