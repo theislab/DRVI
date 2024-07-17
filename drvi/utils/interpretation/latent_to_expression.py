@@ -174,8 +174,21 @@ def mark_differential_vars(effect_adata, layer=None, key_added='affected_vars', 
             }
 
 
+def combine_differential_vars(effect_adata, function, *keys):
+    any_key = keys[0]
+
+    result = {}
+    for dim in effect_adata.uns[any_key]:
+        result[dim] = {}
+        for change_sign in ['up', 'down']:
+            result[dim][change_sign] = function(
+                *[effect_adata.uns[key][dim][change_sign] for key in keys]
+            )
+    return result
+
+
 def find_differential_vars(effect_adata, method='log1p', added_layer='effect', add_to_counts=1., relax_max_by=1.):
-    assert method in ['log1p', 'relative']
+    assert method in ['log1p', 'relative', 'min_possible']
     original_effect_adata = effect_adata
     original_effect_adata.uns[f'affected_vars'] = {}
     effect_adata = effect_adata[effect_adata.obs.sort_values(['original_order']).index].copy()
@@ -205,6 +218,23 @@ def find_differential_vars(effect_adata, method='log1p', added_layer='effect', a
         ) - relax_max_by # n_latent x n_steps x n_samples, n_vars
         normalized_effect_mean_param = find_relative_effect(effect_mean_param, max_possible_other_dims)
         normalized_control_mean_param = find_relative_effect(control_mean_param, max_possible_other_dims)
+        diff_considering_small_values = average_reshape_numpy(
+            normalized_effect_mean_param -
+            normalized_control_mean_param
+        )
+    elif method == 'min_possible':
+        max_cumulative_possible_other_dims = (
+            torch.logsumexp(
+                torch.maximum(
+                    torch.amax(effect_mean_param, dim=(1, 2,), keepdim=True),
+                    torch.amax(control_mean_param, dim=(1, 2,), keepdim=True),
+                ).unsqueeze(0).expand(n_latent, -1, n_steps, n_random_samples, -1)
+                .masked_fill(torch.eye(n_latent).bool().reshape(n_latent, n_latent, 1, 1, 1), -float('inf')),
+                dim=1, keepdim=False,
+            )
+        ) - relax_max_by # n_latent x n_steps x n_samples, n_vars
+        normalized_effect_mean_param = find_relative_effect(effect_mean_param, max_cumulative_possible_other_dims)
+        normalized_control_mean_param = find_relative_effect(control_mean_param, max_cumulative_possible_other_dims)
         diff_considering_small_values = average_reshape_numpy(
             normalized_effect_mean_param -
             normalized_control_mean_param
