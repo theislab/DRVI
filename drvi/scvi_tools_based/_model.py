@@ -104,8 +104,17 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass)
             categorical_covariate_dims=categorical_covariates_info.dims,
             **model_kwargs,
         )
-        # TODO: make summary string
-        self._model_summary_string = "Overwrite this attribute to get an informative representation for your model"
+        
+        self._model_summary_string = (
+            "DRVI \n"
+            + (f"Covariates: {categorical_covariates_info.names}, \n" if len(categorical_covariates_info) > 0 else "") +
+            f"Latent size: {self.module.n_latent}, "
+            f"splits: {self.module.n_split_latent}, "
+            f"pooling of splits: '{self.module.split_aggregation}', \n"
+            f"Encoder dims: {encoder_dims}, \n"
+            f"Decoder dims: {decoder_dims}, \n"
+            f"Gene likelihood: {self.module.gene_likelihood}, \n"
+        )
         # necessary line to get params that will be used for saving/loading
         self.init_params_ = self._get_init_params(locals())
 

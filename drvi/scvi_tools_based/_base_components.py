@@ -110,7 +110,7 @@ class FCLayers(nn.Module):
             use_activation: bool = True,
             bias: bool = True,
             inject_covariates: bool = True,
-            activation_fn: nn.Module = nn.ReLU,
+            activation_fn: nn.Module = nn.ELU,
             layer_factory: LayerFactory = None,
             layers_location: Literal["intermediate", "first", "last"] = "intermediate",
             covariate_modeling_strategy: Literal[

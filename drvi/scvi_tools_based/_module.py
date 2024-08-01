@@ -31,7 +31,7 @@ class DRVIModule(BaseModuleClass):
     n_latent
         Dimensionality of the latent space
     n_split_latent
-        Number of splits in the latent space
+        Number of splits in the latent space. -1 means split all dimensions (n_split_latent=n_latent).
     split_aggregation
         How to aggregate splits in the last layer of the decoder
     split_method
@@ -93,10 +93,10 @@ class DRVIModule(BaseModuleClass):
             self,
             n_input: int,
             n_latent: int = 32,
-            n_split_latent: Optional[int] = 1,
-            split_aggregation: Literal["sum", "logsumexp", "max"] = "sum",
-            split_method: Literal["split", "power", "split_map"] = "split",
-            decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "last",
+            n_split_latent: Optional[int] = -1,
+            split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
+            split_method: Literal["split", "power", "split_map"] = "split_map",
+            decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
             encoder_dims: Sequence[int] = tuple([128, 128]),
             decoder_dims: Sequence[int] = tuple([128, 128]),
             n_cats_per_cov: Optional[Iterable[int]] = tuple([]),
@@ -107,16 +107,18 @@ class DRVIModule(BaseModuleClass):
             covariate_modeling_strategy: Literal[
                 "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
                 "emb_adapter", "one_hot_adapter", "emb_shared_adapter"] = "one_hot",
-            use_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
+            use_batch_norm: Literal["encoder", "decoder", "none", "both"] = "none",
             affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
-            use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "none",
+            use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
             fill_in_the_blanks_ratio: float = 0.,
             input_dropout_rate: float = 0.,
-            encoder_dropout_rate: float = 0.,
+            encoder_dropout_rate: float = 0.1,
             decoder_dropout_rate: float = 0.,
             gene_likelihood: Literal[
-                "nb", "nb_sv", "nb_orig", "pnb", "pnb_sv", "poisson", "lognormal",
-                "normal", "normal_v", "normal_sv"] = 'nb',
+                'normal', 'normal_v', 'normal_sv', 
+                'poisson', 'poisson_orig', 
+                'nb', 'nb_sv', 'nb_libnorm', 'nb_loglib_rec', 'nb_libnorm_loglib_rec', 'nb_loglibnorm_all', 'nb_orig', 'nb_softmax', 'nb_orig_libnorm', 
+                'pnb', 'pnb_sv', 'pnb_softmax'] = 'pnb_softmax',
             prior: Literal["normal", "gmm_x", "vamp_x"] = 'normal',
             prior_init_dataloader: Optional[DataLoader] = None,
             var_activation: Union[Callable, Literal["exp", "pow2"]] = 'exp',
@@ -127,6 +129,10 @@ class DRVIModule(BaseModuleClass):
     ):
         super().__init__()
         self.n_latent = n_latent
+        if n_split_latent == -1:
+            n_split_latent = n_latent
+        self.n_split_latent = n_split_latent
+        self.split_aggregation = split_aggregation
         self.latent_distribution = "normal"
         self.gene_likelihood = gene_likelihood
 
