@@ -26,10 +26,15 @@ merlin-dataloader = "23.8.0"
 # TODO: update this when this resolved: https://github.com/boto/botocore/issues/2926
 urllib3 = "<2"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
+# Formatting
 black = "23.10.1"
 leidenalg = "^0.10.1"
 pytest = "^7.4.3"
+# Docs
+sphinx = "^4.0"
+sphinx-autodoc-typehints = "^1.12.0"
+sphinx-rtd-theme = "^0.5.2"
 
 [build-system]
 requires = ["poetry-core"]
