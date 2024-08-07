@@ -150,9 +150,9 @@ def plot_latent_dims_in_umap(
     kwargs = {**dict(
         frameon=False,
         cmap=cmap.saturated_red_blue_cmap,
-        vmin=list(np.minimum(embed.X.min(axis=0), -1)),
+        vmin=list(np.minimum(tmp_df['min'].values, -1)),
         vcenter=0,
-        vmax=list(np.maximum(embed.X.max(axis=0), +1)),
+        vmax=list(np.maximum(tmp_df['max'].values, +1)),
     ), **kwargs}
     pl = sc.pl.umap(embed, gene_symbols=title_col, color=cols_to_show, return_fig=True, **kwargs)
 
@@ -251,6 +251,7 @@ def differential_vars_heatmap(
         remove_unaffected: bool = False,
         figsize: Optional[Tuple[int, int]] = None,
         show: bool=True,
+        **kwargs,
     ):
     """
     Generate a heatmap of differential variables based on traverse data.
@@ -264,6 +265,7 @@ def differential_vars_heatmap(
     - remove_unaffected (bool): Whether to remove variables that have no effect.
     - figsize (Optional[Tuple[int, int]]): Size of the figure (width, height).
     - show (bool): Whether to show the heatmap.
+    - **kwargs: Additional keyword arguments to be passed to `sc.pl.heatmap`.
 
     Returns:
     - None if show is True, otherwise the plot.
@@ -321,6 +323,16 @@ def differential_vars_heatmap(
     vmin = min(-1, min(traverse_adata.varm[f"{key}_traverse_effect_pos"].values.min(), traverse_adata.varm[f"{key}_traverse_effect_neg"].values.min()))
     vmax = max(+1, max(traverse_adata.varm[f"{key}_traverse_effect_pos"].values.max(), traverse_adata.varm[f"{key}_traverse_effect_neg"].values.max()))
     var_group_positions, var_group_labels = make_heatmap_groups(plot_adata.var[f'max_effect_dim_{title_col}_plus'])
+    kwargs = {
+        **dict(
+            vcenter=0, vmin=vmin, vmax=vmax,
+            cmap=cmap.saturated_red_blue_cmap,
+            var_group_positions=var_group_positions,
+            var_group_labels=var_group_labels,
+            var_group_rotation=90,
+        ),
+        **kwargs,
+    }
 
     return sc.pl.heatmap(
         plot_adata,
@@ -329,12 +341,8 @@ def differential_vars_heatmap(
         layer=None,
         figsize=figsize,
         dendrogram=False,
-        vcenter=0, vmin=vmin, vmax=vmax,
-        cmap=cmap.saturated_red_blue_cmap,
-        var_group_positions=var_group_positions,
-        var_group_labels=var_group_labels,
-        var_group_rotation=90,
         show=show,
+        **kwargs,
     )
 
 
@@ -415,3 +423,55 @@ def show_top_differential_vars(
     )
 
     return _bar_plot_top_differential_vars(plot_info, ncols, show)
+
+
+def plot_relevant_genes_on_umap(
+        adata: AnnData,
+        embed: AnnData,
+        traverse_adata: AnnData,
+        traverse_adata_key: str,
+        layer=None,
+        title_col: str = 'title',
+        order_col: str = 'order',
+        gene_symbols: Optional[str] = None,
+        score_threshold: float = 0.,
+        dim_subset: Sequence[str] = None,
+        max_gene_per_dim: int = 10,
+        max_cells_to_plot: Union[int, None] = None,
+    ):
+
+    if max_cells_to_plot is not None and adata.n_obs > max_cells_to_plot:
+        adata = sc.pp.subsample(adata, n_obs=max_cells_to_plot, copy=True)
+
+    plot_info = iterate_on_top_differential_vars(
+        traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
+    )
+
+    adata.obsm['X_umap_method'] = embed[adata.obs.index].obsm['X_umap']
+    for dim_title, gene_scores in plot_info:
+        if dim_subset is not None and dim_title not in dim_subset:
+            continue
+
+        print(dim_title)
+        adata.obs[dim_title] = list(embed[adata.obs.index, embed.var[title_col] == dim_title[:-1]].X[:, 0])
+
+        relevant_genes = gene_scores.index.to_list()
+
+        ax = sc.pl.embedding(adata, 'X_umap_method', color=[dim_title], 
+                             cmap=cmap.saturated_sky_cmap if dim_title[-1] == '+' else cmap.saturated_sky_cmap.reversed(),
+                             vcenter=0,
+                             show=False, frameon=False)
+        ax.text(0.92, 0.05, ax.get_title(), size=15, ha='left', color='black', 
+                rotation=90, transform=ax.transAxes)
+        ax.set_title("")
+        plt.show()
+
+        axes = sc.pl.embedding(adata, 'X_umap_method', layer=layer, color=relevant_genes[:max_gene_per_dim], 
+                               cmap=cmap.saturated_just_sky_cmap, show=False, frameon=False)
+        if max_gene_per_dim == 1 or len(relevant_genes) == 1:
+            axes = [axes]
+        for ax in axes:
+            ax.text(0.92, 0.05, ax.get_title(), size=15, ha='left', color='black', 
+                    rotation=90, transform=ax.transAxes)
+            ax.set_title("")
+        plt.show()

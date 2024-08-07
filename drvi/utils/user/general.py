@@ -40,22 +40,22 @@ def iterate_on_top_differential_vars(
     score_threshold
         A threshold to filter the differential variables.
     """
-    up_df = traverse_adata.varm[f'{key}_traverse_effect_pos'].copy()
-    down_df = traverse_adata.varm[f'{key}_traverse_effect_neg'].copy()
+    df_pos = traverse_adata.varm[f'{key}_traverse_effect_pos'].copy()
+    df_neg = traverse_adata.varm[f'{key}_traverse_effect_neg'].copy()
 
     if gene_symbols is not None:
         gene_name_mapping = dict(zip(traverse_adata.var.index, traverse_adata.var[gene_symbols]))
     else:
         gene_name_mapping = dict(zip(traverse_adata.var.index, traverse_adata.var.index))
-    up_df.index = up_df.index.map(gene_name_mapping)
-    down_df.index = down_df.index.map(gene_name_mapping)
+    df_pos.index = df_pos.index.map(gene_name_mapping)
+    df_neg.index = df_neg.index.map(gene_name_mapping)
 
     de_info = dict(
-        **{(str(k) + "-"): v.sort_values(ascending=False).where(lambda x : x > score_threshold).dropna()
-           for k, v in up_df.to_dict(orient='series').items()
-        },
         **{(str(k) + "+"): v.sort_values(ascending=False).where(lambda x : x > score_threshold).dropna()
-           for k, v in down_df.to_dict(orient='series').items()
+           for k, v in df_pos.to_dict(orient='series').items()
+        },
+        **{(str(k) + "-"): v.sort_values(ascending=False).where(lambda x : x > score_threshold).dropna()
+           for k, v in df_neg.to_dict(orient='series').items()
         },
     )
 
