@@ -5,24 +5,28 @@ import numpy as np
 from anndata import AnnData
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
-from scvi.data.fields import (CategoricalObsField,
-                              LayerField, NumericalJointObsField)
+from scvi.data.fields import (CategoricalObsField, LayerField,
+                              NumericalJointObsField)
 from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
-from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
-from drvi.scvi_tools_based._module import DRVIModule
-from drvi.scvi_tools_based._archesmixin import DRVIArchesMixin
-from drvi.scvi_tools_based.merlin_data import (
-    MerlinCategoricalJointObsField, MerlinCategoricalObsField, MerlinData,
-    MerlinDataManager, MerlinDataSplitter, MerlinLayerField,
-    MerlinNumericalJointObsField, MerlinTransformedDataLoader)
 from drvi.module.feature_interface import FeatureInfoList
+from drvi.scvi_tools_based._archesmixin import DRVIArchesMixin
+from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
+from drvi.scvi_tools_based._generative_mixin import GenerativeMixin
+from drvi.scvi_tools_based._module import DRVIModule
+from drvi.scvi_tools_based.merlin_data import (MerlinCategoricalJointObsField,
+                                               MerlinCategoricalObsField,
+                                               MerlinData, MerlinDataManager,
+                                               MerlinDataSplitter,
+                                               MerlinLayerField,
+                                               MerlinNumericalJointObsField,
+                                               MerlinTransformedDataLoader)
 
 logger = logging.getLogger(__name__)
 
 
-class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass):
+class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
     """
     DRVI model based on scvi-tools skelethon
 

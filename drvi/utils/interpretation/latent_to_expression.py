@@ -1,11 +1,12 @@
-import numpy as np
 import math
-import torch
-import scvi
-from drvi import DRVI
-import anndata as ad
-import pandas as pd
 
+import anndata as ad
+import numpy as np
+import pandas as pd
+import scvi
+import torch
+
+from drvi import DRVI
 
 
 def make_generative_samples_to_inspect(
@@ -200,7 +201,7 @@ def find_differential_vars(effect_adata, method='log1p', added_layer='effect', a
 
     average_reshape_numpy = lambda x: x.mean(dim=-2).reshape(n_latent * n_steps, n_vars).numpy(force=True)
     add_eps_in_count_space = lambda x: torch.logsumexp(torch.stack([x, math.log(add_to_counts) * torch.ones_like(x)]), dim=0)
-    find_relative_effect = lambda x, max_possible: (torch.logsumexp(torch.stack([x, torch.zeros_like(x), max_possible]), dim=0) - max_possible)
+    find_relative_effect = lambda x, max_possible: (torch.logsumexp(torch.stack([x, math.log(add_to_counts) * torch.ones_like(x), max_possible]), dim=0) - max_possible)
 
     if method == 'log1p':
         diff_considering_small_values = average_reshape_numpy(

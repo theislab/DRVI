@@ -1,2 +1,2 @@
 from .latent_analysis import plot_latent_dims_in_umap
-from .network_inspection import plot_group_activity, plot_group_activity_matrix, plot_node_activity
+from .network_inspection import plot_group_activity, plot_group_activity_matrix

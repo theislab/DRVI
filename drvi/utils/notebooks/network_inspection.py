@@ -5,38 +5,6 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
 
-from .latent_analysis import plot_umap
-
-
-def plot_node_activity(node_activities, groups, umap_colors=None, umap_adata=None, max_output=5):
-    any_node_activity = list(node_activities.values())[0]
-    
-    for i in range(min(max_output, any_node_activity.shape[1])):
-        df = pd.DataFrame({**{name: value[:, i] for name, value in node_activities.items()},
-                           **groups})
-        for node_activity_key in node_activities.keys():
-            fig, ax = plt.subplots(1, len(groups), figsize=(10 * len(groups), 10))
-            for j, group_name in enumerate(groups.keys()):
-                sns.violinplot(x=group_name, y=node_activity_key, data=df, ax=ax[j])
-                ax[j].tick_params(axis='x', rotation=90)
-            fig.show()
-            plt.show()
-        if umap_colors is not None:
-            colors = []
-            for umap_color in umap_colors:
-                if umap_color in df.columns:
-                    umap_adata.obs[f'_tmp_{umap_color}'] = df[umap_color]
-                    colors.append(f'_tmp_{umap_color}')
-                else:
-                    colors.append(umap_color)
-            with plt.rc_context({"figure.figsize": (10, 10), 'figure.dpi': 40}):
-                plot_umap(umap_adata, color=colors)
-                plt.show()
-            for umap_color in umap_colors:
-                col = f'_tmp_{umap_color}'
-                if col in umap_adata.obs.columns:
-                    umap_adata.obs.drop(columns=[col], inplace=True)
-
 
 def _find_optimal_ordering(node_activity):
     X = node_activity.T

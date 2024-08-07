@@ -9,7 +9,6 @@ def hvg_batch(
     n_bins=20,
     adataOut=False,
 ):
-    # Source: scIB
     """Batch-aware highly variable gene selection
     Method to select HVGs based on mean dispersions of genes that are highly
     variable genes in all batches. Using a the top target_genes per batch by
@@ -23,6 +22,7 @@ def hvg_batch(
     :param n_bins: parameter for ``scanpy.pp.highly_variable_genes``
     :param adataOut: whether to return an ``anndata`` object or a list of highly variable genes
     """
+    print("This function is obtained from scIB metrics. Please don't forget to cite them if you use it.")
 
     adata_hvg = adata if adataOut else adata.copy()
 

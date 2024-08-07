@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Iterable, Literal, Union, Callable, Sequence
+from typing import Callable, Dict, Iterable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -7,12 +7,14 @@ from scvi.module.base import BaseModuleClass, LossOutput, auto_move_data
 from torch.distributions import Normal
 from torch.utils.data import DataLoader
 
-from drvi.scvi_tools_based._base_components import DecoderDRVI, Encoder
 from drvi.module.embedding import MultiEmbedding
 from drvi.module.layer.factory import LayerFactory
-from drvi.module.noise_model import NormalNoiseModel, PoissonNoiseModel, \
-    NegativeBinomialNoiseModel, LogNegativeBinomialNoiseModel
-from drvi.module.prior import StandardPrior, GaussianMixtureModelPrior, VampPrior
+from drvi.module.noise_model import (LogNegativeBinomialNoiseModel,
+                                     NegativeBinomialNoiseModel,
+                                     NormalNoiseModel, PoissonNoiseModel)
+from drvi.module.prior import (GaussianMixtureModelPrior, StandardPrior,
+                               VampPrior)
+from drvi.scvi_tools_based._base_components import DecoderDRVI, Encoder
 
 TensorDict = Dict[str, torch.Tensor]
 
@@ -201,6 +203,7 @@ class DRVIModule(BaseModuleClass):
         )
 
         self.prior = self._construct_prior(prior, prior_init_dataloader)
+        self.fully_deterministic = False
 
     def _construct_gene_likelihood_module(self, gene_likelihood):
         if gene_likelihood == 'normal':
@@ -340,6 +343,8 @@ class DRVIModule(BaseModuleClass):
 
     def _get_generative_input(self, tensors, inference_outputs):
         z = inference_outputs["z"]
+        if self.fully_deterministic:
+            z = inference_outputs["qz_m"]
         library = inference_outputs["library"]
         gene_likelihood_additional_info = inference_outputs["gene_likelihood_additional_info"]
 
