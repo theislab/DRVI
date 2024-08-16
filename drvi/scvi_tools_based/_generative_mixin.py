@@ -174,6 +174,7 @@ class GenerativeMixin:
     def get_reconstruction_effect_of_each_split(
         self,
         adata: Optional[AnnData] = None,
+        add_to_counts: float = 1.,
         aggregate_over_cells: bool = True,
         deterministic: bool = True,
         **kwargs,
@@ -185,6 +186,8 @@ class GenerativeMixin:
         adata
             AnnData object with equivalent structure to initial AnnData.
             If `None`, defaults to the AnnData object used to initialize the model.
+        add_to_counts
+            Value to add to the counts before computing the logarithm.
         aggregate_over_cells
             Whether to aggregate the effect over cells and return a value per dimension.
         deterministic
@@ -194,13 +197,13 @@ class GenerativeMixin:
         """
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
             if self.module.split_aggregation == "logsumexp":
-                effect_share = F.softmax(generative_outputs['original_params']['mean'], dim=-2)
+                log_mean_params = generative_outputs['original_params']['mean']  # n_samples x n_splits x n_genes
+                log_mean_params = F.pad(log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts))  # n_samples x (n_splits + 1) x n_genes
+                effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :]).sum(dim=-1)  # n_samples x n_splits
             elif self.module.split_aggregation == "sum":
-                effect_share = F.normalize(torch.abs(generative_outputs['original_params']['mean']), p=1, dim=-2)
+                effect_share = torch.abs(generative_outputs['original_params']['mean']).sum(dim=-1)  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            mean_in_log_space = F.softplus(generative_outputs['params']['mean'])  # log(1+exp(x)) for negative values in log-space
-            effect_share = (effect_share * mean_in_log_space.unsqueeze(-2)).sum(dim=-1)
             return store.append(effect_share.detach().cpu())
 
         def aggregate_effects(store):
@@ -224,6 +227,7 @@ class GenerativeMixin:
     def get_max_effect_of_splits_within_distribution(
         self,
         adata: Optional[AnnData] = None,
+        add_to_counts: float = 1.,
         deterministic: bool = True,
         **kwargs,
     ):
@@ -235,33 +239,50 @@ class GenerativeMixin:
         adata
             AnnData object with equivalent structure to initial AnnData.
             If `None`, defaults to the AnnData object used to initialize the model.
+        add_to_counts
+            Value to add to the counts before computing the logarithm.
         deterministic
             Makes model fully deterministic (e.g. no sampling in the bottleneck).
         kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
+
+        Returns
+        -------
+        np.ndarray
+            Max effect of each split on the reconstructed expression params for all genes
+
+        
+        -------
+        Example usage
+        -------
+
+        >>> effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=0.1)
+        >>> effect_data = pd.DataFrame(
+        ...     effects,
+        ...     columns=model.adata.var_names,
+        ...     index=embed.var['title'],
+        ... ).loc[embed.var.query('vanished == False').sort_values('order')['title']].T
+        >>> plot_info = list(effect_data.to_dict(orient='series').items())
+        >>> drvi.user_utils.pl._bar_plot_top_differential_vars(plot_info)
+        >>> drvi.user_utils.pl._umap_of_relevant_genes(adata, embed, plot_info, dim_subset=['DR 1'])
         """
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
-            # if self.module.split_aggregation == "logsumexp":
-            #     effect_logfc = -torch.log10(1 - F.softmax(generative_outputs['original_params']['mean'], dim=-2))
-            # elif self.module.split_aggregation == "sum":
-            #     effect_logfc = -torch.log10(1 - F.normalize(generative_outputs['original_params']['mean'], p=1, dim=-2))
-            # else:
-            #     raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
             if self.module.split_aggregation == "logsumexp":
-                effect_share = F.softmax(generative_outputs['original_params']['mean'], dim=-2)
+                log_mean_params = generative_outputs['original_params']['mean']  # n_samples x n_splits x n_genes
+                log_mean_params = F.pad(log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts))  # n_samples x (n_splits + 1) x n_genes
+                effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
-                effect_share = F.normalize(torch.abs(generative_outputs['original_params']['mean']), p=1, dim=-2)
+                effect_share = torch.abs(generative_outputs['original_params']['mean'])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            mean_in_log_space = F.softplus(generative_outputs['params']['mean'])  # log(1+exp(x)) for negative values in log-space
-            effect_share = (effect_share * mean_in_log_space.unsqueeze(-2)).amax(dim=0).detach().cpu().numpy(force=True)
+            effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)
             if len(store) == 0:
                 store.append(effect_share)
             else:
                 store[0] = np.maximum(store[0], effect_share)
 
         def aggregate_effects(store):
-            return store
+            return store[0]
         
         output = self.iterate_on_ae_output(
             adata=adata,

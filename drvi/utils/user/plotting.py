@@ -425,27 +425,102 @@ def show_top_differential_vars(
     return _bar_plot_top_differential_vars(plot_info, ncols, show)
 
 
-def plot_relevant_genes_on_umap(
-        adata: AnnData,
-        embed: AnnData,
+def show_differential_vars_scatter_plot(
         traverse_adata: AnnData,
-        traverse_adata_key: str,
-        layer=None,
+        key_x: str,
+        key_y: str,
+        key_combined: str,
         title_col: str = 'title',
         order_col: str = 'order',
         gene_symbols: Optional[str] = None,
         score_threshold: float = 0.,
+        dim_subset: Optional[Sequence[str]] = None,
+        ncols: int = 3,
+        show: bool = True,
+        **kwargs,
+    ):
+    """
+    Show a scatter plot of differential variables conidering multiple criteria.
+
+    Parameters:
+
+    - traverse_adata (AnnData): Annotated data object containing the variables to be plotted.
+    - key_x (str): Key to access the first variable in `traverse_adata.varm`.
+    - key_y (str): Key to access the second variable in `traverse_adata.varm`.
+    - key_combined (str): Key to access the combined variable in `traverse_adata.varm`.
+    - title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
+    - order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.
+    - gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
+    - score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
+    - dim_subset (Optional[Sequence[str]], optional): Subset of dimensions to plot. If None, all dimensions will be plotted. Defaults to None.
+    - ncols (int, optional): Number of columns in the plot grid. Defaults to 3.
+    - show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
+    - **kwargs: Additional keyword arguments to be passed to the scatter plot.
+
+    Returns:
+    - None if show is True, otherwise the figure.
+    """
+    
+    plot_info = {}
+    for key in [key_x, key_y, key_combined]:
+        plot_info[key] = iterate_on_top_differential_vars(
+            traverse_adata, key, title_col, order_col, gene_symbols, score_threshold
+        )
+    
+    if dim_subset is None:
+        dim_ids = [dim_id for dim_id, _ in plot_info[key_combined]]
+    else:
+        dim_ids = [dim_id for dim_id, _ in plot_info[key_combined] if dim_id in dim_subset]
+    for key in [key_x, key_y, key_combined]:
+        plot_info[key] = dict(plot_info[key])
+
+    n_plots = len(dim_ids)
+    n_row = int(np.ceil(n_plots / ncols))
+    fig, axes = plt.subplots(n_row, ncols, figsize=(5 * ncols, 4 * n_row), sharex=False, sharey=False)
+
+    for ax, dim_id in zip(axes.flatten(), dim_ids):
+        df = pd.concat({
+            key_x: plot_info[key_x][dim_id],
+            key_y: plot_info[key_y][dim_id],
+            key_combined: plot_info[key_combined][dim_id],
+            },
+            axis=1).dropna().sort_values(key_combined, ascending=False)
+
+        scatter = ax.scatter(df[key_x], df[key_y], c=df[key_combined], cmap='Reds', **kwargs)
+        
+        cbar = fig.colorbar(scatter, ax=ax)
+        cbar.set_label(key_combined)
+        
+        top_20 = df.nlargest(20, key_combined)
+        for idx, row in top_20.iterrows():
+            ax.text(row[key_x], row[key_y], str(idx), fontsize=8, ha='left', va='bottom')
+        
+        ax.set_title(dim_id)
+        ax.set_xlabel(key_x)
+        ax.set_ylabel(key_y)
+
+    for ax in axes.flatten()[n_plots:]:
+        fig.delaxes(ax)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+    else:
+        return fig
+
+
+def _umap_of_relevant_genes(
+        adata: AnnData,
+        embed: AnnData,
+        plot_info: Sequence[Tuple[str, pd.Series]],
+        layer: Optional[str] = None,
+        title_col: str = 'title',
         dim_subset: Sequence[str] = None,
         max_gene_per_dim: int = 10,
         max_cells_to_plot: Union[int, None] = None,
     ):
-
     if max_cells_to_plot is not None and adata.n_obs > max_cells_to_plot:
         adata = sc.pp.subsample(adata, n_obs=max_cells_to_plot, copy=True)
-
-    plot_info = iterate_on_top_differential_vars(
-        traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
-    )
 
     adata.obsm['X_umap_method'] = embed[adata.obs.index].obsm['X_umap']
     for dim_title, gene_scores in plot_info:
@@ -453,12 +528,21 @@ def plot_relevant_genes_on_umap(
             continue
 
         print(dim_title)
-        adata.obs[dim_title] = list(embed[adata.obs.index, embed.var[title_col] == dim_title[:-1]].X[:, 0])
+        relevant_genes = gene_scores.sort_values(ascending=False).index.to_list()
 
-        relevant_genes = gene_scores.index.to_list()
-
+        if dim_title[-1] == '+':
+            _cmap = cmap.saturated_sky_cmap
+            real_dim_title = dim_title[:-1]
+        elif dim_title[-1] == '-':
+            _cmap = cmap.saturated_sky_cmap.reversed()
+            real_dim_title = dim_title[:-1]
+        else:
+            _cmap = cmap.saturated_red_blue_cmap
+            real_dim_title = dim_title
+        
+        adata.obs[dim_title] = list(embed[adata.obs.index, embed.var[title_col] == real_dim_title].X[:, 0])
         ax = sc.pl.embedding(adata, 'X_umap_method', color=[dim_title], 
-                             cmap=cmap.saturated_sky_cmap if dim_title[-1] == '+' else cmap.saturated_sky_cmap.reversed(),
+                             cmap=_cmap,
                              vcenter=0,
                              show=False, frameon=False)
         ax.text(0.92, 0.05, ax.get_title(), size=15, ha='left', color='black', 
@@ -475,3 +559,26 @@ def plot_relevant_genes_on_umap(
                     rotation=90, transform=ax.transAxes)
             ax.set_title("")
         plt.show()
+
+
+def plot_relevant_genes_on_umap(
+        adata: AnnData,
+        embed: AnnData,
+        traverse_adata: AnnData,
+        traverse_adata_key: str,
+        layer: Optional[str] = None,
+        title_col: str = 'title',
+        order_col: str = 'order',
+        gene_symbols: Optional[str] = None,
+        score_threshold: float = 0.,
+        dim_subset: Sequence[str] = None,
+        max_gene_per_dim: int = 10,
+        max_cells_to_plot: Union[int, None] = None,
+    ):
+
+    plot_info = iterate_on_top_differential_vars(
+        traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
+    )
+
+    return _umap_of_relevant_genes(adata, embed, plot_info, layer, title_col,
+                                   dim_subset, max_gene_per_dim, max_cells_to_plot)
