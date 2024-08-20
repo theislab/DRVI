@@ -515,6 +515,7 @@ def _umap_of_relevant_genes(
         plot_info: Sequence[Tuple[str, pd.Series]],
         layer: Optional[str] = None,
         title_col: str = 'title',
+        gene_symbols: Optional[str] = None,
         dim_subset: Sequence[str] = None,
         max_gene_per_dim: int = 10,
         max_cells_to_plot: Union[int, None] = None,
@@ -541,7 +542,7 @@ def _umap_of_relevant_genes(
             real_dim_title = dim_title
         
         adata.obs[dim_title] = list(embed[adata.obs.index, embed.var[title_col] == real_dim_title].X[:, 0])
-        ax = sc.pl.embedding(adata, 'X_umap_method', color=[dim_title], 
+        ax = sc.pl.embedding(adata, 'X_umap_method', color=[dim_title],
                              cmap=_cmap,
                              vcenter=0,
                              show=False, frameon=False)
@@ -550,7 +551,8 @@ def _umap_of_relevant_genes(
         ax.set_title("")
         plt.show()
 
-        axes = sc.pl.embedding(adata, 'X_umap_method', layer=layer, color=relevant_genes[:max_gene_per_dim], 
+        axes = sc.pl.embedding(adata, 'X_umap_method', layer=layer, 
+                               color=relevant_genes[:max_gene_per_dim], gene_symbols=gene_symbols,
                                cmap=cmap.saturated_just_sky_cmap, show=False, frameon=False)
         if max_gene_per_dim == 1 or len(relevant_genes) == 1:
             axes = [axes]
@@ -580,5 +582,5 @@ def plot_relevant_genes_on_umap(
         traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
     )
 
-    return _umap_of_relevant_genes(adata, embed, plot_info, layer, title_col,
+    return _umap_of_relevant_genes(adata, embed, plot_info, layer, title_col, gene_symbols,
                                    dim_subset, max_gene_per_dim, max_cells_to_plot)

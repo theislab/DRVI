@@ -218,7 +218,7 @@ class GenerativeMixin:
         )
 
         if aggregate_over_cells:
-            output = output.mean(axis=0)
+            output = output.sum(axis=0)
         
         return output
 

@@ -119,11 +119,14 @@ def traverse_the_latent(
             'original_order': np.arange(effect_mean_param.shape[1]),
         }, index=model.adata.var_names),
     )
+    for col in model.adata.var.columns:
+        traverse_adata.var[col] = model.adata.var[col]
     traverse_adata.layers['control'] = control_mean_param
     traverse_adata.layers['effect'] = effect_mean_param
     traverse_adata.obsm['control_latent'] = control_data
     traverse_adata.obsm['effect_latent'] = effect_data
-    traverse_adata.obsm['cat_covs'] = cat_vector
+    if cat_vector is not None:
+        traverse_adata.obsm['cat_covs'] = cat_vector
     traverse_adata.obs['lib_size'] = lib_vector
 
     return traverse_adata
