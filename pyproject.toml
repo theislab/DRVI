@@ -132,6 +132,9 @@ ignore = [
     "D203",
     # We want docstrings to start immediately after the opening triple quote
     "D213",
+    # For now skip missing docstrings for public classes and methods. TODO: remove this
+    "D101",
+    "D102",
 ]
 
 [tool.ruff.lint.pydocstyle]
