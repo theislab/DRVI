@@ -1,6 +1,7 @@
 import collections
 import math
-from typing import Callable, Iterable, Dict, Literal, Union, Sequence
+from collections.abc import Callable, Iterable, Sequence
+from typing import Literal
 
 import torch
 from scvi.nn._utils import one_hot
@@ -10,7 +11,7 @@ from torch.nn import functional as F
 
 from drvi.module.embedding import MultiEmbedding
 from drvi.module.freezable import FreezableBatchNorm1d, FreezableLayerNorm
-from src.drvi.module.layer.factory import LayerFactory, FCLayerFactory
+from drvi.module.layer.factory import FCLayerFactory, LayerFactory
 from drvi.module.layer.linear_layer import StackedLinearLayer
 from drvi.module.noise_model import NoiseModel
 
@@ -28,7 +29,7 @@ class BatchWiseAdapter(nn.Module):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        gain = 1.
+        gain = 1.0
         fan_l = self.L.shape[0]
         std_l = gain / math.sqrt(fan_l)
         bound_l = math.sqrt(3.0) * std_l
@@ -43,18 +44,20 @@ class BatchWiseAdapter(nn.Module):
 
     def forward(self, x, batch_emb):
         # TODO: replace with more efficient ops
-        l_t = torch.einsum('be,eid->bid', batch_emb, self.L)
-        r_t = torch.einsum('be,edo->bdo', batch_emb, self.R)
-        intermediate_tensor = F.relu(torch.einsum('b...i,bid->b...d', x, l_t) + self.L_bias)
-        return torch.einsum('b...d,bdo->b...o', intermediate_tensor, r_t)
+        l_t = torch.einsum("be,eid->bid", batch_emb, self.L)
+        r_t = torch.einsum("be,edo->bdo", batch_emb, self.R)
+        intermediate_tensor = F.relu(torch.einsum("b...i,bid->b...d", x, l_t) + self.L_bias)
+        return torch.einsum("b...d,bdo->b...o", intermediate_tensor, r_t)
 
     def __repr__(self):
-        return (f"{self.__class__.__name__}("
-                f"batch_repr_dim={self.L.shape[0]}, "
-                f"input_dim={self.L.shape[1]}, "
-                f"output_dim={self.R.shape[2]}, "
-                f"low_rank_dim={self.L.shape[2]}"
-                f")")
+        return (
+            f"{self.__class__.__name__}("
+            f"batch_repr_dim={self.L.shape[0]}, "
+            f"input_dim={self.L.shape[1]}, "
+            f"output_dim={self.R.shape[2]}, "
+            f"low_rank_dim={self.L.shape[2]}"
+            f")"
+        )
 
 
 class FCLayers(nn.Module):
@@ -98,34 +101,42 @@ class FCLayers(nn.Module):
     """
 
     def __init__(
-            self,
-            layers_dim: Sequence[int],
-            n_cat_list: Iterable[int] = None,
-            dropout_rate: float = 0.1,
-            split_size: int = -1,
-            reuse_weights: bool = True,
-            use_batch_norm: bool = True,
-            affine_batch_norm: bool = True,
-            use_layer_norm: bool = False,
-            use_activation: bool = True,
-            bias: bool = True,
-            inject_covariates: bool = True,
-            activation_fn: nn.Module = nn.ELU,
-            layer_factory: LayerFactory = None,
-            layers_location: Literal["intermediate", "first", "last"] = "intermediate",
-            covariate_modeling_strategy: Literal[
-                "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
-                "emb_adapter", "one_hot_adapter", "emb_shared_adapter"] = "one_hot",
-            covariate_embs_dim: Iterable[int] = tuple([]),
+        self,
+        layers_dim: Sequence[int],
+        n_cat_list: Iterable[int] = None,
+        dropout_rate: float = 0.1,
+        split_size: int = -1,
+        reuse_weights: bool = True,
+        use_batch_norm: bool = True,
+        affine_batch_norm: bool = True,
+        use_layer_norm: bool = False,
+        use_activation: bool = True,
+        bias: bool = True,
+        inject_covariates: bool = True,
+        activation_fn: nn.Module = nn.ELU,
+        layer_factory: LayerFactory = None,
+        layers_location: Literal["intermediate", "first", "last"] = "intermediate",
+        covariate_modeling_strategy: Literal[
+            "one_hot",
+            "emb",
+            "emb_shared",
+            "one_hot_linear",
+            "emb_linear",
+            "emb_shared_linear",
+            "emb_adapter",
+            "one_hot_adapter",
+            "emb_shared_adapter",
+        ] = "one_hot",
+        covariate_embs_dim: Iterable[int] = (),
     ):
         super().__init__()
         self.inject_covariates = inject_covariates
         if covariate_modeling_strategy.endswith("_linear"):
             self.covariate_projection_modeling = "linear"
-            self.covariate_vector_modeling = covariate_modeling_strategy[:-len("_linear")]
+            self.covariate_vector_modeling = covariate_modeling_strategy[: -len("_linear")]
         elif covariate_modeling_strategy.endswith("_adapter"):
             self.covariate_projection_modeling = "adapter"
-            self.covariate_vector_modeling = covariate_modeling_strategy[:-len("_adapter")]
+            self.covariate_vector_modeling = covariate_modeling_strategy[: -len("_adapter")]
         else:
             self.covariate_projection_modeling = "cat"
             self.covariate_vector_modeling = covariate_modeling_strategy
@@ -166,9 +177,7 @@ class FCLayers(nn.Module):
                 layer_needs_injection = True
                 cat_dim = sum(covariate_embs_dim)
                 if self.covariate_vector_modeling == "emb":
-                    batch_emb = MultiEmbedding(
-                        self.n_cat_list, covariate_embs_dim,
-                        init_method='normal', max_norm=1.)
+                    batch_emb = MultiEmbedding(self.n_cat_list, covariate_embs_dim, init_method="normal", max_norm=1.0)
                     output.append(batch_emb)
                 if self.covariate_projection_modeling == "cat":
                     n_in += cat_dim
@@ -210,15 +219,15 @@ class FCLayers(nn.Module):
             if split_size == -1:
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
-                    output.append(FreezableBatchNorm1d(n_out, momentum=0.01, eps=0.001,
-                                                       affine=affine_batch_norm))
+                    output.append(FreezableBatchNorm1d(n_out, momentum=0.01, eps=0.001, affine=affine_batch_norm))
                 if use_layer_norm:
                     output.append(FreezableLayerNorm(n_out, elementwise_affine=False))
             else:
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
-                    output.append(FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001,
-                                                       affine=affine_batch_norm))
+                    output.append(
+                        FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001, affine=affine_batch_norm)
+                    )
                 if use_layer_norm:
                     output.append(FreezableLayerNorm(n_out, elementwise_affine=False))
                     # The following logic is wrong
@@ -230,16 +239,20 @@ class FCLayers(nn.Module):
                 [
                     (
                         f"Layer {i}",
-                        nn.ModuleList([p for p in [
-                            *get_projection_layer(n_in, n_out, i),
-                            *get_normalization_layers(n_out),
-                            activation_fn() if use_activation else None,
-                            nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None,
-                        ] if p is not None]),
+                        nn.ModuleList(
+                            [
+                                p
+                                for p in [
+                                    *get_projection_layer(n_in, n_out, i),
+                                    *get_normalization_layers(n_out),
+                                    activation_fn() if use_activation else None,
+                                    nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None,
+                                ]
+                                if p is not None
+                            ]
+                        ),
                     )
-                    for i, (n_in, n_out) in enumerate(
-                        zip(layers_dim[:-1], layers_dim[1:])
-                    )
+                    for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:], strict=True))
                 ]
             )
         )
@@ -259,9 +272,11 @@ class FCLayers(nn.Module):
                     if w_size[1] == sum(n_cats_per_cov):
                         transfer_mask = []
                     else:
-                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov)], device=weight.device)]
+                        transfer_mask = [
+                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov)], device=weight.device)
+                        ]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
-                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
+                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old], device=weight.device))
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old], device=weight.device))
@@ -273,12 +288,16 @@ class FCLayers(nn.Module):
                     if w_size[1] == sum(n_cats_per_cov):
                         transfer_mask = []
                     else:
-                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov), w_size[2]], device=weight.device)]
+                        transfer_mask = [
+                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov), w_size[2]], device=weight.device)
+                        ]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
-                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
+                    for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old, w_size[2]], device=weight.device))
                         if n_cat_new > n_cat_old:
-                            transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old, w_size[2]], device=weight.device))
+                            transfer_mask.append(
+                                torch.ones([w_size[0], n_cat_new - n_cat_old, w_size[2]], device=weight.device)
+                            )
                     transfer_mask = torch.cat(transfer_mask, dim=1)
             else:
                 raise NotImplementedError()
@@ -291,7 +310,7 @@ class FCLayers(nn.Module):
         if self.covariate_projection_modeling == "adapter":
             raise NotImplementedError()
 
-        for i, layers in enumerate(self.fc_layers):
+        for layers in self.fc_layers:
             for layer in layers:
                 if self.covariate_vector_modeling == "emb_shared":
                     # Nothing to do here :)
@@ -306,10 +325,8 @@ class FCLayers(nn.Module):
                 elif self.covariate_vector_modeling == "one_hot":
                     assert self.covariate_projection_modeling in ["cat", "linear"]
                     # Freeze everything but linears right after one_hot (new weights)
-                    if (
-                            (self.covariate_projection_modeling == "cat" and layer in self.injectable_layers)
-                            or
-                            (self.covariate_projection_modeling == "linear" and layer in self.linear_batch_projections)
+                    if (self.covariate_projection_modeling == "cat" and layer in self.injectable_layers) or (
+                        self.covariate_projection_modeling == "linear" and layer in self.linear_batch_projections
                     ):
                         assert layer.weight.requires_grad
                         print(f"Registering backward hook parameter with shape {layer.weight.size()}")
@@ -339,13 +356,11 @@ class FCLayers(nn.Module):
             if cat_full_tensor is not None:
                 cat_list = torch.split(cat_full_tensor, 1, dim=1)
             else:
-                cat_list = tuple()
+                cat_list = ()
 
             if len(self.n_cat_list) > len(cat_list):
-                raise ValueError(
-                    "nb. categorical args provided doesn't match init. params."
-                )
-            for n_cat, cat in zip(self.n_cat_list, cat_list):
+                raise ValueError("nb. categorical args provided doesn't match init. params.")
+            for n_cat, cat in zip(self.n_cat_list, cat_list, strict=False):
                 if n_cat and cat is None:
                     raise ValueError("cat not provided while n_cat != 0 in init. params.")
                 concat_list += [one_hot(cat, n_cat)]
@@ -361,7 +376,7 @@ class FCLayers(nn.Module):
                 return t.unsqueeze(dim=1).expand(-1, x.shape[1], -1)
             raise NotImplementedError()
 
-        for i, layers in enumerate(self.fc_layers):
+        for layers in self.fc_layers:
             concat_list_layer = concat_list
             projected_batch_layer = None
             for layer in layers:
@@ -449,28 +464,36 @@ class Encoder(nn.Module):
     """
 
     def __init__(
-            self,
-            n_input: int,
-            n_output: int,
-            layers_dim: Sequence[int] = tuple([128]),
-            n_cat_list: Iterable[int] = None,
-            n_continuous_cov: int = 0,
-            inject_covariates: bool = True,
-            use_batch_norm: bool = True,
-            affine_batch_norm: bool = True,
-            use_layer_norm: bool = False,
-            input_dropout_rate: float = 0.,
-            dropout_rate: float = 0.1,
-            distribution: str = "normal",
-            var_eps: float = 1e-4,
-            var_activation: Union[Callable, Literal["exp", "pow2"]] = 'exp',
-            layer_factory: LayerFactory = None,
-            covariate_modeling_strategy: Literal[
-                "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
-                "emb_adapter", "one_hot_adapter", "emb_shared_adapter"] = "one_hot",
-            categorical_covariate_dims: Sequence[int] = tuple([]),
-            return_dist: bool = False,
-            **kwargs,
+        self,
+        n_input: int,
+        n_output: int,
+        layers_dim: Sequence[int] = (128,),
+        n_cat_list: Iterable[int] = None,
+        n_continuous_cov: int = 0,
+        inject_covariates: bool = True,
+        use_batch_norm: bool = True,
+        affine_batch_norm: bool = True,
+        use_layer_norm: bool = False,
+        input_dropout_rate: float = 0.0,
+        dropout_rate: float = 0.1,
+        distribution: str = "normal",
+        var_eps: float = 1e-4,
+        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        layer_factory: LayerFactory = None,
+        covariate_modeling_strategy: Literal[
+            "one_hot",
+            "emb",
+            "emb_shared",
+            "one_hot_linear",
+            "emb_linear",
+            "emb_shared_linear",
+            "emb_adapter",
+            "one_hot_adapter",
+            "emb_shared_adapter",
+        ] = "one_hot",
+        categorical_covariate_dims: Sequence[int] = (),
+        return_dist: bool = False,
+        **kwargs,
     ):
         super().__init__()
 
@@ -495,7 +518,7 @@ class Encoder(nn.Module):
                 **kwargs,
             )
         else:
-            self.register_parameter('encoder', None)
+            self.register_parameter("encoder", None)
             inject_covariates = True
         self.mean_encoder = FCLayers(
             layers_dim=all_layers_dim[-2:],
@@ -531,9 +554,9 @@ class Encoder(nn.Module):
             self.z_transformation = nn.Softmax(dim=-1)
         else:
             self.z_transformation = _identity
-        if var_activation == 'exp':
+        if var_activation == "exp":
             self.var_activation = torch.exp
-        elif var_activation == 'pow2':
+        elif var_activation == "pow2":
             self.var_activation = lambda x: torch.pow(x, 2)
         else:
             assert callable(var_activation)
@@ -620,28 +643,36 @@ class DecoderDRVI(nn.Module):
     """
 
     def __init__(
-            self,
-            n_input: int,
-            n_output: int,
-            gene_likelihood_module: NoiseModel,
-            n_cat_list: Iterable[int] = None,
-            n_continuous_cov: int = 0,
-            n_split: int = 1,
-            split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
-            split_method: Literal["split", "power", "split_map"] = "split",
-            reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
-            layers_dim: Sequence[int] = tuple([128]),
-            dropout_rate: float = 0.1,
-            inject_covariates: bool = True,
-            use_batch_norm: bool = False,
-            affine_batch_norm: bool = True,
-            use_layer_norm: bool = False,
-            layer_factory: LayerFactory = None,
-            covariate_modeling_strategy: Literal[
-                "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
-                "emb_adapter", "one_hot_adapter", "emb_shared_adapter"] = "one_hot",
-            categorical_covariate_dims: Sequence[int] = tuple([]),
-            **kwargs,
+        self,
+        n_input: int,
+        n_output: int,
+        gene_likelihood_module: NoiseModel,
+        n_cat_list: Iterable[int] = None,
+        n_continuous_cov: int = 0,
+        n_split: int = 1,
+        split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
+        split_method: Literal["split", "power", "split_map"] = "split",
+        reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
+        layers_dim: Sequence[int] = (128,),
+        dropout_rate: float = 0.1,
+        inject_covariates: bool = True,
+        use_batch_norm: bool = False,
+        affine_batch_norm: bool = True,
+        use_layer_norm: bool = False,
+        layer_factory: LayerFactory = None,
+        covariate_modeling_strategy: Literal[
+            "one_hot",
+            "emb",
+            "emb_shared",
+            "one_hot_linear",
+            "emb_linear",
+            "emb_shared_linear",
+            "emb_adapter",
+            "one_hot_adapter",
+            "emb_shared_adapter",
+        ] = "one_hot",
+        categorical_covariate_dims: Sequence[int] = (),
+        **kwargs,
     ):
         super().__init__()
         self.n_output = n_output
@@ -694,7 +725,7 @@ class DecoderDRVI(nn.Module):
                 **kwargs,
             )
         else:
-            self.register_parameter('px_shared_decoder', None)
+            self.register_parameter("px_shared_decoder", None)
             inject_covariates = True
 
         params_for_likelihood = self.gene_likelihood_module.parameters
@@ -702,8 +733,9 @@ class DecoderDRVI(nn.Module):
         for param_name, param_info in params_for_likelihood.items():
             if param_info.startswith("fixed="):
                 params_nets[param_name] = torch.nn.Parameter(
-                    torch.tensor(float(param_info.split("=")[1])), requires_grad=False)
-            elif param_info == 'no_transformation':
+                    torch.tensor(float(param_info.split("=")[1])), requires_grad=False
+                )
+            elif param_info == "no_transformation":
                 params_nets[param_name] = FCLayers(
                     layers_dim=all_layers_dim[-2:],
                     split_size=n_split,
@@ -720,19 +752,19 @@ class DecoderDRVI(nn.Module):
                     covariate_embs_dim=categorical_covariate_dims if inject_covariates else [],
                     **kwargs,
                 )
-            elif param_info == 'per_feature':
+            elif param_info == "per_feature":
                 params_nets[param_name] = torch.nn.Parameter(torch.randn(n_output))
             else:
                 raise NotImplementedError()
         self.params_nets = nn.ParameterDict(params_nets)
 
     def forward(
-            self,
-            z: torch.Tensor,
-            cat_full_tensor: torch.Tensor,
-            cont_full_tensor: torch.Tensor,
-            library: torch.Tensor,
-            gene_likelihood_additional_info: Dict,
+        self,
+        z: torch.Tensor,
+        cat_full_tensor: torch.Tensor,
+        cont_full_tensor: torch.Tensor,
+        library: torch.Tensor,
+        gene_likelihood_additional_info: dict,
     ):
         """The forward computation for a single sample.
 
@@ -761,7 +793,7 @@ class DecoderDRVI(nn.Module):
                 z = self.split_transformation(z)
             z = torch.reshape(z, (batch_size, self.n_split, -1))
             if self.split_method == "split_map":
-                z = torch.einsum('bsd,sdn->bsn', z, self.split_transformation_weight)
+                z = torch.einsum("bsd,sdn->bsn", z, self.split_transformation_weight)
 
         if cont_full_tensor is not None:
             if self.n_split > 1:
@@ -776,7 +808,7 @@ class DecoderDRVI(nn.Module):
             if param_info.startswith("fixed="):
                 original_params[param_name] = param_net
                 params[param_name] = param_net.reshape(1, 1).expand(batch_size, self.n_output)
-            elif param_info == 'no_transformation':
+            elif param_info == "no_transformation":
                 param_value = param_net(last_tensor, cat_full_tensor)
                 original_params[param_name] = param_value
                 if self.n_split > 1:
@@ -792,13 +824,14 @@ class DecoderDRVI(nn.Module):
                         raise NotImplementedError()
                 else:
                     params[param_name] = param_value
-            elif param_info == 'per_feature':
+            elif param_info == "per_feature":
                 original_params[param_name] = param_net
                 params[param_name] = param_net.unsqueeze(0).expand(batch_size, -1)
             else:
                 raise NotImplementedError()
 
         # Note this logic:
-        px_dist = self.gene_likelihood_module.dist(aux_info=gene_likelihood_additional_info,
-                                                   parameters=params, lib_y=library)
+        px_dist = self.gene_likelihood_module.dist(
+            aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
+        )
         return px_dist, params, original_params
