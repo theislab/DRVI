@@ -3,7 +3,7 @@
 ## Model
 
 ```{eval-rst}
-.. module:: drvi.scvi_tools_based
+.. module:: drvi.DRVI
 .. currentmodule:: drvi
 
 .. autosummary::
@@ -12,11 +12,10 @@
     drvi.DRVI
 ```
 
-
 ## Module
 
 ```{eval-rst}
-.. module:: drvi.scvi_tools_based
+.. module:: drvi.DRVIModule
 .. currentmodule:: drvi
 
 .. autosummary::
@@ -25,12 +24,11 @@
     drvi.DRVIModule
 ```
 
-
 ## Tools
 
 ```{eval-rst}
 .. module:: drvi.utils.user.tools
-.. currentmodule:: drvi
+.. currentmodule:: drvi.utils.user
 
 .. autosummary::
     :toctree: generated
@@ -45,7 +43,7 @@
 
 ```{eval-rst}
 .. module:: drvi.utils.user.general
-.. currentmodule:: drvi
+.. currentmodule:: drvi.utils.user
 
 .. autosummary::
     :toctree: generated
@@ -58,7 +56,7 @@
 
 ```{eval-rst}
 .. module:: drvi.utils.user.plotting
-.. currentmodule:: drvi
+.. currentmodule:: drvi.utils.user
 
 .. autosummary::
     :toctree: generated
