@@ -8,7 +8,7 @@ from torch.distributions import Normal
 from torch.utils.data import DataLoader
 
 from drvi.module.embedding import MultiEmbedding
-from drvi.module.layer.factory import LayerFactory
+from src.drvi.module.layer.factory import LayerFactory
 from drvi.module.noise_model import (LogNegativeBinomialNoiseModel,
                                      NegativeBinomialNoiseModel,
                                      NormalNoiseModel, PoissonNoiseModel)
@@ -117,9 +117,9 @@ class DRVIModule(BaseModuleClass):
             encoder_dropout_rate: float = 0.1,
             decoder_dropout_rate: float = 0.,
             gene_likelihood: Literal[
-                'normal', 'normal_v', 'normal_sv', 
-                'poisson', 'poisson_orig', 
-                'nb', 'nb_sv', 'nb_libnorm', 'nb_loglib_rec', 'nb_libnorm_loglib_rec', 'nb_loglibnorm_all', 'nb_orig', 'nb_softmax', 'nb_orig_libnorm', 
+                'normal', 'normal_v', 'normal_sv',
+                'poisson', 'poisson_orig',
+                'nb', 'nb_sv', 'nb_libnorm', 'nb_loglib_rec', 'nb_libnorm_loglib_rec', 'nb_loglibnorm_all', 'nb_orig', 'nb_softmax', 'nb_orig_libnorm',
                 'pnb', 'pnb_sv', 'pnb_softmax'] = 'pnb_softmax',
             prior: Literal["normal", "gmm_x", "vamp_x"] = 'normal',
             prior_init_dataloader: Optional[DataLoader] = None,
@@ -331,7 +331,7 @@ class DRVIModule(BaseModuleClass):
 
         # get variational parameters via the encoder networks
         qz_m, qz_v, z = self.z_encoder(
-            x_, 
+            x_,
             cat_full_tensor=pre_processed_input['cat_full_tensor'],
             cont_full_tensor=pre_processed_input['cont_full_tensor'],
         )

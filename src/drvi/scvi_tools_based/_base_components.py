@@ -10,7 +10,7 @@ from torch.nn import functional as F
 
 from drvi.module.embedding import MultiEmbedding
 from drvi.module.freezable import FreezableBatchNorm1d, FreezableLayerNorm
-from drvi.module.layer.factory import LayerFactory, FCLayerFactory
+from src.drvi.module.layer.factory import LayerFactory, FCLayerFactory
 from drvi.module.layer.linear_layer import StackedLinearLayer
 from drvi.module.noise_model import NoiseModel
 
@@ -148,7 +148,7 @@ class FCLayers(nn.Module):
             if layers_location == "last" and i == len(layers_dim) - 2:
                 return False
             return True
-        
+
         def inject_into_layer(layer_num):
             user_cond = layer_num == 0 or (layer_num > 0 and self.inject_covariates)
             return user_cond
@@ -266,7 +266,7 @@ class FCLayers(nn.Module):
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old], device=weight.device))
                     transfer_mask = torch.cat(transfer_mask, dim=1)
-            elif weight.dim() == 3:                        
+            elif weight.dim() == 3:
                 # 3D tensors
                 with torch.no_grad():
                     # Freeze gradients for normal nodes
@@ -285,7 +285,7 @@ class FCLayers(nn.Module):
 
             def _hook_fn_injectable(grad):
                 return grad * transfer_mask
-            
+
             return _hook_fn_injectable
 
         if self.covariate_projection_modeling == "adapter":
@@ -762,7 +762,7 @@ class DecoderDRVI(nn.Module):
             z = torch.reshape(z, (batch_size, self.n_split, -1))
             if self.split_method == "split_map":
                 z = torch.einsum('bsd,sdn->bsn', z, self.split_transformation_weight)
-        
+
         if cont_full_tensor is not None:
             if self.n_split > 1:
                 cont_full_tensor = cont_full_tensor.unsqueeze(1).expand(-1, self.n_split, -1)
