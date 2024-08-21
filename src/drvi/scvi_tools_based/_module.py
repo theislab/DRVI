@@ -1,4 +1,5 @@
-from typing import Callable, Dict, Iterable, Literal, Optional, Sequence, Union
+from collections.abc import Callable, Iterable, Sequence
+from typing import Literal
 
 import numpy as np
 import torch
@@ -8,15 +9,17 @@ from torch.distributions import Normal
 from torch.utils.data import DataLoader
 
 from drvi.module.embedding import MultiEmbedding
-from src.drvi.module.layer.factory import LayerFactory
-from drvi.module.noise_model import (LogNegativeBinomialNoiseModel,
-                                     NegativeBinomialNoiseModel,
-                                     NormalNoiseModel, PoissonNoiseModel)
-from drvi.module.prior import (GaussianMixtureModelPrior, StandardPrior,
-                               VampPrior)
+from drvi.module.layer.factory import LayerFactory
+from drvi.module.noise_model import (
+    LogNegativeBinomialNoiseModel,
+    NegativeBinomialNoiseModel,
+    NormalNoiseModel,
+    PoissonNoiseModel,
+)
+from drvi.module.prior import GaussianMixtureModelPrior, StandardPrior, VampPrior
 from drvi.scvi_tools_based._base_components import DecoderDRVI, Encoder
 
-TensorDict = Dict[str, torch.Tensor]
+TensorDict = dict[str, torch.Tensor]
 
 
 class DRVIModule(BaseModuleClass):
@@ -92,42 +95,64 @@ class DRVIModule(BaseModuleClass):
     """
 
     def __init__(
-            self,
-            n_input: int,
-            n_latent: int = 32,
-            n_split_latent: Optional[int] = -1,
-            split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
-            split_method: Literal["split", "power", "split_map"] = "split_map",
-            decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
-            encoder_dims: Sequence[int] = tuple([128, 128]),
-            decoder_dims: Sequence[int] = tuple([128, 128]),
-            n_cats_per_cov: Optional[Iterable[int]] = tuple([]),
-            n_continuous_cov: int = 0,
-            encode_covariates: bool = False,
-            deeply_inject_covariates: bool = False,
-            categorical_covariate_dims: Sequence[int] = tuple([]),
-            covariate_modeling_strategy: Literal[
-                "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
-                "emb_adapter", "one_hot_adapter", "emb_shared_adapter"] = "one_hot",
-            use_batch_norm: Literal["encoder", "decoder", "none", "both"] = "none",
-            affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
-            use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
-            fill_in_the_blanks_ratio: float = 0.,
-            input_dropout_rate: float = 0.,
-            encoder_dropout_rate: float = 0.1,
-            decoder_dropout_rate: float = 0.,
-            gene_likelihood: Literal[
-                'normal', 'normal_v', 'normal_sv',
-                'poisson', 'poisson_orig',
-                'nb', 'nb_sv', 'nb_libnorm', 'nb_loglib_rec', 'nb_libnorm_loglib_rec', 'nb_loglibnorm_all', 'nb_orig', 'nb_softmax', 'nb_orig_libnorm',
-                'pnb', 'pnb_sv', 'pnb_softmax'] = 'pnb_softmax',
-            prior: Literal["normal", "gmm_x", "vamp_x"] = 'normal',
-            prior_init_dataloader: Optional[DataLoader] = None,
-            var_activation: Union[Callable, Literal["exp", "pow2"]] = 'exp',
-            encoder_layer_factory: LayerFactory = None,
-            decoder_layer_factory: LayerFactory = None,
-            extra_encoder_kwargs: Optional[dict] = None,
-            extra_decoder_kwargs: Optional[dict] = None,
+        self,
+        n_input: int,
+        n_latent: int = 32,
+        n_split_latent: int | None = -1,
+        split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
+        split_method: Literal["split", "power", "split_map"] = "split_map",
+        decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
+        encoder_dims: Sequence[int] = (128, 128),
+        decoder_dims: Sequence[int] = (128, 128),
+        n_cats_per_cov: Iterable[int] | None = (),
+        n_continuous_cov: int = 0,
+        encode_covariates: bool = False,
+        deeply_inject_covariates: bool = False,
+        categorical_covariate_dims: Sequence[int] = (),
+        covariate_modeling_strategy: Literal[
+            "one_hot",
+            "emb",
+            "emb_shared",
+            "one_hot_linear",
+            "emb_linear",
+            "emb_shared_linear",
+            "emb_adapter",
+            "one_hot_adapter",
+            "emb_shared_adapter",
+        ] = "one_hot",
+        use_batch_norm: Literal["encoder", "decoder", "none", "both"] = "none",
+        affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
+        use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
+        fill_in_the_blanks_ratio: float = 0.0,
+        input_dropout_rate: float = 0.0,
+        encoder_dropout_rate: float = 0.1,
+        decoder_dropout_rate: float = 0.0,
+        gene_likelihood: Literal[
+            "normal",
+            "normal_v",
+            "normal_sv",
+            "poisson",
+            "poisson_orig",
+            "nb",
+            "nb_sv",
+            "nb_libnorm",
+            "nb_loglib_rec",
+            "nb_libnorm_loglib_rec",
+            "nb_loglibnorm_all",
+            "nb_orig",
+            "nb_softmax",
+            "nb_orig_libnorm",
+            "pnb",
+            "pnb_sv",
+            "pnb_softmax",
+        ] = "pnb_softmax",
+        prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
+        prior_init_dataloader: DataLoader | None = None,
+        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        encoder_layer_factory: LayerFactory = None,
+        decoder_layer_factory: LayerFactory = None,
+        extra_encoder_kwargs: dict | None = None,
+        extra_decoder_kwargs: dict | None = None,
     ):
         super().__init__()
         self.n_latent = n_latent
@@ -152,13 +177,23 @@ class DRVIModule(BaseModuleClass):
         use_layer_norm_decoder = use_layer_norm == "decoder" or use_layer_norm == "both"
 
         assert covariate_modeling_strategy in [
-            "one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear",
-            "emb_adapter", "one_hot_adapter", "emb_shared_adapter"]
-        if covariate_modeling_strategy in [
-            "emb_shared", "emb_shared_linear", "emb_shared_adapter"
-        ] and len(n_cats_per_cov) > 0:
+            "one_hot",
+            "emb",
+            "emb_shared",
+            "one_hot_linear",
+            "emb_linear",
+            "emb_shared_linear",
+            "emb_adapter",
+            "one_hot_adapter",
+            "emb_shared_adapter",
+        ]
+        if (
+            covariate_modeling_strategy in ["emb_shared", "emb_shared_linear", "emb_shared_adapter"]
+            and len(n_cats_per_cov) > 0
+        ):
             self.shared_covariate_emb = MultiEmbedding(
-                n_cats_per_cov, categorical_covariate_dims, init_method="normal", max_norm=1.)
+                n_cats_per_cov, categorical_covariate_dims, init_method="normal", max_norm=1.0
+            )
         else:
             self.register_module("shared_covariate_emb", None)
 
@@ -178,7 +213,7 @@ class DRVIModule(BaseModuleClass):
             layer_factory=encoder_layer_factory,
             covariate_modeling_strategy=covariate_modeling_strategy,
             categorical_covariate_dims=categorical_covariate_dims if self.encode_covariates else [],
-            **(extra_encoder_kwargs or {})
+            **(extra_encoder_kwargs or {}),
         )
         self.decoder = DecoderDRVI(
             n_latent,
@@ -199,75 +234,81 @@ class DRVIModule(BaseModuleClass):
             layer_factory=decoder_layer_factory,
             covariate_modeling_strategy=covariate_modeling_strategy,
             categorical_covariate_dims=categorical_covariate_dims,
-            **(extra_decoder_kwargs or {})
+            **(extra_decoder_kwargs or {}),
         )
 
         self.prior = self._construct_prior(prior, prior_init_dataloader)
         self.fully_deterministic = False
 
     def _construct_gene_likelihood_module(self, gene_likelihood):
-        if gene_likelihood == 'normal':
-            return NormalNoiseModel(model_var='fixed=1')
-        elif gene_likelihood == 'normal_v':
-            return NormalNoiseModel(model_var='dynamic')
-        elif gene_likelihood == 'normal_sv':
-            return NormalNoiseModel(model_var='feature')
-        elif gene_likelihood == 'poisson':
-            return PoissonNoiseModel(mean_transformation='exp', library_normalization='none')
-        elif gene_likelihood == 'poisson_orig':
-            return PoissonNoiseModel(mean_transformation='softmax', library_normalization='none')
-        elif gene_likelihood in ['nb', 'nb_sv']:
-            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='none')
-        elif gene_likelihood in ['nb_libnorm']:
-            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_lib')
-        elif gene_likelihood in ['nb_loglib_rec']:
-            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_loglib')
-        elif gene_likelihood in ['nb_libnorm_loglib_rec']:
-            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='div_lib_x_loglib')
-        elif gene_likelihood in ['nb_loglibnorm_all']:
-            return NegativeBinomialNoiseModel(dispersion='feature', library_normalization='x_loglib_all')
-        elif gene_likelihood in ['nb_orig', 'nb_softmax']:
-            return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='none')
-        elif gene_likelihood == 'nb_orig_libnorm':
-            return NegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='x_lib')
-        elif gene_likelihood in ['pnb', 'pnb_sv']:
-            return LogNegativeBinomialNoiseModel(dispersion='feature', library_normalization='none')
-        elif gene_likelihood in ['pnb_softmax']:
-            return LogNegativeBinomialNoiseModel(dispersion='feature', mean_transformation='softmax', library_normalization='none')
+        if gene_likelihood == "normal":
+            return NormalNoiseModel(model_var="fixed=1")
+        elif gene_likelihood == "normal_v":
+            return NormalNoiseModel(model_var="dynamic")
+        elif gene_likelihood == "normal_sv":
+            return NormalNoiseModel(model_var="feature")
+        elif gene_likelihood == "poisson":
+            return PoissonNoiseModel(mean_transformation="exp", library_normalization="none")
+        elif gene_likelihood == "poisson_orig":
+            return PoissonNoiseModel(mean_transformation="softmax", library_normalization="none")
+        elif gene_likelihood in ["nb", "nb_sv"]:
+            return NegativeBinomialNoiseModel(dispersion="feature", library_normalization="none")
+        elif gene_likelihood in ["nb_libnorm"]:
+            return NegativeBinomialNoiseModel(dispersion="feature", library_normalization="x_lib")
+        elif gene_likelihood in ["nb_loglib_rec"]:
+            return NegativeBinomialNoiseModel(dispersion="feature", library_normalization="x_loglib")
+        elif gene_likelihood in ["nb_libnorm_loglib_rec"]:
+            return NegativeBinomialNoiseModel(dispersion="feature", library_normalization="div_lib_x_loglib")
+        elif gene_likelihood in ["nb_loglibnorm_all"]:
+            return NegativeBinomialNoiseModel(dispersion="feature", library_normalization="x_loglib_all")
+        elif gene_likelihood in ["nb_orig", "nb_softmax"]:
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="softmax", library_normalization="none"
+            )
+        elif gene_likelihood == "nb_orig_libnorm":
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="softmax", library_normalization="x_lib"
+            )
+        elif gene_likelihood in ["pnb", "pnb_sv"]:
+            return LogNegativeBinomialNoiseModel(dispersion="feature", library_normalization="none")
+        elif gene_likelihood in ["pnb_softmax"]:
+            return LogNegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="softmax", library_normalization="none"
+            )
         else:
             raise NotImplementedError()
 
     def _construct_prior(self, prior, prior_init_dataloader=None):
-        if prior == 'normal':
+        if prior == "normal":
             return StandardPrior()
-        elif prior.startswith('gmm_'):
+        elif prior.startswith("gmm_"):
             n_components = int(prior.split("_")[1])
             if prior_init_dataloader is not None:
                 inference_output = self.inference(**self._get_inference_input(next(iter(prior_init_dataloader))))
-                init_data = inference_output['qz_m'], inference_output['qz_v']
+                init_data = inference_output["qz_m"], inference_output["qz_v"]
             else:
                 init_data = None
             return GaussianMixtureModelPrior(n_components, self.n_latent, data=init_data)
-        elif prior.startswith('vamp_'):
+        elif prior.startswith("vamp_"):
             n_components = int(prior.split("_")[1])
             if prior_init_dataloader is not None:
+
                 def preparation_function(prepared_input):
-                    x = prepared_input['encoder_input']
+                    x = prepared_input["encoder_input"]
                     args = []
-                    kwargs = {'cat_full_tensor': prepared_input['cat_full_tensor']}
+                    kwargs = {"cat_full_tensor": prepared_input["cat_full_tensor"]}
                     return x, args, kwargs
 
                 model_input = self._input_pre_processing(**self._get_inference_input(next(iter(prior_init_dataloader))))
             else:
                 raise ValueError("VaMP prior needs input samples as pseudo-inputs.")
             return VampPrior(
-                n_components, self.z_encoder, model_input,input_type='scvi',
-                trainable_keys=(
-                    'encoder_input',
-                ),
-                fixed_keys=(
-                    'cat_full_tensor',
-                ),
+                n_components,
+                self.z_encoder,
+                model_input,
+                input_type="scvi",
+                trainable_keys=("encoder_input",),
+                fixed_keys=("cat_full_tensor",),
                 preparation_function=preparation_function,
             )
         else:
@@ -280,11 +321,7 @@ class DRVIModule(BaseModuleClass):
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
-        input_dict = dict(
-            x=x,
-            cont_covs=cont_covs,
-            cat_covs=cat_covs,
-        )
+        input_dict = {"x": x, "cont_covs": cont_covs, "cat_covs": cat_covs}
         return input_dict
 
     def _input_pre_processing(self, x, cont_covs=None, cat_covs=None):
@@ -296,13 +333,13 @@ class DRVIModule(BaseModuleClass):
 
         encoder_input = x_
 
-        return dict(
-            encoder_input=encoder_input,
-            cat_full_tensor=cat_covs if self.encode_covariates else None,
-            cont_full_tensor=cont_covs if self.encode_covariates else None,
-            library=library,
-            gene_likelihood_additional_info=gene_likelihood_additional_info,
-        )
+        return {
+            "encoder_input": encoder_input,
+            "cat_full_tensor": cat_covs if self.encode_covariates else None,
+            "cont_full_tensor": cont_covs if self.encode_covariates else None,
+            "library": library,
+            "gene_likelihood_additional_info": gene_likelihood_additional_info,
+        }
 
     @auto_move_data
     def inference(self, x, cont_covs=None, cat_covs=None):
@@ -312,12 +349,12 @@ class DRVIModule(BaseModuleClass):
         Runs the inference (encoder) model.
         """
         pre_processed_input = self._input_pre_processing(x, cont_covs, cat_covs).copy()
-        x_ = pre_processed_input['encoder_input']
+        x_ = pre_processed_input["encoder_input"]
 
         # Mask if needed
-        if self.fill_in_the_blanks_ratio > 0. and self.training:
+        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
             assert cont_covs is None  # We do not consider cont_cov here
-            x_mask = torch.where(torch.rand_like(x_) >= self.fill_in_the_blanks_ratio, 1., 0.)
+            x_mask = torch.where(torch.rand_like(x_) >= self.fill_in_the_blanks_ratio, 1.0, 0.0)
             x_ = x_ * x_mask
             # TODO: check this:
             # x_ = x_ * x_mask / x_mask.mean(dim=1, keepdim=True)
@@ -326,19 +363,25 @@ class DRVIModule(BaseModuleClass):
 
         # Prepare shared emb
         if self.shared_covariate_emb is not None and self.encode_covariates:
-            pre_processed_input['cat_full_tensor'] = self.shared_covariate_emb(
-                pre_processed_input['cat_full_tensor'].int())
+            pre_processed_input["cat_full_tensor"] = self.shared_covariate_emb(
+                pre_processed_input["cat_full_tensor"].int()
+            )
 
         # get variational parameters via the encoder networks
         qz_m, qz_v, z = self.z_encoder(
             x_,
-            cat_full_tensor=pre_processed_input['cat_full_tensor'],
-            cont_full_tensor=pre_processed_input['cont_full_tensor'],
+            cat_full_tensor=pre_processed_input["cat_full_tensor"],
+            cont_full_tensor=pre_processed_input["cont_full_tensor"],
         )
 
-        outputs = dict(z=z, qz_m=qz_m, qz_v=qz_v,
-                       library=pre_processed_input['library'], x_mask=x_mask,
-                       gene_likelihood_additional_info=pre_processed_input['gene_likelihood_additional_info'])
+        outputs = {
+            "z": z,
+            "qz_m": qz_m,
+            "qz_v": qz_v,
+            "library": pre_processed_input["library"],
+            "x_mask": x_mask,
+            "gene_likelihood_additional_info": pre_processed_input["gene_likelihood_additional_info"],
+        }
         return outputs
 
     def _get_generative_input(self, tensors, inference_outputs):
@@ -351,13 +394,13 @@ class DRVIModule(BaseModuleClass):
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
-        input_dict = dict(
-            z=z,
-            library=library,
-            gene_likelihood_additional_info=gene_likelihood_additional_info,
-            cont_covs=cont_covs,
-            cat_covs=cat_covs,
-        )
+        input_dict = {
+            "z": z,
+            "library": library,
+            "gene_likelihood_additional_info": gene_likelihood_additional_info,
+            "cont_covs": cont_covs,
+            "cat_covs": cat_covs,
+        }
         return input_dict
 
     @auto_move_data
@@ -367,18 +410,25 @@ class DRVIModule(BaseModuleClass):
             cat_covs = self.shared_covariate_emb(cat_covs.int())
         # form the likelihood
         px, params, original_params = self.decoder(
-            z, cat_full_tensor=cat_covs, cont_full_tensor=cont_covs,
-            library=library, gene_likelihood_additional_info=gene_likelihood_additional_info
+            z,
+            cat_full_tensor=cat_covs,
+            cont_full_tensor=cont_covs,
+            library=library,
+            gene_likelihood_additional_info=gene_likelihood_additional_info,
         )
 
-        return dict(px=px, params=params, original_params=original_params)
+        return {
+            "px": px,
+            "params": params,
+            "original_params": original_params,
+        }
 
     def loss(
-            self,
-            tensors,
-            inference_outputs,
-            generative_outputs,
-            kl_weight: float = 1.0,
+        self,
+        tensors,
+        inference_outputs,
+        generative_outputs,
+        kl_weight: float = 1.0,
     ):
         """Loss function."""
         x = tensors[REGISTRY_KEYS.X_KEY]
@@ -388,7 +438,7 @@ class DRVIModule(BaseModuleClass):
         px = generative_outputs["px"]
 
         kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
-        if self.fill_in_the_blanks_ratio > 0. and self.training:
+        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
             reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
         else:
             reconst_loss = -px.log_prob(x).sum(dim=-1)
@@ -397,28 +447,28 @@ class DRVIModule(BaseModuleClass):
         assert kl_divergence_z.shape == reconst_loss.shape
 
         kl_local_for_warmup = kl_divergence_z
-        kl_local_no_warmup = 0.
+        kl_local_no_warmup = 0.0
 
         weighted_kl_local = kl_weight * kl_local_for_warmup + kl_local_no_warmup
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
 
-        kl_local = dict(kl_divergence_z=kl_divergence_z.sum())
+        kl_local = {"kl_divergence_z": kl_divergence_z.sum()}
         return LossOutput(
             loss=loss,
             reconstruction_loss=reconst_loss,
             kl_local=kl_local,
-            extra_metrics=dict(
-                mse=torch.nn.functional.mse_loss(x, px.mean, reduction='none').sum(dim=1).mean(dim=0)
-            ),
+            extra_metrics={
+                "mse": torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0),
+            },
         )
 
     @torch.no_grad()
     def sample(
-            self,
-            tensors,
-            n_samples=1,
-            library_size=1,
+        self,
+        tensors,
+        n_samples=1,
+        library_size=1,
     ) -> torch.Tensor:
         # Note: Not tested
         r"""
@@ -434,12 +484,13 @@ class DRVIModule(BaseModuleClass):
             Number of required samples for each cell
         library_size
             Library size to scale scamples to
+
         Returns
         -------
         x_new
             tensor with shape (n_cells, n_genes, n_samples)
         """
-        inference_kwargs = dict(n_samples=n_samples)
+        inference_kwargs = {"n_samples": n_samples}
         (
             _,
             generative_outputs,
