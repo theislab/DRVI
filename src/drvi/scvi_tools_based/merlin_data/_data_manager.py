@@ -6,7 +6,7 @@ from scvi._types import AnnOrMuData
 from scvi.data import AnnDataManager, AnnDataManagerValidationCheck, _constants
 
 from drvi.scvi_tools_based.merlin_data._data import MerlinData
-from drvi.scvi_tools_based.merlin_data._fields import (
+from drvi.scvi_tools_based.merlin_data.fields import (
     MerlinCategoricalJointObsField,
     MerlinCategoricalObsField,
     MerlinDataField,

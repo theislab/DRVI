@@ -6,7 +6,7 @@
 :hidden: true
 :maxdepth: 1
 
-api.md
+api/index.md
 changelog.md
 contributing.md
 references.md

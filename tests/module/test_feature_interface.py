@@ -1,4 +1,4 @@
-from drvi.module.feature_interface import FeatureInfo, FeatureInfoList
+from drvi.nn_modules.feature_interface import FeatureInfo, FeatureInfoList
 
 
 class TestFeatureInfoList:

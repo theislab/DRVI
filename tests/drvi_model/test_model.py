@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from drvi.scvi_tools_based import DRVI
+from drvi.model import DRVI
 
 
 class TestDRVIModel:

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from drvi.module.encodig import FeatureOneHotEncoding
+from drvi.nn_modules.encodig import FeatureOneHotEncoding
 
 
 class TestFeatureEmbedding:

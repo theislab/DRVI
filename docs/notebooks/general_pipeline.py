@@ -31,8 +31,8 @@ from IPython.display import display
 from gprofiler import GProfiler
 
 import drvi
-from drvi import DRVI
-from drvi.utils.hvg import hvg_batch
+from drvi.model import DRVI
+from drvi.utils.misc import hvg_batch
 
 # -
 
@@ -138,12 +138,12 @@ sc.pl.umap(embed, color=["batch", "final_annotation"], ncols=1, frameon=False)
 drvi.user_utils.tl.set_latent_dimension_stats(model, embed)
 embed.var.sort_values("reconstruction_effect", ascending=False)[:5]
 
-drvi.user_utils.pl.plot_latent_dimension_stats(embed, ncols=2)
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
 
 
 # You can check the same plot after removing vanished dimensions
 
-drvi.user_utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
 
 
 # ## Plot latent dimensions
@@ -152,37 +152,37 @@ drvi.user_utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=T
 
 # ### UMAP
 
-drvi.user_utils.pl.plot_latent_dims_in_umap(embed)
+drvi.utils.pl.plot_latent_dims_in_umap(embed)
 
 # ### Heatmap
 
-# Heatmaps can be useful to visualize general relasionship between latent dims and known categories of data
+# Heatmaps can be useful to visualize general relationship between latent dims and known categories of data
 
-drvi.user_utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="title")
+drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="title")
 
 # It is possible to sort dimensions based on the top relevance with respect to a categoricals variable
 
-drvi.user_utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="title", sort_by_categorical=True)
+drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="title", sort_by_categorical=True)
 
 
 # # Interpretability
 
-traverse_adata = drvi.user_utils.tl.traverse_latent(model, embed, n_samples=1, max_noise_std=0.0)
-drvi.user_utils.tl.calculate_differential_vars(traverse_adata)
+traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=1, max_noise_std=0.0)
+drvi.utils.tl.calculate_differential_vars(traverse_adata)
 traverse_adata
 
-drvi.user_utils.pl.differential_vars_heatmap(
+drvi.utils.pl.differential_vars_heatmap(
     traverse_adata, key="combined_score", score_threshold=1e-8, remove_unaffected=True, vmax=1
 )
 
-drvi.user_utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0)
+drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0)
 
 
 # +
 
 gp = GProfiler(return_dataframe=True)
 
-for dim_title, gene_scores in drvi.user_utils.general.iterate_on_top_differential_vars(
+for dim_title, gene_scores in drvi.utils.tl.iterate_on_top_differential_vars(
     traverse_adata, key="combined_score", score_threshold=0.0
 ):
     print(dim_title)
@@ -201,7 +201,7 @@ for dim_title, gene_scores in drvi.user_utils.general.iterate_on_top_differentia
 
 # Deeper look into genes and scores.
 
-drvi.user_utils.pl.show_differential_vars_scatter_plot(
+drvi.utils.pl.show_differential_vars_scatter_plot(
     traverse_adata,
     key_x="max_possible",
     key_y="min_possible",
@@ -211,7 +211,7 @@ drvi.user_utils.pl.show_differential_vars_scatter_plot(
 )
 
 
-drvi.user_utils.pl.plot_relevant_genes_on_umap(
+drvi.utils.pl.plot_relevant_genes_on_umap(
     adata,
     embed,
     traverse_adata,

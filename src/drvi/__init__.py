@@ -1,7 +1,13 @@
 from importlib.metadata import version
 
-from drvi.scvi_tools_based import DRVI, DRVIModule
-from drvi.scvi_tools_based.merlin_data import MerlinData
-from drvi.utils import user as user_utils
+from . import model, nn_modules, scvi_tools_based, utils
 
 __version__ = version("drvi")
+
+__all__ = [
+    "__version__",
+    "model",
+    "utils",
+    "nn_modules",
+    "scvi_tools_based",
+]

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from drvi.module.embedding import FeatureEmbedding
+from drvi.nn_modules.embedding import FeatureEmbedding
 
 
 class TestFeatureEmbedding:
