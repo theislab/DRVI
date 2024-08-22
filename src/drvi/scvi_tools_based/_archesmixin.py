@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 
 import torch
 from anndata import AnnData
@@ -7,15 +6,12 @@ from scvi import REGISTRY_KEYS
 from scvi.data._constants import _MODEL_NAME_KEY, _SETUP_ARGS_KEY
 from scvi.model._utils import parse_device_args
 from scvi.model.base import BaseModelClass
+from scvi.model.base._archesmixin import ArchesMixin, _get_loaded_data, _initialize_model, _validate_var_names
 from torch import nn
 
 from drvi.scvi_tools_based._base_components import FCLayers
 
 logger = logging.getLogger(__name__)
-
-
-from scvi.model.base._archesmixin import (
-    ArchesMixin, _get_loaded_data, _initialize_model, _validate_var_names)
 
 
 class DRVIArchesMixin(ArchesMixin):
@@ -25,10 +21,10 @@ class DRVIArchesMixin(ArchesMixin):
     def load_query_data(
         cls,
         adata: AnnData,
-        reference_model: Union[str, BaseModelClass],
+        reference_model: str | BaseModelClass,
         inplace_subset_query_vars: bool = False,
         accelerator: str = "auto",
-        device: Union[int, str] = "auto",
+        device: int | str = "auto",
         unfrozen: bool = False,
         freeze_dropout: bool = False,
         freeze_shared_emb: bool = True,
@@ -77,9 +73,7 @@ class DRVIArchesMixin(ArchesMixin):
             validate_single_device=True,
         )
 
-        attr_dict, var_names, load_state_dict = _get_loaded_data(
-            reference_model, device=device
-        )
+        attr_dict, var_names, load_state_dict = _get_loaded_data(reference_model, device=device)
 
         if inplace_subset_query_vars:
             logger.debug("Subsetting query vars to reference vars.")
@@ -88,15 +82,10 @@ class DRVIArchesMixin(ArchesMixin):
 
         registry = attr_dict.pop("registry_")
         if _MODEL_NAME_KEY in registry and registry[_MODEL_NAME_KEY] != cls.__name__:
-            raise ValueError(
-                "It appears you are loading a model from a different class."
-            )
+            raise ValueError("It appears you are loading a model from a different class.")
 
         if _SETUP_ARGS_KEY not in registry:
-            raise ValueError(
-                "Saved model does not contain original setup inputs. "
-                "Cannot load the original setup."
-            )
+            raise ValueError("Saved model does not contain original setup inputs. " "Cannot load the original setup.")
 
         cls.setup_anndata(
             adata,
@@ -110,7 +99,9 @@ class DRVIArchesMixin(ArchesMixin):
         adata_manager = model.get_anndata_manager(adata, required=True)
 
         if REGISTRY_KEYS.CAT_COVS_KEY in adata_manager.data_registry:
-            previous_n_cats_per_cov = registry['field_registries'][REGISTRY_KEYS.CAT_COVS_KEY]['state_registry']['n_cats_per_key']
+            previous_n_cats_per_cov = registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"][
+                "n_cats_per_key"
+            ]
             n_cats_per_cov = model.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
         else:
             previous_n_cats_per_cov = None
@@ -140,7 +131,7 @@ class DRVIArchesMixin(ArchesMixin):
             # new categoricals changed size
             else:
                 print(f"Resizing {key} from {load_ten.size()} to {new_ten.size()}")
-                if 'emb_list' in key:
+                if "emb_list" in key:
                     # Extend embeddings along dim 0 (n_emb)
                     dim_diff = new_ten.size()[0] - load_ten.size()[0]
                     assert new_ten.size()[1] == load_ten.size()[1]
@@ -151,27 +142,32 @@ class DRVIArchesMixin(ArchesMixin):
                     if new_ten.dim() == load_ten.dim() == 2:
                         # 2D tensors
                         # Extend linear layers along dim 1 (input)
-                        assert sum(n_cats_per_cov) - sum(previous_n_cats_per_cov) == new_ten.size()[-1] - load_ten.size()[-1]
+                        assert (
+                            sum(n_cats_per_cov) - sum(previous_n_cats_per_cov)
+                            == new_ten.size()[-1] - load_ten.size()[-1]
+                        )
                         assert new_ten.size()[0] == load_ten.size()[0]
                         # Keep data flow (normal nodes) as is
                         cum_n_cat_old = new_ten.size()[1] - sum(n_cats_per_cov)
                         cum_n_cat_new = cum_n_cat_old
                         fixed_ten = [load_ten[:, :cum_n_cat_old]] if cum_n_cat_old > 0 else []
                         # Iterate and get old covariates deom load_ten and new ones from new_ten
-                        for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
-                            fixed_ten.append(load_ten[:, cum_n_cat_old:cum_n_cat_old + n_cat_old])
+                        for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                            fixed_ten.append(load_ten[:, cum_n_cat_old : cum_n_cat_old + n_cat_old])
                             if n_cat_new > n_cat_old:
-                                fixed_ten.append(new_ten[:, cum_n_cat_new:cum_n_cat_new + n_cat_new - n_cat_old])
+                                fixed_ten.append(new_ten[:, cum_n_cat_new : cum_n_cat_new + n_cat_new - n_cat_old])
                             cum_n_cat_old += n_cat_old
                             cum_n_cat_new += n_cat_new
                         # Concat and set as init tensor
                         fixed_ten = torch.cat([t.to(device) for t in fixed_ten], dim=1)
                         load_state_dict[key] = fixed_ten
                         reloaded_tensor_keys.append(key)
-                    elif new_ten.dim() == load_ten.dim() == 3:                        
+                    elif new_ten.dim() == load_ten.dim() == 3:
                         # 3D tensors
                         # extend weight of stacked linears along dim 1 (input)
-                        assert sum(n_cats_per_cov) - sum(previous_n_cats_per_cov) == new_ten.size()[1] - load_ten.size()[1]
+                        assert (
+                            sum(n_cats_per_cov) - sum(previous_n_cats_per_cov) == new_ten.size()[1] - load_ten.size()[1]
+                        )
                         assert new_ten.size()[0] == load_ten.size()[0]
                         assert new_ten.size()[2] == load_ten.size()[2]
                         # Keep data flow (normal nodes) as is
@@ -179,10 +175,10 @@ class DRVIArchesMixin(ArchesMixin):
                         cum_n_cat_new = cum_n_cat_old
                         fixed_ten = [load_ten[:, :cum_n_cat_old, :]] if cum_n_cat_old > 0 else []
                         # Iterate and get old covariates deom load_ten and new ones from new_ten
-                        for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov):
-                            fixed_ten.append(load_ten[:, cum_n_cat_old:cum_n_cat_old + n_cat_old, :])
+                        for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                            fixed_ten.append(load_ten[:, cum_n_cat_old : cum_n_cat_old + n_cat_old, :])
                             if n_cat_new > n_cat_old:
-                                fixed_ten.append(new_ten[:, cum_n_cat_new:cum_n_cat_new + n_cat_new - n_cat_old])
+                                fixed_ten.append(new_ten[:, cum_n_cat_new : cum_n_cat_new + n_cat_new - n_cat_old])
                             cum_n_cat_old += n_cat_old
                             cum_n_cat_new += n_cat_new
                         # Concat and set as init tensor
@@ -231,9 +227,9 @@ def _set_params_online_update(
     # do nothing if unfrozen
     if unfrozen:
         return
-    
+
     if freeze_shared_emb:
-        if hasattr(module, 'shared_covariate_emb') and module.shared_covariate_emb is not None:
+        if hasattr(module, "shared_covariate_emb") and module.shared_covariate_emb is not None:
             print(f"Freezing top {previous_n_cats_per_cov} items in Shared Emb.")
             assert tuple(module.shared_covariate_emb.num_embeddings) == tuple(n_cats_per_cov)
             module.shared_covariate_emb.freeze_top_embs(previous_n_cats_per_cov)
@@ -247,7 +243,7 @@ def _set_params_online_update(
         if key in reloaded_tensor_keys:
             return True
         return False
-        
+
     # General changes
     for key, par in module.named_parameters():
         if requires_grad(key):
@@ -255,15 +251,12 @@ def _set_params_online_update(
         else:
             print(f"Freezing key {key}")
             par.requires_grad = False
-    
+
     # specific changes
     for key, mod in module.named_modules():
         # skip over protected modules
         if isinstance(mod, FCLayers):
-            freeze_fc_layers = (
-                ("decoder" in key and freeze_decoder) or 
-                ("z_encoder" in key and freeze_encoder)
-            )
+            freeze_fc_layers = ("decoder" in key and freeze_decoder) or ("z_encoder" in key and freeze_encoder)
             # This will make requires_frad for layers after one_hot to True
             if freeze_fc_layers:
                 print(f"Setting hooks for {key}")
@@ -272,11 +265,10 @@ def _set_params_online_update(
             if freeze_dropout:
                 print(f"Freezing dropout {key}")
                 mod.p = 0
-        elif isinstance(mod, (nn.BatchNorm1d, nn.LayerNorm)):
+        elif isinstance(mod, nn.BatchNorm1d | nn.LayerNorm):
             assert hasattr(mod, "freeze")
-            freeze_batchnorm = (
-                ("decoder" in key and freeze_batchnorm_decoder) or 
-                ("z_encoder" in key and freeze_batchnorm_encoder)
+            freeze_batchnorm = ("decoder" in key and freeze_batchnorm_decoder) or (
+                "z_encoder" in key and freeze_batchnorm_encoder
             )
             if freeze_batchnorm:
                 print(f"Freezing normalization layer {key}")

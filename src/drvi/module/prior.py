@@ -1,7 +1,6 @@
 import torch
 from torch import nn
-from torch.distributions import Normal
-from torch.distributions import kl_divergence
+from torch.distributions import Normal, kl_divergence
 
 # Standard, VaMP, GMM from Karin's CSI repo
 
@@ -27,8 +26,16 @@ class StandardPrior(Prior):
 class VampPrior(Prior):
     # Adapted from https://github.com/jmtomczak/intro_dgm/main/vaes/vae_priors_example.ipynb
     # K - components, I - inputs, L - latent, N - samples
-    def __init__(self, n_components, encoder, model_input,
-                 trainable_keys=('x',), fixed_keys=tuple(), input_type='scvi', preparation_function=None):
+    def __init__(
+        self,
+        n_components,
+        encoder,
+        model_input,
+        trainable_keys=("x",),
+        fixed_keys=(),
+        input_type="scvi",
+        preparation_function=None,
+    ):
         super().__init__()
 
         self.encoder = encoder
@@ -56,10 +63,10 @@ class VampPrior(Prior):
         # u->encoder->mean, var
         original_mode = self.encoder.training
         self.encoder.train(False)
-        if self.input_type == 'scfemb':
+        if self.input_type == "scfemb":
             z = self.encoder({**self.pi_aux_data, **self.pi_tensor_data})
-            output = z['qz_mean'], z['qz_var']
-        elif self.input_type == 'scvi':
+            output = z["qz_mean"], z["qz_var"]
+        elif self.input_type == "scvi":
             x, args, kwargs = self.preparation_function({**self.pi_aux_data, **self.pi_tensor_data})
             q_m, q_v, latent = self.encoder(x, *args, **kwargs)
             output = q_m, q_v
@@ -94,19 +101,25 @@ class VampPrior(Prior):
 
     def get_extra_state(self):
         return {
-            'pi_aux_data': self.pi_aux_data,
-            'input_type': self.input_type,
+            "pi_aux_data": self.pi_aux_data,
+            "input_type": self.input_type,
         }
 
     def set_extra_state(self, state):
-        self.pi_aux_data = state['pi_aux_data']
-        self.input_type = state['input_type']
+        self.pi_aux_data = state["pi_aux_data"]
+        self.input_type = state["input_type"]
 
 
 class GaussianMixtureModelPrior(Prior):
     # Based on VampPrior class
 
-    def __init__(self, n_components, n_latent, data=None, trainable_priors=True,):
+    def __init__(
+        self,
+        n_components,
+        n_latent,
+        data=None,
+        trainable_priors=True,
+    ):
         # Do we need python 2 compatibility?
         super().__init__()
 

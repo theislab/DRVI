@@ -1,12 +1,12 @@
 import logging
-from typing import List, Literal, Optional, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import numpy as np
 from anndata import AnnData
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
-from scvi.data.fields import (CategoricalObsField, LayerField,
-                              NumericalJointObsField)
+from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsField
 from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
@@ -15,13 +15,16 @@ from drvi.scvi_tools_based._archesmixin import DRVIArchesMixin
 from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
 from drvi.scvi_tools_based._generative_mixin import GenerativeMixin
 from drvi.scvi_tools_based._module import DRVIModule
-from drvi.scvi_tools_based.merlin_data import (MerlinCategoricalJointObsField,
-                                               MerlinCategoricalObsField,
-                                               MerlinData, MerlinDataManager,
-                                               MerlinDataSplitter,
-                                               MerlinLayerField,
-                                               MerlinNumericalJointObsField,
-                                               MerlinTransformedDataLoader)
+from drvi.scvi_tools_based.merlin_data import (
+    MerlinCategoricalJointObsField,
+    MerlinCategoricalObsField,
+    MerlinData,
+    MerlinDataManager,
+    MerlinDataSplitter,
+    MerlinLayerField,
+    MerlinNumericalJointObsField,
+    MerlinTransformedDataLoader,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
     **model_kwargs
         Keyword args for :class:`~mypackage.MyModule`
+
     Examples
     --------
     >>> adata = anndata.read_h5ad(path_to_anndata)
@@ -58,15 +62,15 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     """
 
     def __init__(
-            self,
-            adata: AnnData | MerlinData,
-            n_latent: int = 32,
-            encoder_dims: Sequence[int] = tuple([128, 128]),
-            decoder_dims: Sequence[int] = tuple([128, 128]),
-            prior: Literal["normal", "gmm_x", "vamp_x"] = 'normal',
-            prior_init_obs: Optional[np.ndarray] = None,
-            categorical_covariates: List[str] = tuple([]),
-            **model_kwargs,
+        self,
+        adata: AnnData | MerlinData,
+        n_latent: int = 32,
+        encoder_dims: Sequence[int] = (128, 128),
+        decoder_dims: Sequence[int] = (128, 128),
+        prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
+        prior_init_obs: np.ndarray | None = None,
+        categorical_covariates: list[str] = (),
+        **model_kwargs,
     ):
         super().__init__(adata)
 
@@ -78,7 +82,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError("Only AnnData and MerlinData is supported")
 
-        categorical_covariates_info = FeatureInfoList(categorical_covariates, axis='obs', default_dim=10)
+        categorical_covariates_info = FeatureInfoList(categorical_covariates, axis="obs", default_dim=10)
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
             n_cats_per_cov = cat_cov_stats.n_cats_per_key
@@ -93,8 +97,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             assert "_" in prior
             assert len(prior_init_obs) == int(prior.split("_")[-1])
             prior_init_dataloader = self._make_data_loader(
-                adata=adata[prior_init_obs],
-                batch_size=len(prior_init_obs), shuffle=False)
+                adata=adata[prior_init_obs], batch_size=len(prior_init_obs), shuffle=False
+            )
 
         self.module = DRVIModule(
             n_input=self.summary_stats["n_vars"],
@@ -108,11 +112,11 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             categorical_covariate_dims=categorical_covariates_info.dims,
             **model_kwargs,
         )
-        
+
         self._model_summary_string = (
             "DRVI \n"
-            + (f"Covariates: {categorical_covariates_info.names}, \n" if len(categorical_covariates_info) > 0 else "") +
-            f"Latent size: {self.module.n_latent}, "
+            + (f"Covariates: {categorical_covariates_info.names}, \n" if len(categorical_covariates_info) > 0 else "")
+            + f"Latent size: {self.module.n_latent}, "
             f"splits: {self.module.n_split_latent}, "
             f"pooling of splits: '{self.module.split_aggregation}', \n"
             f"Encoder dims: {encoder_dims}, \n"
@@ -127,14 +131,14 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     @classmethod
     @setup_anndata_dsp.dedent
     def setup_anndata(
-            cls,
-            adata: AnnData,
-            labels_key: Optional[str] = None,
-            layer: Optional[str] = None,
-            is_count_data: bool = True,
-            categorical_covariate_keys: Optional[List[str]] = None,
-            continuous_covariate_keys: Optional[List[str]] = None,
-            **kwargs,
+        cls,
+        adata: AnnData,
+        labels_key: str | None = None,
+        layer: str | None = None,
+        is_count_data: bool = True,
+        categorical_covariate_keys: list[str] | None = None,
+        continuous_covariate_keys: list[str] | None = None,
+        **kwargs,
     ) -> None:
         """
         %(summary)s.
@@ -146,6 +150,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         %(param_layer)s
         %(param_cat_cov_keys)s
         %(param_cont_cov_keys)s
+
         Returns
         -------
         %(returns)s
@@ -165,12 +170,12 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     def setup_merlin_data(
         cls,
         merlin_data: MerlinData,
-        labels_key: Optional[str] = None,
-        layer: str = 'X',
+        labels_key: str | None = None,
+        layer: str = "X",
         is_count_data: bool = True,
-        categorical_covariate_keys: Optional[List[str]] = None,
-        continuous_covariate_keys: Optional[List[str]] = None,
-        **kwargs
+        categorical_covariate_keys: list[str] | None = None,
+        continuous_covariate_keys: list[str] | None = None,
+        **kwargs,
     ):
         setup_method_args = cls._get_setup_method_args(**locals())
 
@@ -187,8 +192,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     def _make_data_loader(
         self,
         adata,
-        indices: Optional[Sequence[int]] = None,
-        batch_size: Optional[int] = None,
+        indices: Sequence[int] | None = None,
+        batch_size: int | None = None,
         shuffle: bool = False,
         data_loader_class=None,
         **data_loader_kwargs,
@@ -223,7 +228,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             if batch_size is None:
                 batch_size = settings.batch_size
             return MerlinTransformedDataLoader(
-                self.adata_manager.get_dataset('default'),
+                self.adata_manager.get_dataset("default"),
                 mapping=self.adata_manager.get_fields_schema_mapping(),
                 batch_size=batch_size,
                 shuffle=shuffle,

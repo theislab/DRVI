@@ -7,13 +7,18 @@ from scvi.data import AnnDataManager, AnnDataManagerValidationCheck, _constants
 
 from drvi.scvi_tools_based.merlin_data._data import MerlinData
 from drvi.scvi_tools_based.merlin_data._fields import (
-    MerlinCategoricalJointObsField, MerlinCategoricalObsField, MerlinDataField,
-    MerlinLayerField, MerlinNumericalJointObsField)
+    MerlinCategoricalJointObsField,
+    MerlinCategoricalObsField,
+    MerlinDataField,
+    MerlinLayerField,
+    MerlinNumericalJointObsField,
+)
 
 
 class MerlinDataManager(AnnDataManager):
     """
     Provides an interface to validate and process a MerlinData object for use in scvi-tools.
+
     Parameters
     ----------
     fields : list[MerlinDataField] | None, optional
@@ -24,6 +29,7 @@ class MerlinDataManager(AnnDataManager):
     validation_checks : AnnDataManagerValidationCheck | None, optional
         DataClass specifying which global validation checks to run on the data object.
     """
+
     def __init__(
         self,
         fields: list[MerlinDataField] | None = None,
@@ -48,7 +54,7 @@ class MerlinDataManager(AnnDataManager):
         if isinstance(adata, MerlinData):
             return True
         return super()._validate_anndata_object(adata)
-    
+
     def get_fields_schema_mapping(self):
         mapping = []
         for field in self.fields:
@@ -71,16 +77,18 @@ class MerlinDataManager(AnnDataManager):
             else:
                 raise NotImplementedError()
         return mapping
-    
+
     def get_dataset(self, split, **dataset_kwargs):
         """
         Get the dataset for a given split.
 
-        Parameters:
+        Parameters
+        ----------
             split (str): The split to retrieve the dataset for.
             **dataset_kwargs: Additional keyword arguments to pass to the dataset.
 
-        Returns:
+        Returns
+        -------
             The dataset for the given split.
         """
         merlin_data = self.adata

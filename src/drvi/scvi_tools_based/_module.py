@@ -490,7 +490,7 @@ class DRVIModule(BaseModuleClass):
         x_new
             tensor with shape (n_cells, n_genes, n_samples)
         """
-        inference_kwargs = {"n_samples": n_samples}
+        inference_kwargs = dict(n_samples=n_samples)  # noqa: C408
         (
             _,
             generative_outputs,

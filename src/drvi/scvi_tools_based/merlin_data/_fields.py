@@ -1,9 +1,6 @@
-from typing import Union
+from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsField
 
-from scvi.data.fields import (CategoricalJointObsField, CategoricalObsField,
-                              LayerField, NumericalJointObsField)
 from drvi.scvi_tools_based._fields import FixedCategoricalJointObsField
-
 from drvi.scvi_tools_based.merlin_data._data import MerlinData
 
 
@@ -17,13 +14,13 @@ class MerlinLayerField(LayerField):
             self.N_VARS_KEY: adata.n_vars,
             # self.COLUMN_NAMES_KEY: np.asarray(adata.var_names), ?
         }
-    
+
     def get_summary_stats(self, state_registry: dict) -> dict:
         summary_stats = {self.count_stat_key: state_registry[self.N_VARS_KEY]}
         # if self.registry_key == REGISTRY_KEYS.X_KEY:
         #     summary_stats[self.N_CELLS_KEY] = state_registry[self.N_OBS_KEY]
         return summary_stats
-    
+
     def transfer_field(self, state_registry: dict, adata_target: MerlinData, **kwargs) -> dict:
         return super().transfer_field(state_registry, adata_target, **kwargs)
 
@@ -31,13 +28,13 @@ class MerlinLayerField(LayerField):
 class MerlinCategoricalObsField(CategoricalObsField):
     def _setup_default_attr(self, adata: MerlinData) -> None:
         return
-    
+
     def validate_field(self, adata: MerlinData) -> None:
         if self.is_default:
             return
         merlin_data = adata
         assert merlin_data.has_col(self.attr_key)
-    
+
     def register_field(self, adata: MerlinData) -> dict:
         if self.is_default:
             return {
@@ -49,14 +46,14 @@ class MerlinCategoricalObsField(CategoricalObsField):
             self.CATEGORICAL_MAPPING_KEY: categorical_mapping,
             self.ORIGINAL_ATTR_KEY: self._original_attr_key,
         }
-    
+
     def get_summary_stats(self, state_registry: dict) -> dict:
         if self.is_default:
             return {}
         categorical_mapping = state_registry[self.CATEGORICAL_MAPPING_KEY]
         n_categories = len(categorical_mapping)
         return {self.count_stat_key: n_categories}
-    
+
     def transfer_field(
         self,
         state_registry: dict,
@@ -72,7 +69,7 @@ class MerlinCategoricalObsField(CategoricalObsField):
 
         mapping = state_registry[self.CATEGORICAL_MAPPING_KEY].copy()
 
-        assert extend_categories == False
+        assert not extend_categories
 
         return {
             self.CATEGORICAL_MAPPING_KEY: mapping,
@@ -85,7 +82,7 @@ class MerlinCategoricalJointObsField(FixedCategoricalJointObsField):
         merlin_data = adata
         for key in self.attr_keys:
             assert merlin_data.has_col(key)
-    
+
     def register_field(self, adata: MerlinData) -> dict:
         merlin_data = adata
         categories = {}
@@ -101,7 +98,7 @@ class MerlinCategoricalJointObsField(FixedCategoricalJointObsField):
         for k in self.attr_keys:
             mappings_dict[self.N_CATS_PER_KEY].append(len(store_cats[k]))
         return mappings_dict
-    
+
     def get_summary_stats(self, state_registry: dict) -> dict:
         return super().get_summary_stats(state_registry)
 
@@ -117,8 +114,8 @@ class MerlinCategoricalJointObsField(FixedCategoricalJointObsField):
             return
 
         source_cat_dict = state_registry[self.MAPPINGS_KEY].copy()
-        assert extend_categories == False
-        
+        assert not extend_categories
+
         return source_cat_dict
 
 
@@ -127,17 +124,17 @@ class MerlinNumericalJointObsField(NumericalJointObsField):
         merlin_data = adata
         for key in self.attr_keys:
             assert merlin_data.has_col(key)
-    
+
     def register_field(self, adata: MerlinData) -> dict:
         if self.attr_keys:
             raise NotImplementedError()
         return {}
-    
+
     def get_summary_stats(self, state_registry: dict) -> dict:
         if self.attr_keys:
             raise NotImplementedError()
         return {}
-    
+
     def transfer_field(
         self,
         state_registry: dict,
@@ -149,4 +146,6 @@ class MerlinNumericalJointObsField(NumericalJointObsField):
         return self.register_field(adata_target)
 
 
-MerlinDataField = Union[MerlinLayerField, MerlinCategoricalObsField, MerlinCategoricalJointObsField, MerlinNumericalJointObsField]
+MerlinDataField = (
+    MerlinLayerField | MerlinCategoricalObsField | MerlinCategoricalJointObsField | MerlinNumericalJointObsField
+)

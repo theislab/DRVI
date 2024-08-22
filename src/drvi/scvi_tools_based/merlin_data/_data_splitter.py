@@ -1,10 +1,7 @@
-from typing import Optional
-
 import lightning.pytorch as pl
 
+from drvi.scvi_tools_based.merlin_data._data_loader import MerlinTransformedDataLoader
 from drvi.scvi_tools_based.merlin_data._data_manager import MerlinDataManager
-from drvi.scvi_tools_based.merlin_data._data_loader import \
-    MerlinTransformedDataLoader
 
 
 class MerlinDataSplitter(pl.LightningDataModule):
@@ -31,16 +28,16 @@ class MerlinDataSplitter(pl.LightningDataModule):
             kwargs.pop(key, None)
         self.kwargs = kwargs
 
-    def setup(self, stage: Optional[str] = None):
+    def setup(self, stage: str | None = None):
         self.val_idx = None
         self.train_idx = None
         self.test_idx = None
 
     def _get_dataloader(self, split, shuffle=False, **kwargs):
         parts_per_chunk = {
-            'train': 8,
-            'val': 1,
-            'test': 1,
+            "train": 8,
+            "val": 1,
+            "test": 1,
         }[split]
         return self.data_loader_cls(
             self.adata_manager.get_dataset(split),
@@ -52,12 +49,12 @@ class MerlinDataSplitter(pl.LightningDataModule):
 
     def train_dataloader(self):
         """Create train data loader."""
-        return self._get_dataloader('train', shuffle=True, **self.kwargs)
+        return self._get_dataloader("train", shuffle=True, **self.kwargs)
 
     def val_dataloader(self):
         """Create validation data loader."""
-        return self._get_dataloader('val', shuffle=False, **self.kwargs)
+        return self._get_dataloader("val", shuffle=False, **self.kwargs)
 
     def test_dataloader(self):
         """Create test data loader."""
-        return self._get_dataloader('test', shuffle=False, **self.kwargs)
+        return self._get_dataloader("test", shuffle=False, **self.kwargs)

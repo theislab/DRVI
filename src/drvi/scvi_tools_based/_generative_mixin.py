@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional, Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import scvi
@@ -16,15 +16,15 @@ class GenerativeMixin:
     @torch.inference_mode()
     def iterate_on_decoded_latent_samples(
         self,
-        z: np.ndarray, 
+        z: np.ndarray,
         step_func: Callable,
         aggregation_func: Callable,
-        lib: Optional[np.ndarray] = None,
-        cat_key: Optional[np.ndarray] = None,
-        cont_key: Optional[np.ndarray] = None, 
-        batch_size = scvi.settings.batch_size,
+        lib: np.ndarray | None = None,
+        cat_key: np.ndarray | None = None,
+        cont_key: np.ndarray | None = None,
+        batch_size=scvi.settings.batch_size,
     ) -> np.ndarray:
-        r"""iterate over decoder outputs and aggregate the results.
+        r"""Iterate over decoder outputs and aggregate the results.
 
         Parameters
         ----------
@@ -57,18 +57,20 @@ class GenerativeMixin:
                     lib_tensor = torch.tensor(lib[slice])
                 cat_tensor = torch.tensor(cat_key[slice]) if cat_key is not None else None
                 batch_tensor = None
-                
+
                 gen_input = self.module._get_generative_input(
                     tensors={
                         scvi.REGISTRY_KEYS.BATCH_KEY: batch_tensor,
                         scvi.REGISTRY_KEYS.LABELS_KEY: None,
-                        scvi.REGISTRY_KEYS.CONT_COVS_KEY: torch.log(lib_tensor).unsqueeze(-1) if self.summary_stats.get("n_extra_continuous_covs", 0) == 1 else None,
+                        scvi.REGISTRY_KEYS.CONT_COVS_KEY: torch.log(lib_tensor).unsqueeze(-1)
+                        if self.summary_stats.get("n_extra_continuous_covs", 0) == 1
+                        else None,
                         scvi.REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                     },
                     inference_outputs={
-                        'z': z_tensor,
-                        'library': lib_tensor,
-                        'gene_likelihood_additional_info': {},
+                        "z": z_tensor,
+                        "library": lib_tensor,
+                        "gene_likelihood_additional_info": {},
                     },
                 )
                 gen_output = self.module.generative(**gen_input)
@@ -76,15 +78,14 @@ class GenerativeMixin:
         result = aggregation_func(store)
         return result
 
-
     @torch.inference_mode()
     def decode_latent_samples(
         self,
-        z: np.ndarray, 
-        lib: Optional[np.ndarray] = None,
-        cat_key: Optional[np.ndarray] = None,
-        cont_key: Optional[np.ndarray] = None, 
-        batch_size = scvi.settings.batch_size,
+        z: np.ndarray,
+        lib: np.ndarray | None = None,
+        cat_key: np.ndarray | None = None,
+        cont_key: np.ndarray | None = None,
+        batch_size=scvi.settings.batch_size,
     ) -> np.ndarray:
         r"""Return the distribution produces by the decoder for the given latent samples.
 
@@ -105,7 +106,7 @@ class GenerativeMixin:
         return_mean
             Return the mean of the distribution or the full distribution.
         """
-        step_func = lambda gen_output, store: store.append(gen_output['params']['mean'].detach().cpu())
+        step_func = lambda gen_output, store: store.append(gen_output["params"]["mean"].detach().cpu())
         aggregation_func = lambda store: torch.cat(store, dim=0).numpy(force=True)
 
         return self.iterate_on_decoded_latent_samples(
@@ -117,7 +118,6 @@ class GenerativeMixin:
             cont_key=cont_key,
             batch_size=batch_size,
         )
-    
 
     @torch.inference_mode()
     def iterate_on_ae_output(
@@ -125,11 +125,11 @@ class GenerativeMixin:
         adata: AnnData,
         step_func: Callable,
         aggregation_func: Callable,
-        indices: Optional[Sequence[int]] = None,
-        batch_size: Optional[int] = None,
+        indices: Sequence[int] | None = None,
+        batch_size: int | None = None,
         deterministic: bool = False,
     ) -> np.ndarray:
-        r"""iterate over autoencoder outputs and aggregate the results.
+        r"""Iterate over autoencoder outputs and aggregate the results.
 
         Parameters
         ----------
@@ -149,10 +149,8 @@ class GenerativeMixin:
             Makes model fully deterministic (e.g. no sampling in the bottleneck).
         """
         adata = self._validate_anndata(adata)
-        data_loader = self._make_data_loader(
-            adata=adata, indices=indices, batch_size=batch_size
-        )
-        
+        data_loader = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
+
         store = []
         try:
             if deterministic:
@@ -162,19 +160,18 @@ class GenerativeMixin:
                 inference_outputs, generative_outputs, losses = self.module(tensors, loss_kwargs=loss_kwargs)
                 step_func(inference_outputs, generative_outputs, losses, store)
         except Exception as e:
-            logger.error(f"An error occurred in the iteration: {e}")
-            pass
+            self.module.fully_deterministic = False
+            raise e
         finally:
             self.module.fully_deterministic = False
-        
+
         return aggregation_func(store)
-    
 
     @torch.inference_mode()
     def get_reconstruction_effect_of_each_split(
         self,
-        adata: Optional[AnnData] = None,
-        add_to_counts: float = 1.,
+        adata: AnnData | None = None,
+        add_to_counts: float = 1.0,
         aggregate_over_cells: bool = True,
         deterministic: bool = True,
         **kwargs,
@@ -195,13 +192,20 @@ class GenerativeMixin:
         kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
         """
+
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs['original_params']['mean']  # n_samples x n_splits x n_genes
-                log_mean_params = F.pad(log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts))  # n_samples x (n_splits + 1) x n_genes
-                effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :]).sum(dim=-1)  # n_samples x n_splits
+                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = F.pad(
+                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
+                )  # n_samples x (n_splits + 1) x n_genes
+                effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :]).sum(
+                    dim=-1
+                )  # n_samples x n_splits
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs['original_params']['mean']).sum(dim=-1)  # n_samples x n_splits
+                effect_share = torch.abs(generative_outputs["original_params"]["mean"]).sum(
+                    dim=-1
+                )  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
             return store.append(effect_share.detach().cpu())
@@ -219,19 +223,20 @@ class GenerativeMixin:
 
         if aggregate_over_cells:
             output = output.sum(axis=0)
-        
-        return output
 
+        return output
 
     # @torch.inference_mode()
     def get_max_effect_of_splits_within_distribution(
         self,
-        adata: Optional[AnnData] = None,
-        add_to_counts: float = 1.,
+        adata: AnnData | None = None,
+        add_to_counts: float = 1.0,
         deterministic: bool = True,
         **kwargs,
     ):
-        r"""Return the max effect of each split on the reconstructed expression params for all genes.
+        r"""
+        Return the max effect of each split on the reconstructed expression params for all genes.
+
         These values are empirical and inexact for de reasoning of dimensions.
 
         Parameters
@@ -251,28 +256,35 @@ class GenerativeMixin:
         np.ndarray
             Max effect of each split on the reconstructed expression params for all genes
 
-        
+
         -------
         Example usage
         -------
 
         >>> effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=0.1)
-        >>> effect_data = pd.DataFrame(
-        ...     effects,
-        ...     columns=model.adata.var_names,
-        ...     index=embed.var['title'],
-        ... ).loc[embed.var.query('vanished == False').sort_values('order')['title']].T
-        >>> plot_info = list(effect_data.to_dict(orient='series').items())
+        >>> effect_data = (
+        ...     pd.DataFrame(
+        ...         effects,
+        ...         columns=model.adata.var_names,
+        ...         index=embed.var["title"],
+        ...     )
+        ...     .loc[embed.var.query("vanished == False").sort_values("order")["title"]]
+        ...     .T
+        ... )
+        >>> plot_info = list(effect_data.to_dict(orient="series").items())
         >>> drvi.user_utils.pl._bar_plot_top_differential_vars(plot_info)
-        >>> drvi.user_utils.pl._umap_of_relevant_genes(adata, embed, plot_info, dim_subset=['DR 1'])
+        >>> drvi.user_utils.pl._umap_of_relevant_genes(adata, embed, plot_info, dim_subset=["DR 1"])
         """
+
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs['original_params']['mean']  # n_samples x n_splits x n_genes
-                log_mean_params = F.pad(log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts))  # n_samples x (n_splits + 1) x n_genes
+                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = F.pad(
+                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
+                )  # n_samples x (n_splits + 1) x n_genes
                 effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs['original_params']['mean'])
+                effect_share = torch.abs(generative_outputs["original_params"]["mean"])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
             effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)
@@ -283,7 +295,7 @@ class GenerativeMixin:
 
         def aggregate_effects(store):
             return store[0]
-        
+
         output = self.iterate_on_ae_output(
             adata=adata,
             step_func=calculate_effect,
@@ -291,5 +303,5 @@ class GenerativeMixin:
             deterministic=deterministic,
             **kwargs,
         )
-        
+
         return output

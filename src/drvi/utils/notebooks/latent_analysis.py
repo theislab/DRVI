@@ -1,5 +1,3 @@
-import anndata as ad
-import numpy as np
 import scanpy as sc
 
 
@@ -10,16 +8,18 @@ def plot_latent_dims_in_umap(embed_adata, dims=None, max_cells_to_plot=None, opt
         dims = list(range(embed_adata.n_vars))
     obs_original = embed_adata.obs.copy()
     for i in dims:
-        embed_adata.obs[f'Dim {i+1}'] = embed_adata.X[:, i]
+        embed_adata.obs[f"Dim {i+1}"] = embed_adata.X[:, i]
     try:
         if optimal_order:
-            color_cols = [f'Dim {i+1}' for i in 
-                          embed_adata.uns['optimal_var_order'] if i in dims]
+            color_cols = [f"Dim {i+1}" for i in embed_adata.uns["optimal_var_order"] if i in dims]
         else:
-            color_cols = [f'Dim {i+1}' for i in dims]
-        kwargs = {**dict(
-            frameon=False,
-        ), **kwargs}
+            color_cols = [f"Dim {i+1}" for i in dims]
+        kwargs = {
+            **dict(  # noqa: C408
+                frameon=False,
+            ),
+            **kwargs,
+        }
         pl = sc.pl.umap(embed_adata, color=color_cols, return_fig=True, **kwargs)
     finally:
         embed_adata.obs = obs_original

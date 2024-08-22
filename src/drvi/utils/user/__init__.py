@@ -1,3 +1,3 @@
-from . import tools as tl
-from . import plotting as pl
 from . import general
+from . import plotting as pl
+from . import tools as tl

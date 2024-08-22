@@ -9,12 +9,15 @@ def hvg_batch(
     n_bins=20,
     adataOut=False,
 ):
-    """Batch-aware highly variable gene selection
+    """
+    Batch-aware highly variable gene selection
+
     Method to select HVGs based on mean dispersions of genes that are highly
     variable genes in all batches. Using a the top target_genes per batch by
     average normalize dispersion. If target genes still hasn't been reached,
     then HVGs in all but one batches are used to fill up. This is continued
     until HVGs in a single batch are considered.
+
     :param adata: ``anndata`` object
     :param batch: ``adata.obs`` column
     :param target_genes: maximum number of genes (intersection reduces the number of genes)
@@ -38,8 +41,7 @@ def hvg_batch(
     )
 
     nbatch1_dispersions = adata_hvg.var["dispersions_norm"][
-        adata_hvg.var.highly_variable_nbatches
-        > len(adata_hvg.obs[batch_key].cat.categories) - 1
+        adata_hvg.var.highly_variable_nbatches > len(adata_hvg.obs[batch_key].cat.categories) - 1
     ]
 
     nbatch1_dispersions.sort_values(ascending=False, inplace=True)
@@ -61,16 +63,12 @@ def hvg_batch(
             ]
 
             if len(tmp_dispersions) < target_genes_diff:
-                print(
-                    f"Using {len(tmp_dispersions)} HVGs from n_batch-{not_n_batches} set"
-                )
+                print(f"Using {len(tmp_dispersions)} HVGs from n_batch-{not_n_batches} set")
                 hvg = hvg.append(tmp_dispersions.index)
                 not_n_batches += 1
 
             else:
-                print(
-                    f"Using {target_genes_diff} HVGs from n_batch-{not_n_batches} set"
-                )
+                print(f"Using {target_genes_diff} HVGs from n_batch-{not_n_batches} set")
                 tmp_dispersions.sort_values(ascending=False, inplace=True)
                 hvg = hvg.append(tmp_dispersions.index[:target_genes_diff])
                 enough = True

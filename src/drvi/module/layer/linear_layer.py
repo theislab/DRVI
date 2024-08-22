@@ -5,15 +5,16 @@ from torch import nn
 
 
 class StackedLinearLayer(nn.Module):
-    __constants__ = ['n_channels', 'in_features', 'out_features']
+    __constants__ = ["n_channels", "in_features", "out_features"]
     n_channels: int
     in_features: int
     out_features: int
     weight: torch.Tensor
 
-    def __init__(self, n_channels: int, in_features: int, out_features: int, bias: bool = True,
-                 device=None, dtype=None) -> None:
-        factory_kwargs = {'device': device, 'dtype': dtype}
+    def __init__(
+        self, n_channels: int, in_features: int, out_features: int, bias: bool = True, device=None, dtype=None
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.n_channels = n_channels
         self.in_features = in_features
@@ -22,7 +23,7 @@ class StackedLinearLayer(nn.Module):
         if bias:
             self.bias = nn.Parameter(torch.empty(n_channels, out_features, **factory_kwargs))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -42,11 +43,13 @@ class StackedLinearLayer(nn.Module):
         nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        mm = torch.einsum('bci,cio->bco', input, self.weight)
+        mm = torch.einsum("bci,cio->bco", input, self.weight)
         if self.bias is not None:
             mm = mm + self.bias  # They will broadcast well
         return mm
 
     def extra_repr(self) -> str:
-        return (f'in_features={self.in_features}, out_features={self.out_features}, '
-                f'n_channels={self.n_channels}, bias={self.bias is not None}')
+        return (
+            f"in_features={self.in_features}, out_features={self.out_features}, "
+            f"n_channels={self.n_channels}, bias={self.bias is not None}"
+        )

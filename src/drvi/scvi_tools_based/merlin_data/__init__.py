@@ -5,5 +5,6 @@ from ._data_splitter import MerlinDataSplitter
 from ._fields import (
     MerlinCategoricalJointObsField,
     MerlinCategoricalObsField,
-      MerlinLayerField,
-      MerlinNumericalJointObsField,)
+    MerlinLayerField,
+    MerlinNumericalJointObsField,
+)

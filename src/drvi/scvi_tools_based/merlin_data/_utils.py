@@ -4,9 +4,7 @@ import pyarrow as pa
 
 
 def read_first_row(path):
-    """
-    Read first row of a parquet file in a memory efficient way
-    """
+    """Read first row of a parquet file in a memory efficient way"""
     parquet_file = pa.parquet.ParquetFile(path)
     first_row = next(parquet_file.iter_batches(batch_size=1))
     df = pa.Table.from_batches([first_row])
@@ -14,9 +12,7 @@ def read_first_row(path):
 
 
 def transfer_type_from_pyarrow(schema, first_row=None):
-    """
-    Transfer pyarrow schema to merlin schema.
-    """
+    """Transfer pyarrow schema to merlin schema."""
     if isinstance(schema, pa.Schema):
         fields = []
         for field in schema:
@@ -28,23 +24,24 @@ def transfer_type_from_pyarrow(schema, first_row=None):
     elif isinstance(schema, pa.Field):
         return merlin.schema.ColumnSchema(schema.name, **transfer_type_from_pyarrow(schema.type, first_row=first_row))
     elif isinstance(schema, pa.lib.ListType):
-        return dict(
-                    dtype=transfer_type_from_pyarrow(schema.value_type),
-                    is_list=True, is_ragged=False,
-                    properties={'value_count': {'max': len(first_row)}}
-                )
+        return {
+            "dtype": transfer_type_from_pyarrow(schema.value_type),
+            "is_list": True,
+            "is_ragged": False,
+            "properties": {"value_count": {"max": len(first_row)}},
+        }
     elif isinstance(schema, pa.DataType):
         if pa.float32().equals(schema):
-            return dict(dtype=merlin.dtypes.float32)
+            return {"dtype": merlin.dtypes.float32}
         elif pa.float64().equals(schema):
-            return dict(dtype=merlin.dtypes.float64)
+            return {"dtype": merlin.dtypes.float64}
         elif pa.int32().equals(schema):
-            return dict(dtype=merlin.dtypes.int32)
+            return {"dtype": merlin.dtypes.int32}
         elif pa.int64().equals(schema):
-            return dict(dtype=merlin.dtypes.int64)
+            return {"dtype": merlin.dtypes.int64}
         elif pa.bool_().equals(schema):
-            return dict(dtype=merlin.dtypes.boolean)
+            return {"dtype": merlin.dtypes.boolean}
         else:
-            raise ValueError(f'Unknown type for {schema}')
+            raise ValueError(f"Unknown type for {schema}")
     else:
-        raise ValueError(f'Unknown type for {schema}')
+        raise ValueError(f"Unknown type for {schema}")
