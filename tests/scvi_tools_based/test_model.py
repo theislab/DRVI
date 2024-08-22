@@ -206,9 +206,9 @@ class TestDRVIModel:
 
         DRVI.prepare_query_anndata(adata_query, model)
         transfer_model = model.load_query_data(adata_query, model)
-        transfer_model.train(accelerator="cpu", max_epochs=1, plan_kwargs={"weight_decay": 0.0})
+        transfer_model.train(accelerator="cpu", max_epochs=10, plan_kwargs={"lr": 0.1, "weight_decay": 0.0})
         latent_query = transfer_model.get_latent_representation(adata_query)
-        transfer_model.train(accelerator="cpu", max_epochs=10, plan_kwargs={"weight_decay": 0.0})
+        transfer_model.train(accelerator="cpu", max_epochs=10, plan_kwargs={"lr": 0.1, "weight_decay": 0.0})
         latent_reference_after_train = transfer_model.get_latent_representation(adata_reference)
         latent_query_after_train = transfer_model.get_latent_representation(adata_query)
 
