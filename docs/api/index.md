@@ -6,4 +6,5 @@
 model
 tools
 plotting
+metrics
 ```

@@ -1,8 +1,8 @@
 # Plotting
 
 ```{eval-rst}
-.. module:: drvi.utils.user.plotting
-.. currentmodule:: drvi.utils.user
+.. module:: drvi.utils.plotting
+.. currentmodule:: drvi.utils
 
 .. autosummary::
     :nosignatures:
