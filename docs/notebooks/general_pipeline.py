@@ -135,7 +135,7 @@ sc.pl.umap(embed, color=["batch", "final_annotation"], ncols=1, frameon=False)
 
 # ## Chack latent dimension stats
 
-drvi.user_utils.tl.set_latent_dimension_stats(model, embed)
+drvi.utils.tl.set_latent_dimension_stats(model, embed)
 embed.var.sort_values("reconstruction_effect", ascending=False)[:5]
 
 drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)

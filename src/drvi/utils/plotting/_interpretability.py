@@ -161,6 +161,7 @@ def differential_vars_heatmap(
 
 def _bar_plot_top_differential_vars(
     plot_info: Sequence[tuple[str, pd.Series]],
+    dim_subset: Sequence[str] | None = None,
     ncols: int = 5,
     show: bool = True,
 ):
@@ -170,6 +171,7 @@ def _bar_plot_top_differential_vars(
     Parameters
     ----------
         plot_info (Sequence[Tuple[str, pd.Series]]): Information about the top differential variables.
+        dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
         ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
         show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
 
@@ -177,6 +179,9 @@ def _bar_plot_top_differential_vars(
     -------
         None if show is True, otherwise the figure.
     """
+    if dim_subset is not None:
+        plot_info = [info for info in plot_info if info[0] in dim_subset]
+
     n_row = int(np.ceil(len(plot_info) / ncols))
     fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, 3 * n_row))
 
@@ -209,6 +214,7 @@ def show_top_differential_vars(
     key: str,
     title_col: str = "title",
     order_col: str = "order",
+    dim_subset: Sequence[str] | None = None,
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
     ncols: int = 5,
@@ -223,6 +229,7 @@ def show_top_differential_vars(
         key (str): Key to access the traverse effect variables in `traverse_adata.varm`.
         title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
         order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.
+        dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
         gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
         score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
         ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
@@ -236,7 +243,7 @@ def show_top_differential_vars(
         traverse_adata, key, title_col, order_col, gene_symbols, score_threshold
     )
 
-    return _bar_plot_top_differential_vars(plot_info, ncols, show)
+    return _bar_plot_top_differential_vars(plot_info, dim_subset, ncols, show)
 
 
 def show_differential_vars_scatter_plot(
@@ -248,7 +255,7 @@ def show_differential_vars_scatter_plot(
     order_col: str = "order",
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
-    dim_subset: Sequence[str] | None = None,
+    dim_subset: Sequence[str] = None,
     ncols: int = 3,
     show: bool = True,
     **kwargs,
