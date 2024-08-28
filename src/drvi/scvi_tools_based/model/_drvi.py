@@ -10,6 +10,7 @@ from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsF
 from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
+import drvi
 from drvi.nn_modules.feature_interface import FeatureInfoList
 from drvi.scvi_tools_based.data.fields import FixedCategoricalJointObsField
 from drvi.scvi_tools_based.merlin_data import (
@@ -157,6 +158,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         %(returns)s
         """
         setup_method_args = cls._get_setup_method_args(**locals())
+        setup_method_args["drvi_version"] = drvi.__version__
+
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
             CategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
@@ -179,6 +182,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         **kwargs,
     ):
         setup_method_args = cls._get_setup_method_args(**locals())
+        setup_method_args["drvi_version"] = drvi.__version__
 
         fields = [
             MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
