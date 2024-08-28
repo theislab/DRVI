@@ -144,9 +144,6 @@ class TestDRVIModel:
                 "one_hot_linear",
                 "emb_shared",
                 "emb_linear",
-                "emb_adapter",
-                "one_hot_adapter",
-                "emb_shared_adapter",
             ]:
                 self._general_integration_test(
                     adata, covariate_modeling_strategy=cms, encode_covariates=encode_covariates
@@ -233,8 +230,6 @@ class TestDRVIModel:
             "one_hot_linear",
             "emb_shared",
             "emb_linear",
-            # scArches on adapter is not implemented yet
-            # 'emb_adapter', 'one_hot_adapter', 'emb_shared_adapter',
         ]:
             self._general_query_to_reference(adata_reference, adata_query, covariate_modeling_strategy=cms)
 

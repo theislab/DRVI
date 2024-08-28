@@ -7,7 +7,6 @@ import torch
 from scvi.nn._utils import one_hot
 from torch import nn
 from torch.distributions import Normal
-from torch.nn import functional as F
 
 from drvi.nn_modules.embedding import MultiEmbedding
 from drvi.nn_modules.freezable import FreezableBatchNorm1d, FreezableLayerNorm
@@ -18,46 +17,6 @@ from drvi.nn_modules.noise_model import NoiseModel
 
 def _identity(x):
     return x
-
-
-class BatchWiseAdapter(nn.Module):
-    def __init__(self, batch_repr_dim, input_dim, output_dim, low_rank_dim=10):
-        super().__init__()
-        self.L = nn.Parameter(torch.empty([batch_repr_dim, input_dim, low_rank_dim]))
-        self.R = nn.Parameter(torch.empty([batch_repr_dim, low_rank_dim, output_dim]))
-        self.L_bias = nn.Parameter(torch.empty([low_rank_dim]))
-        self._reset_parameters()
-
-    def _reset_parameters(self):
-        gain = 1.0
-        fan_l = self.L.shape[0]
-        std_l = gain / math.sqrt(fan_l)
-        bound_l = math.sqrt(3.0) * std_l
-        fan_r = self.R.shape[0]
-        std_r = gain / math.sqrt(fan_r)
-        bound_r = math.sqrt(3.0) * std_r
-
-        with torch.no_grad():
-            self.L.uniform_(-bound_l, bound_l)
-            self.R.uniform_(-bound_r, bound_r)
-            self.L_bias.zero_()
-
-    def forward(self, x, batch_emb):
-        # TODO: replace with more efficient ops
-        l_t = torch.einsum("be,eid->bid", batch_emb, self.L)
-        r_t = torch.einsum("be,edo->bdo", batch_emb, self.R)
-        intermediate_tensor = F.relu(torch.einsum("b...i,bid->b...d", x, l_t) + self.L_bias)
-        return torch.einsum("b...d,bdo->b...o", intermediate_tensor, r_t)
-
-    def __repr__(self):
-        return (
-            f"{self.__class__.__name__}("
-            f"batch_repr_dim={self.L.shape[0]}, "
-            f"input_dim={self.L.shape[1]}, "
-            f"output_dim={self.R.shape[2]}, "
-            f"low_rank_dim={self.L.shape[2]}"
-            f")"
-        )
 
 
 class FCLayers(nn.Module):
@@ -123,9 +82,6 @@ class FCLayers(nn.Module):
             "one_hot_linear",
             "emb_linear",
             "emb_shared_linear",
-            "emb_adapter",
-            "one_hot_adapter",
-            "emb_shared_adapter",
         ] = "one_hot",
         covariate_embs_dim: Iterable[int] = (),
     ):
@@ -134,9 +90,6 @@ class FCLayers(nn.Module):
         if covariate_modeling_strategy.endswith("_linear"):
             self.covariate_projection_modeling = "linear"
             self.covariate_vector_modeling = covariate_modeling_strategy[: -len("_linear")]
-        elif covariate_modeling_strategy.endswith("_adapter"):
-            self.covariate_projection_modeling = "adapter"
-            self.covariate_vector_modeling = covariate_modeling_strategy[: -len("_adapter")]
         else:
             self.covariate_projection_modeling = "cat"
             self.covariate_vector_modeling = covariate_modeling_strategy
@@ -150,7 +103,6 @@ class FCLayers(nn.Module):
 
         self.injectable_layers = []
         self.linear_batch_projections = []
-        self.adapter_batch_projections = []
 
         def is_intermediate(i):
             assert layers_location in ["intermediate", "first", "last"]
@@ -170,7 +122,6 @@ class FCLayers(nn.Module):
             if not reuse_weights:
                 assert split_size > 1
                 if self.covariate_projection_modeling not in ["cat", "linear"]:
-                    # cannot reuse adapters
                     raise NotImplementedError()
 
             if len(self.n_cat_list) > 0 and inject_into_layer(i):
@@ -188,10 +139,6 @@ class FCLayers(nn.Module):
                         linear_batch_projection = StackedLinearLayer(split_size, cat_dim, n_out, bias=False)
                     output.append(linear_batch_projection)
                     self.linear_batch_projections.append(linear_batch_projection)
-                elif self.covariate_projection_modeling == "adapter":
-                    adapter_module = BatchWiseAdapter(cat_dim, n_in, n_out, low_rank_dim=10)
-                    output.append(adapter_module)
-                    self.adapter_batch_projections.append(adapter_module)
                 else:
                     raise NotImplementedError()
             if reuse_weights:
@@ -307,9 +254,6 @@ class FCLayers(nn.Module):
 
             return _hook_fn_injectable
 
-        if self.covariate_projection_modeling == "adapter":
-            raise NotImplementedError()
-
         for layers in self.fc_layers:
             for layer in layers:
                 if self.covariate_vector_modeling == "emb_shared":
@@ -393,16 +337,13 @@ class FCLayers(nn.Module):
                     elif layer in self.linear_batch_projections:
                         assert self.covariate_projection_modeling == "linear"
                         projected_batch_layer = layer(torch.cat(concat_list_layer, dim=-1))
-                    elif layer in self.adapter_batch_projections:
-                        assert self.covariate_projection_modeling == "adapter"
-                        projected_batch_layer = layer(x, torch.cat(concat_list_layer, dim=-1))
                     else:
                         if layer in self.injectable_layers:
                             if self.covariate_projection_modeling == "cat":
                                 current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
                                 x = torch.cat((x, current_cat_tensor), dim=-1)
                                 x = layer(x)
-                            elif self.covariate_projection_modeling in ["linear", "adapter"]:
+                            elif self.covariate_projection_modeling in ["linear"]:
                                 x = layer(x) + dimension_transformation(projected_batch_layer)
                             else:
                                 raise NotImplementedError()
@@ -487,9 +428,6 @@ class Encoder(nn.Module):
             "one_hot_linear",
             "emb_linear",
             "emb_shared_linear",
-            "emb_adapter",
-            "one_hot_adapter",
-            "emb_shared_adapter",
         ] = "one_hot",
         categorical_covariate_dims: Sequence[int] = (),
         return_dist: bool = False,
@@ -667,9 +605,6 @@ class DecoderDRVI(nn.Module):
             "one_hot_linear",
             "emb_linear",
             "emb_shared_linear",
-            "emb_adapter",
-            "one_hot_adapter",
-            "emb_shared_adapter",
         ] = "one_hot",
         categorical_covariate_dims: Sequence[int] = (),
         **kwargs,

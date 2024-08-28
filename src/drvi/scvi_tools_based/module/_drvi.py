@@ -116,9 +116,6 @@ class DRVIModule(BaseModuleClass):
             "one_hot_linear",
             "emb_linear",
             "emb_shared_linear",
-            "emb_adapter",
-            "one_hot_adapter",
-            "emb_shared_adapter",
         ] = "one_hot",
         use_batch_norm: Literal["encoder", "decoder", "none", "both"] = "none",
         affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
@@ -183,14 +180,8 @@ class DRVIModule(BaseModuleClass):
             "one_hot_linear",
             "emb_linear",
             "emb_shared_linear",
-            "emb_adapter",
-            "one_hot_adapter",
-            "emb_shared_adapter",
         ]
-        if (
-            covariate_modeling_strategy in ["emb_shared", "emb_shared_linear", "emb_shared_adapter"]
-            and len(n_cats_per_cov) > 0
-        ):
+        if covariate_modeling_strategy in ["emb_shared", "emb_shared_linear"] and len(n_cats_per_cov) > 0:
             self.shared_covariate_emb = MultiEmbedding(
                 n_cats_per_cov, categorical_covariate_dims, init_method="normal", max_norm=1.0
             )
