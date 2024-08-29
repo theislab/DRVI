@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Literal
 
+import anndata as ad
 import numpy as np
 import scanpy as sc
 from anndata import AnnData
@@ -134,7 +135,11 @@ def plot_latent_dims_in_umap(
     additional_columns=(),
     max_cells_to_plot: int | None = None,
     order_col="order",
+    dim_subset: Sequence[str] | None = None,
+    directional: bool = False,
     remove_vanished: bool = True,
+    rearrange_titles: bool = True,
+    color_bar_rescale_ratio: float = 1.0,
     show: bool = True,
     **kwargs,
 ):
@@ -148,8 +153,12 @@ def plot_latent_dims_in_umap(
         additional_columns (tuple, optional): Additional columns to plot alongside the latent dimensions.
         max_cells_to_plot (int, optional): Maximum number of cells to plot. If the number of cells in `embed`
                                            is greater than `max_cells_to_plot`, a subsample will be taken.
-        order_col (str, optional): The column in the `embed.var` DataFrame to use for ordering the dimensions.
+        order_col (str, optional): The column in the `embed.var` DataFrame to use for ordering the dimensions. Ignored if `dim_subset` is provided.
+        dim_subset (Sequence[str], optional): The subset of dimensions to plot. Defaults to None.
+        directional (bool, optional): Consider + and - directions as two separate dimensions. Default is False.
         remove_vanished (bool, optional): Whether to remove the vanished dimensions from the plot. Default is True.
+        rearrange_titles (bool, optional): Whether to rearrange the titles to bottom right of the plot. Default is True.
+        color_bar_rescale_ratio (float, optional): The ratio to rescale the height of colorbars. Default is 1.0.
         show (bool, optional): Whether to display the plot. If False, the plot is returned. Default is True.
         **kwargs: Additional keyword arguments to be passed to `sc.pl.umap`.
 
@@ -169,9 +178,34 @@ def plot_latent_dims_in_umap(
     if max_cells_to_plot is not None and embed.n_obs > max_cells_to_plot:
         embed = sc.pp.subsample(embed, n_obs=max_cells_to_plot, copy=True)
 
+    if directional:
+        embed_pos = embed.copy()
+        if "layer" in kwargs:
+            embed_pos.X = embed_pos.layers[kwargs["layer"]]
+            del kwargs["layer"]
+        embed_neg = embed_pos.copy()
+        embed_neg.X = -embed_neg.X
+        embed_neg.var["min"], embed_neg.var["max"] = -embed_neg.var["max"], -embed_neg.var["min"]
+
+        embed_pos.var["_direction"] = "+"
+        embed_neg.var["_direction"] = "-"
+        embed_pos.var[title_col] = embed_pos.var[title_col] + "+"
+        embed_neg.var[title_col] = embed_neg.var[title_col] + "-"
+        if embed.var[order_col].dtype in [np.int32, np.int64, np.float32, np.float64]:
+            embed_pos.var[order_col] = embed_pos.var[order_col] + 1e-8
+            embed_neg.var[order_col] = embed_neg.var[order_col] - 1e-8
+        else:
+            embed_pos.var[order_col] = embed_pos.var[order_col].astype(str) + "+"
+            embed_neg.var[order_col] = embed_neg.var[order_col].astype(str) + "-"
+
+        embed = ad.concat([embed_pos, embed_neg], axis=1, join="inner", merge="first")
+        embed.var.reset_index(drop=True, inplace=True)
+
     tmp_df = embed.var.sort_values(order_col)
     if remove_vanished:
         tmp_df = tmp_df.query("vanished == False")
+    if dim_subset:
+        tmp_df = tmp_df.set_index(title_col).loc[dim_subset].reset_index()
     cols_to_show = tmp_df.index if title_col is None else tmp_df[title_col]
     if additional_columns:
         cols_to_show = list(cols_to_show) + list(additional_columns)
@@ -179,19 +213,37 @@ def plot_latent_dims_in_umap(
     kwargs = {
         **dict(  # noqa: C408
             frameon=False,
-            cmap=cmap.saturated_red_blue_cmap,
+            cmap=cmap.saturated_red_blue_cmap if not directional else cmap.saturated_sky_cmap,
             vmin=list(np.minimum(tmp_df["min"].values, -1)),
             vcenter=0,
             vmax=list(np.maximum(tmp_df["max"].values, +1)),
         ),
         **kwargs,
     }
-    pl = sc.pl.umap(embed, gene_symbols=title_col, color=cols_to_show, return_fig=True, **kwargs)
+    fig = sc.pl.umap(embed, gene_symbols=title_col, color=cols_to_show, return_fig=True, **kwargs)
+    for i, ax in enumerate(fig.axes[1 : 2 * len(tmp_df) : 2]):
+        assert hasattr(ax, "_colorbar")
+        pos = ax.get_position()
+        new_pos = [pos.x0, pos.y0, pos.width, pos.height * color_bar_rescale_ratio]
+        ax.set_position(new_pos)
+
+        if directional:
+            direction = tmp_df["_direction"].iloc[i]
+            if direction == "-":
+                ax.invert_yaxis()
+                labels = -ax.get_yticks()
+                if all(x == int(x) for x in labels):
+                    labels = [int(x) for x in labels]
+                ax.set_yticklabels(labels)
+    if rearrange_titles:
+        for ax in fig.axes:
+            ax.text(0.935, 0.05, ax.get_title(), size=15, ha="left", color="black", rotation=90, transform=ax.transAxes)
+            ax.set_title("")
 
     if show:
         plt.show()
     else:
-        return pl
+        return fig
 
 
 def plot_latent_dims_in_heatmap(

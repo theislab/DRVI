@@ -162,6 +162,7 @@ def differential_vars_heatmap(
 def _bar_plot_top_differential_vars(
     plot_info: Sequence[tuple[str, pd.Series]],
     dim_subset: Sequence[str] | None = None,
+    n_top_genes: int = 10,
     ncols: int = 5,
     show: bool = True,
 ):
@@ -172,6 +173,7 @@ def _bar_plot_top_differential_vars(
     ----------
         plot_info (Sequence[Tuple[str, pd.Series]]): Information about the top differential variables.
         dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
+        n_top_genes (int, optional): Number of top genes to plot. Defaults to 10.
         ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
         show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
 
@@ -180,15 +182,16 @@ def _bar_plot_top_differential_vars(
         None if show is True, otherwise the figure.
     """
     if dim_subset is not None:
-        plot_info = [info for info in plot_info if info[0] in dim_subset]
+        plot_info = dict(plot_info)
+        plot_info = [(dim_id, plot_info[dim_id]) for dim_id in dim_subset]
 
     n_row = int(np.ceil(len(plot_info) / ncols))
-    fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, 3 * n_row))
+    fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, int(1 + 0.2 * n_top_genes) * n_row))
 
     for ax, info in zip(axes.flatten(), plot_info, strict=False):
         dim_title = info[0]
 
-        top_indices = info[1].sort_values(ascending=False)[:10]
+        top_indices = info[1].sort_values(ascending=False)[:n_top_genes]
         genes = top_indices.index
         values = top_indices.values
 
@@ -217,6 +220,7 @@ def show_top_differential_vars(
     dim_subset: Sequence[str] | None = None,
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
+    n_top_genes: int = 10,
     ncols: int = 5,
     show: bool = True,
 ):
@@ -228,10 +232,11 @@ def show_top_differential_vars(
         traverse_adata (AnnData): Annotated data object containing the variables to be plotted.
         key (str): Key to access the traverse effect variables in `traverse_adata.varm`.
         title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
-        order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.
+        order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.  Ignored if `dim_subset` is provided.
         dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
         gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
         score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
+        n_top_genes (int, optional): Number of top genes to plot. Defaults to 10.
         ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
         show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
 
@@ -243,7 +248,7 @@ def show_top_differential_vars(
         traverse_adata, key, title_col, order_col, gene_symbols, score_threshold
     )
 
-    return _bar_plot_top_differential_vars(plot_info, dim_subset, ncols, show)
+    return _bar_plot_top_differential_vars(plot_info, dim_subset, n_top_genes, ncols, show)
 
 
 def show_differential_vars_scatter_plot(
@@ -255,7 +260,7 @@ def show_differential_vars_scatter_plot(
     order_col: str = "order",
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
-    dim_subset: Sequence[str] = None,
+    dim_subset: Sequence[str] | None = None,
     ncols: int = 3,
     show: bool = True,
     **kwargs,
@@ -270,7 +275,7 @@ def show_differential_vars_scatter_plot(
     - key_y (str): Key to access the second variable in `traverse_adata.varm`.
     - key_combined (str): Key to access the combined variable in `traverse_adata.varm`.
     - title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
-    - order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.
+    - order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.  Ignored if `dim_subset` is provided.
     - gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
     - score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
     - dim_subset (Optional[Sequence[str]], optional): Subset of dimensions to plot. If None, all dimensions will be plotted. Defaults to None.
@@ -342,18 +347,19 @@ def _umap_of_relevant_genes(
     plot_info: Sequence[tuple[str, pd.Series]],
     layer: str | None = None,
     title_col: str = "title",
-    dim_subset: Sequence[str] = None,
-    max_gene_per_dim: int = 10,
+    dim_subset: Sequence[str] | None = None,
+    n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
 ):
     if max_cells_to_plot is not None and adata.n_obs > max_cells_to_plot:
         adata = sc.pp.subsample(adata, n_obs=max_cells_to_plot, copy=True)
 
+    if dim_subset is not None:
+        plot_info = dict(plot_info)
+        plot_info = [(dim_id, plot_info[dim_id]) for dim_id in dim_subset]
+
     adata.obsm["X_umap_method"] = embed[adata.obs.index].obsm["X_umap"]
     for dim_title, gene_scores in plot_info:
-        if dim_subset is not None and dim_title not in dim_subset:
-            continue
-
         print(dim_title)
         relevant_genes = gene_scores.sort_values(ascending=False).index.to_list()
 
@@ -379,12 +385,12 @@ def _umap_of_relevant_genes(
             adata,
             "X_umap_method",
             layer=layer,
-            color=relevant_genes[:max_gene_per_dim],
+            color=relevant_genes[:n_top_genes],
             cmap=cmap.saturated_just_sky_cmap,
             show=False,
             frameon=False,
         )
-        if max_gene_per_dim == 1 or len(relevant_genes) == 1:
+        if n_top_genes == 1 or len(relevant_genes) == 1:
             axes = [axes]
         for ax in axes:
             ax.text(0.92, 0.05, ax.get_title(), size=15, ha="left", color="black", rotation=90, transform=ax.transAxes)
@@ -403,7 +409,7 @@ def plot_relevant_genes_on_umap(
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
     dim_subset: Sequence[str] = None,
-    max_gene_per_dim: int = 10,
+    n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
 ):
     plot_info = iterate_on_top_differential_vars(
@@ -411,5 +417,5 @@ def plot_relevant_genes_on_umap(
     )
 
     return _umap_of_relevant_genes(
-        adata, embed, plot_info, layer, title_col, dim_subset, max_gene_per_dim, max_cells_to_plot
+        adata, embed, plot_info, layer, title_col, dim_subset, n_top_genes, max_cells_to_plot
     )
