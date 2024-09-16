@@ -24,7 +24,7 @@ buck-out/
 /.cache/
 /data/
 /node_modules/
-/tmp/
+tmp/
 
 # docs
 /docs/**/generated/

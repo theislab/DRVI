@@ -33,7 +33,6 @@ from gprofiler import GProfiler
 import drvi
 from drvi.model import DRVI
 from drvi.utils.misc import hvg_batch
-
 # -
 
 sc.settings.set_figure_params(dpi=100, frameon=False)
@@ -44,9 +43,20 @@ plt.rcParams["figure.figsize"] = (3, 3)
 
 # # Load Data
 
-# +
-# # !mkdir tmp
-# # !wget -O tmp/immune_all.h5ad https://figshare.com/ndownloader/files/25717328
+# + language="bash"
+#
+# # Download Immune dataset
+#
+# mkdir -p tmp
+#
+# # Check if the file exists
+# if [ ! -f tmp/immune_all.h5ad ]; then
+#   # Download the file if it does not exist
+#   wget -O tmp/immune_all.h5ad https://figshare.com/ndownloader/files/25717328
+#   echo "File downloaded successfully."
+# else
+#   echo "File already exists."
+# fi
 # -
 
 adata = sc.read("tmp/immune_all.h5ad")
@@ -61,12 +71,10 @@ sc.pp.normalize_total(adata)
 sc.pp.log1p(adata)
 adata
 
-# +
-# sc.pp.pca(adata)
-# sc.pp.neighbors(adata)
-# sc.tl.umap(adata)
-# adata
-# -
+sc.pp.pca(adata)
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+adata
 
 # Batch aware HVG selection (method is obtained from scIB metrics)
 hvg_genes = hvg_batch(adata, batch_key="batch", target_genes=2000, adataOut=False)
@@ -128,7 +136,11 @@ sc.pp.subsample(embed, fraction=1.0)  # Shuffling for better visualization of ov
 sc.pp.neighbors(embed, n_neighbors=10, use_rep="X", n_pcs=embed.X.shape[1])
 sc.tl.umap(embed, spread=1.0, min_dist=0.5, random_state=123)
 sc.pp.pca(embed)
+
+embed.write("tmp/drvi_general_pipeline_immune_128_embed.h5ad")
 # -
+
+embed = sc.read("tmp/drvi_general_pipeline_immune_128_embed.h5ad")
 
 sc.pl.umap(embed, color=["batch", "final_annotation"], ncols=1, frameon=False)
 
@@ -167,19 +179,29 @@ drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="
 
 # # Interpretability
 
-traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=1, max_noise_std=0.0)
+# ## Traversing the latent space
+
+# Here we use DRVI's utils to traverse latent space and find the effect of each latent dimension
+
+traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=20, max_noise_std=0.0)
 drvi.utils.tl.calculate_differential_vars(traverse_adata)
+traverse_adata.write("tmp/drvi_general_pipeline_immune_128_reaverse_adata.h5ad")
+
+traverse_adata = sc.read("tmp/drvi_general_pipeline_immune_128_reaverse_adata.h5ad")
 traverse_adata
 
-drvi.utils.pl.differential_vars_heatmap(
-    traverse_adata, key="combined_score", score_threshold=1e-8, remove_unaffected=True, vmax=1
-)
+# ## Getting the results
+
+# We can then visualize the top relevant genes for each dimension
 
 drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0)
 
 
-# +
+# ## Identify using external tools
 
+# Additionally any gene set enrichment tool / marker gene searching tools can be used to identify the meaning of dimensions
+
+# +
 gp = GProfiler(return_dataframe=True)
 
 for dim_title, gene_scores in drvi.utils.tl.iterate_on_top_differential_vars(
@@ -199,14 +221,20 @@ for dim_title, gene_scores in drvi.utils.tl.iterate_on_top_differential_vars(
 # -
 
 
-# Deeper look into genes and scores.
+# ## Looking into individual dimensions
 
+# A user can take a deeper look into individual dimensions. we can see the min_possible, and max_possible log-fold-changes of each dimension. In addition, one can check the activity of top relevant genes for dimensions of interest.
+
+# We visualize 3 dimensions:
+# 1. DR 12+ highlighting CD8
+# 2. DR 22- highlighting Dissociation stress response
+# 3. DR 23+ highlighting T-reg cells
 drvi.utils.pl.show_differential_vars_scatter_plot(
     traverse_adata,
     key_x="max_possible",
     key_y="min_possible",
     key_combined="combined_score",
-    dim_subset=["DR 10+", "DR 26+", "DR 38+"],
+    dim_subset=["DR 12+", "DR 22-", "DR 23+"],
     score_threshold=0.0,
 )
 
@@ -216,6 +244,6 @@ drvi.utils.pl.plot_relevant_genes_on_umap(
     embed,
     traverse_adata,
     traverse_adata_key="combined_score",
-    dim_subset=["DR 10+", "DR 26+", "DR 38+"],
+    dim_subset=["DR 12+", "DR 22-", "DR 23+"],
     score_threshold=0.0,
 )
