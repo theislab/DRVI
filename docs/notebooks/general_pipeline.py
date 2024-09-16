@@ -185,9 +185,9 @@ drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="
 
 traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=20, max_noise_std=0.0)
 drvi.utils.tl.calculate_differential_vars(traverse_adata)
-traverse_adata.write("tmp/drvi_general_pipeline_immune_128_reaverse_adata.h5ad")
+traverse_adata.write("tmp/drvi_general_pipeline_immune_128_traverse_adata.h5ad")
 
-traverse_adata = sc.read("tmp/drvi_general_pipeline_immune_128_reaverse_adata.h5ad")
+traverse_adata = sc.read("tmp/drvi_general_pipeline_immune_128_traverse_adata.h5ad")
 traverse_adata
 
 # ## Getting the results
