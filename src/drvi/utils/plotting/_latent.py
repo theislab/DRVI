@@ -249,7 +249,7 @@ def plot_latent_dims_in_umap(
 def plot_latent_dims_in_heatmap(
     embed: AnnData,
     categorical_column: str,
-    title_col: str | None = None,
+    title_col: str | None = "title",
     sort_by_categorical: bool = False,
     make_balanced: bool = True,
     order_col: str | None = "order",

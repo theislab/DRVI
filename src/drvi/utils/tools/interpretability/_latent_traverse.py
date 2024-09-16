@@ -128,7 +128,8 @@ def make_traverse_adata(
     traverse_adata.layers["effect"] = effect_mean_param
     traverse_adata.obsm["control_latent"] = control_data
     traverse_adata.obsm["effect_latent"] = effect_data
-    traverse_adata.obsm["cat_covs"] = cat_vector
+    if cat_vector is not None:
+        traverse_adata.obsm["cat_covs"] = cat_vector
     traverse_adata.obs["lib_size"] = lib_vector
 
     return traverse_adata

@@ -93,6 +93,9 @@ def find_differential_effects(
         original_traverse_adata.uns[f"{key_added}_traverse_effect_{effect_sign}_dim_ids"] = (
             original_traverse_adata.varm[f"{key_added}_traverse_effect_{effect_sign}"].columns.values
         )
+        original_traverse_adata.varm[
+            f"{key_added}_traverse_effect_{effect_sign}"
+        ].columns = original_traverse_adata.varm[f"{key_added}_traverse_effect_{effect_sign}"].columns.astype(str)
 
 
 def combine_differential_effects(
@@ -135,6 +138,9 @@ def combine_differential_effects(
         original_traverse_adata.uns[f"{key_added}_traverse_effect_{effect_sign}_dim_ids"] = (
             original_traverse_adata.varm[f"{key_added}_traverse_effect_{effect_sign}"].columns.values
         )
+        original_traverse_adata.varm[
+            f"{key_added}_traverse_effect_{effect_sign}"
+        ].columns = original_traverse_adata.varm[f"{key_added}_traverse_effect_{effect_sign}"].columns.astype(str)
 
 
 def calculate_differential_vars(traverse_adata: AnnData, **kwargs):
