@@ -1,41 +1,161 @@
-[tool.poetry]
-name = "drvi"
-version = "1.0.0"
-description = "Disentangled Generative Representation of Single Cell Omics"
-authors = ["Amir Ali moinfar <moinfar.amirali@gmail.com>"]
-readme = "README.md"
-packages = [{include = "drvi"}]
-
-[tool.poetry.dependencies]
-python = ">=3.9,<3.12"
-torch = "2.1.0"
-lightning = "<2.1,>=2.0"
-scanpy = "1.9.5"
-scikit-learn = ">=1.5.1"
-scipy = ">=1.11.3"
-scvi-tools = "1.0.4"
-# TODO: Remove when scvi-tools and jax become ok again
-jax = "<=0.4.20"
-jaxlib = "<=0.4.20"
-# END_TODO
-anndata = ">=0.10.2"
-numpy = ">=1.26.1"
-pandas = ">=1.2.0"
-merlin-dataloader = "23.8.0"
-# lightning-cloud depends on boto3 that is currently not compatible with urllib3 so poetry resolution takes forever
-# TODO: update this when this resolved: https://github.com/boto/botocore/issues/2926
-urllib3 = "<2"
-
-[tool.poetry.dev-dependencies]
-# Formatting
-black = "23.10.1"
-leidenalg = "^0.10.1"
-pytest = "^7.4.3"
-# Docs
-sphinx = "^4.0"
-sphinx-autodoc-typehints = "^1.12.0"
-sphinx-rtd-theme = "^0.5.2"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+name = "drvi"
+version = "0.1.0"
+description = "Disentangled Generative Representation of Single Cell Omics"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Amir Ali Moinfar"},
+]
+maintainers = [
+    {name = "Amir Ali Moinfar", email = "moinfar.amirali@gmail.com"},
+]
+urls.Documentation = "https://drvi.readthedocs.io/"
+urls.Source = "https://github.com/theislab/drvi"
+urls.Home-page = "https://github.com/theislab/drvi"
+
+# Please make an issue if you need wider range of versions
+dependencies = [
+    "torch==2.1.0",
+    "lightning>=2.0,<2.1",
+    "scanpy==1.9.5",
+    "scikit-learn>=1.5.1",
+    "scipy>=1.11.3",
+    "scvi-tools==1.0.4",
+    ## TODO: Remove when scvi-tools and jax become ok again
+    "jax<=0.4.20",
+    "jaxlib<=0.4.20",
+    ## END_TODO
+    "anndata>=0.10.2",
+    "numpy>=1.26.1",
+    "pandas>=1.2.0",
+    "merlin-dataloader==23.8.0",
+    ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
+    # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
+    "urllib3<2",
+    ## END_TODO
+    # for debug logging (referenced from the issue template)
+    "session-info",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "twine>=4.0.2",
+]
+doc = [
+    "docutils>=0.8,!=0.18.*,!=0.19.*",
+    "sphinx>=4",
+    "sphinx-book-theme>=1.0.0",
+    "myst-nb>=1.1.0",
+    "sphinxcontrib-bibtex>=1.0.0",
+    "setuptools",  # Until pybtex >0.23.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+    "sphinx-autodoc-typehints",
+    "sphinxext-opengraph",
+    # For notebooks
+    "ipykernel",
+    "ipython",
+    "sphinx-copybutton",
+    "pandas",
+]
+test = [
+    "pytest",
+    "coverage",
+]
+tutorials = [
+    "leidenalg",
+    "gprofiler",
+]
+
+[tool.coverage.run]
+source = ["drvi"]
+omit = [
+    "**/test_*.py",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true
+addopts = [
+    "--import-mode=importlib",  # allow using test files with same name
+]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "F",  # Errors detected by Pyflakes
+    "E",  # Error detected by Pycodestyle
+    "W",  # Warning detected by Pycodestyle
+    "I",  # isort
+    "D",  # pydocstyle
+    "B",  # flake8-bugbear
+    "TID",  # flake8-tidy-imports
+    "C4",  # flake8-comprehensions
+    "BLE",  # flake8-blind-except
+    "UP",  # pyupgrade
+    "RUF100",  # Report unused noqa directives
+]
+ignore = [
+    # line too long -> we accept long comment lines; formatter gets rid of long code lines
+    "E501",
+    # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
+    "E731",
+    # allow I, O, l as variable names -> I is the identity matrix
+    "E741",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in __init__
+    "D107",
+    # Errors from function calls in argument defaults. These are fine when the result is immutable.
+    "B008",
+    # __magic__ methods are often self-explanatory, allow missing docstrings
+    "D105",
+    # first line should end with a period [Bug: doesn't work with single-line docstrings]
+    "D400",
+    # First line should be in imperative mood; try rephrasing
+    "D401",
+    ## Disable one in each pair of mutually incompatible rules
+    # We don’t want a blank line before a class docstring
+    "D203",
+    # We want docstrings to start immediately after the opening triple quote
+    "D213",
+    # For now skip missing docstrings for public classes, methods, and functions. TODO: remove this
+    "D101",
+    "D102",
+    "D103",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/*" = ["I"]
+"docs/notebooks/*" = ["B018"]
+"tests/*" = ["D"]
+"*/__init__.py" = ["F401"]
+
+[tool.cruft]
+skip = [
+    "tests",
+    "src/**/__init__.py",
+    "src/**/basic.py",
+    "docs/api.md",
+    "docs/changelog.md",
+    "docs/references.bib",
+    "docs/references.md",
+    "docs/notebooks/example.ipynb",
+]
