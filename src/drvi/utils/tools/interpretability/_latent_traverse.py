@@ -70,6 +70,7 @@ def make_traverse_adata(
     n_samples: int = 100,
     noise_formula: callable = lambda x: x / 2,
     max_noise_std: float = 0.2,
+    copy_adata_var_info: bool = True,
     **kwargs,
 ):
     # Generate random delta vectors for each dimension
@@ -114,15 +115,16 @@ def make_traverse_adata(
     )
     print(f"Output mean param shape: control: {control_mean_param.shape}, effect: {effect_mean_param.shape}")
 
+    if copy_adata_var_info:
+        traverse_adata_var = model.adata.var.copy()
+    else:
+        traverse_adata_var = pd.DataFrame(index=model.adata.var_names)
+    traverse_adata_var["original_order"] = np.arange(effect_mean_param.shape[1])
+
     traverse_adata = AnnData(
         X=effect_mean_param - control_mean_param,
         obs=span_adata.obs,
-        var=pd.DataFrame(
-            {
-                "original_order": np.arange(effect_mean_param.shape[1]),
-            },
-            index=model.adata.var_names,
-        ),
+        var=traverse_adata_var,
     )
     traverse_adata.layers["control"] = control_mean_param
     traverse_adata.layers["effect"] = effect_mean_param
@@ -149,6 +151,7 @@ def traverse_latent(
     embed: AnnData,
     n_steps=10 * 2,
     n_samples=100,
+    copy_adata_var_info=True,
     **kwargs,
 ):
     if "original_dim_id" not in embed.var:
@@ -161,6 +164,7 @@ def traverse_latent(
         embed=embed,
         n_steps=n_steps,
         n_samples=n_samples,
+        copy_adata_var_info=copy_adata_var_info,
         **kwargs,
     )
 

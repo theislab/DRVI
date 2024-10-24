@@ -347,6 +347,7 @@ def _umap_of_relevant_genes(
     plot_info: Sequence[tuple[str, pd.Series]],
     layer: str | None = None,
     title_col: str = "title",
+    gene_symbols: str | None = None,
     dim_subset: Sequence[str] | None = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
@@ -387,6 +388,7 @@ def _umap_of_relevant_genes(
             layer=layer,
             color=relevant_genes[:n_top_genes],
             cmap=cmap.saturated_just_sky_cmap,
+            gene_symbols=gene_symbols,
             show=False,
             frameon=False,
         )
@@ -417,5 +419,5 @@ def plot_relevant_genes_on_umap(
     )
 
     return _umap_of_relevant_genes(
-        adata, embed, plot_info, layer, title_col, dim_subset, n_top_genes, max_cells_to_plot
+        adata, embed, plot_info, layer, title_col, gene_symbols, dim_subset, n_top_genes, max_cells_to_plot
     )
