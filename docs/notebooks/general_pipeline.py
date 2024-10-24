@@ -18,10 +18,9 @@
 # %load_ext autoreload
 # %autoreload 2
 
-# +
-# TODO: uncomment for the final version
-# import warnings
-# warnings.filterwarnings('ignore')
+import warnings
+
+warnings.filterwarnings("ignore")
 
 # +
 import anndata as ad
@@ -203,10 +202,12 @@ drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", s
 
 # +
 gp = GProfiler(return_dataframe=True)
-
-for dim_title, gene_scores in drvi.utils.tl.iterate_on_top_differential_vars(
+dimensions_interpretability = drvi.utils.tools.iterate_on_top_differential_vars(
     traverse_adata, key="combined_score", score_threshold=0.0
-):
+)
+
+# For making it brief we just iterate over 5 dimensions
+for dim_title, gene_scores in dimensions_interpretability[:5]:
     print(dim_title)
 
     gene_scores = gene_scores[gene_scores > gene_scores.max() / 10]
