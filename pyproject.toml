@@ -32,7 +32,7 @@ dependencies = [
     "jaxlib<=0.4.20",
     ## END_TODO
     "anndata>=0.10.2",
-    "numpy>=1.26.1",
+    "numpy>=1.16.1",  # for np.linspace
     "pandas>=1.2.0",
     "merlin-dataloader==23.8.0",
     ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
@@ -144,7 +144,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "docs/*" = ["I"]
-"docs/notebooks/*" = ["B018"]
+"docs/notebooks/*" = ["B018", "E402"]
 "tests/*" = ["D"]
 "*/__init__.py" = ["F401"]
 
