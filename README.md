@@ -61,8 +61,6 @@ If DRVI is helpful in your research, please consider citing the following paper:
 
 > t.b.a
 
-## License
-
 [issue-tracker]: https://github.com/theislab/drvi/issues
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
