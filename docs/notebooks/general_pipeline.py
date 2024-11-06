@@ -13,7 +13,16 @@
 #     name: drvi
 # ---
 
-# # Imports
+# # General training and interpretanility pipeline
+
+# In this notebook, we analyse the immune dataset composed of 9 batches from four human peripheral blood and bone marrow studies, with 16 annotated cell types. We apply DRVI with 128 latent dimensions to showcase:
+# - How to train DRVI
+# - Observe vanished dimensions
+# - Observe the latent space in UMAP and heatmap
+# - How to run the interpretability pipeline
+# - How to identify and check individual dimensions
+
+# ## Imports
 
 # %load_ext autoreload
 # %autoreload 2
@@ -40,7 +49,7 @@ sc.set_figure_params(figsize=(3, 3))
 plt.rcParams["figure.dpi"] = 100
 plt.rcParams["figure.figsize"] = (3, 3)
 
-# # Load Data
+# ## Load Data
 
 # + language="bash"
 #
@@ -63,7 +72,7 @@ adata = sc.read("tmp/immune_all.h5ad")
 adata = adata[adata.obs["batch"] != "Villani"].copy()
 adata
 
-# # Pre-processing
+# ## Pre-processing
 
 adata.X = adata.layers["counts"].copy()
 sc.pp.normalize_total(adata)
@@ -84,7 +93,7 @@ adata
 sc.pl.umap(adata, color=["batch", "final_annotation"], ncols=1, frameon=False)
 
 
-# # Train DRVI
+# ## Train DRVI
 
 # +
 # Setup data
@@ -123,7 +132,7 @@ model.train(
 # Save the model
 model.save("tmp/drvi_general_pipeline_immune_128", overwrite=True)
 
-# # Latent space
+# ## Latent space
 
 # Load the model
 model = DRVI.load("tmp/drvi_general_pipeline_immune_128", adata)
@@ -144,7 +153,7 @@ embed = sc.read("tmp/drvi_general_pipeline_immune_128_embed.h5ad")
 sc.pl.umap(embed, color=["batch", "final_annotation"], ncols=1, frameon=False)
 
 
-# ## Chack latent dimension stats
+# ### Chack latent dimension stats
 
 drvi.utils.tl.set_latent_dimension_stats(model, embed)
 embed.var.sort_values("reconstruction_effect", ascending=False)[:5]
@@ -157,15 +166,15 @@ drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
 drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
 
 
-# ## Plot latent dimensions
+# ### Plot latent dimensions
 
 # By default, vanished dimensions are not plotted. Change arguments if you would like to.
 
-# ### UMAP
+# #### UMAP
 
 drvi.utils.pl.plot_latent_dims_in_umap(embed)
 
-# ### Heatmap
+# #### Heatmap
 
 # Heatmaps can be useful to visualize general relationship between latent dims and known categories of data
 
@@ -176,9 +185,9 @@ drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="
 drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "final_annotation", title_col="title", sort_by_categorical=True)
 
 
-# # Interpretability
+# ## Interpretability
 
-# ## Traversing the latent space
+# ### Traversing the latent space
 
 # Here we use DRVI's utils to traverse latent space and find the effect of each latent dimension
 
@@ -189,14 +198,14 @@ traverse_adata.write("tmp/drvi_general_pipeline_immune_128_traverse_adata.h5ad")
 traverse_adata = sc.read("tmp/drvi_general_pipeline_immune_128_traverse_adata.h5ad")
 traverse_adata
 
-# ## Getting the results
+# ### Getting the results
 
 # We can then visualize the top relevant genes for each dimension
 
 drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0)
 
 
-# ## Identify using external tools
+# ### Identify using external tools
 
 # Additionally any gene set enrichment tool / marker gene searching tools can be used to identify the meaning of dimensions
 
@@ -222,7 +231,7 @@ for dim_title, gene_scores in dimensions_interpretability[:5]:
 # -
 
 
-# ## Looking into individual dimensions
+# ### Looking into individual dimensions
 
 # A user can take a deeper look into individual dimensions. we can see the min_possible, and max_possible log-fold-changes of each dimension. In addition, one can check the activity of top relevant genes for dimensions of interest.
 
