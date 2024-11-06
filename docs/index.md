@@ -10,6 +10,5 @@ api/index.md
 changelog.md
 contributing.md
 references.md
-
-notebooks/general_pipeline
+tutorials.md
 ```

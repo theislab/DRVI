@@ -9,11 +9,19 @@
 
 Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
+<h1 align="center">
+    <picture>
+        <source srcset=".github/misc/concept.svg">
+        <img width="800" src=".github/misc/concept.svg" alt="DRVI concept">
+    </picture>
+</h1>
+
 ## Getting started
 
 Please refer to the [documentation][link-docs]. In particular, the
 
 -   [API documentation][link-api].
+-   [Tutorials][link-tutorials]
 
 ## Installation
 
@@ -42,23 +50,22 @@ See the [changelog][changelog].
 
 ## Contact
 
-[//]: # (TODO: make clear where to ask questions:)
-[//]: # (For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse].)
+[//]: # "TODO: make clear where to ask questions:"
+[//]: # "For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]."
+
 If you found a bug, please use the [issue tracker][issue-tracker].
 
 ## Citation
 
+If DRVI is helpful in your research, please consider citing the following paper:
+
 > t.b.a
 
-## Contributing
-
-## Authors and acknowledgment
-
 ## License
-
 
 [issue-tracker]: https://github.com/theislab/drvi/issues
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
 [link-api]: https://drvi.readthedocs.io/latest/api.html
+[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials.html
 [link-pypi]: https://pypi.org/project/drvi-py
