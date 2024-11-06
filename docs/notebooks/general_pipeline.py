@@ -13,9 +13,10 @@
 #     name: drvi
 # ---
 
-# # General training and interpretanility pipeline
+# # General training and interpretability pipeline
 
-# In this notebook, we analyse the immune dataset composed of 9 batches from four human peripheral blood and bone marrow studies, with 16 annotated cell types. We apply DRVI with 128 latent dimensions to showcase:
+# In this notebook, we analyze the immune dataset of 9 batches from four human peripheral blood and bone marrow studies, with 16 annotated cell types. We apply DRVI with 128 latent dimensions to showcase the following:
+#
 # - How to train DRVI
 # - Observe vanished dimensions
 # - Observe the latent space in UMAP and heatmap
