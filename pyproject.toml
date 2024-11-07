@@ -7,7 +7,7 @@ name = "drvi"
 version = "0.1.0"
 description = "Disentangled Generative Representation of Single Cell Omics"
 readme = "README.md"
-requires-python = ">=3.10,<3.12"
+requires-python = ">=3.10,<3.13"
 license = {file = "LICENSE"}
 authors = [
     {name = "Amir Ali Moinfar"},
