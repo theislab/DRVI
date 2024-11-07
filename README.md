@@ -20,7 +20,7 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 Please refer to the [documentation][link-docs]. In particular, the
 
--   [API documentation][link-api].
+-   [API documentation][link-api]
 -   [Tutorials][link-tutorials]
 
 ## Installation
