@@ -21,7 +21,7 @@ urls.Home-page = "https://github.com/theislab/drvi"
 
 # Please make an issue if you need wider range of versions
 dependencies = [
-    "torch==2.1.0",
+    "torch>=2.1.0,<2.4",
     "lightning>=2.0,<2.1",
     "scanpy==1.9.5",
     "scikit-learn>=1.5.1",
