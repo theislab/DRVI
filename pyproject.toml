@@ -25,7 +25,7 @@ dependencies = [
     "lightning>=2.0,<2.1",
     "scanpy==1.9.5",
     "scikit-learn>=1.5.1",
-    "scipy>=1.11.3",
+    "scipy>=1.11.3,<1.13",
     "scvi-tools==1.0.4",
     ## TODO: Remove when scvi-tools and jax become ok again
     "jax<=0.4.20",
