@@ -74,12 +74,16 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         super().__init__(adata)
 
         # TODO: Remove later. Currently used to detect autoreload problems sooner.
-        if isinstance(adata, MerlinData):
-            self._data_splitter_cls = MerlinDataSplitter
-        elif isinstance(adata, AnnData):
+        if isinstance(adata, AnnData):
             pass
+        elif MerlinData is not None and isinstance(adata, MerlinData):
+            self._data_splitter_cls = MerlinDataSplitter
         else:
-            raise ValueError("Only AnnData and MerlinData is supported")
+            raise ValueError(
+                "Only AnnData and MerlinData are supported. "
+                "If you have passes an instalce of MerlinData and still get this error, "
+                "make sure merlin is installed as a dependency."
+            )
 
         categorical_covariates_info = FeatureInfoList(categorical_covariates, axis="obs", default_dim=10)
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
@@ -221,7 +225,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             return super()._make_data_loader(
                 adata, indices, batch_size, shuffle, data_loader_class, **data_loader_kwargs
             )
-        elif isinstance(adata, MerlinData):
+        elif MerlinData is not None and isinstance(adata, MerlinData):
             adata_manager = self.get_anndata_manager(adata)
             if adata_manager is None:
                 raise AssertionError(
@@ -238,4 +242,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
                 **data_loader_kwargs,
             )
         else:
-            raise ValueError("Only AnnData and MerlinData is supported")
+            raise ValueError(
+                "Only AnnData and MerlinData are supported. "
+                "If you have passes an instalce of MerlinData and still get this error, "
+                "make sure merlin is installed as a dependency."
+            )
