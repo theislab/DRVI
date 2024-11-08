@@ -40,6 +40,7 @@ dependencies = [
     ## END_TODO
     # for debug logging (referenced from the issue template)
     "session-info",
+    "pyarrow",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +62,6 @@ doc = [
     "ipython",
     "sphinx-copybutton",
     "pandas",
-    "pyarrow",
 ]
 test = [
     "pytest",
