@@ -7,8 +7,8 @@ name = "drvi"
 version = "0.1.0"
 description = "Disentangled Generative Representation of Single Cell Omics"
 readme = "README.md"
-requires-python = ">=3.10,<3.12"
-license = {file = "LICENSE"}
+requires-python = ">=3.10,<3.13"
+license = "BSD-3-Clause"
 authors = [
     {name = "Amir Ali Moinfar"},
 ]
@@ -21,11 +21,11 @@ urls.Home-page = "https://github.com/theislab/drvi"
 
 # Please make an issue if you need wider range of versions
 dependencies = [
-    "torch==2.1.0",
+    "torch>=2.1.0,<2.4",
     "lightning>=2.0,<2.1",
     "scanpy==1.9.5",
     "scikit-learn>=1.5.1",
-    "scipy>=1.11.3",
+    "scipy>=1.11.3,<1.13",
     "scvi-tools==1.0.4",
     ## TODO: Remove when scvi-tools and jax become ok again
     "jax<=0.4.20",
@@ -34,7 +34,6 @@ dependencies = [
     "anndata>=0.10.2",
     "numpy>=1.16.1",  # for np.linspace
     "pandas>=1.2.0",
-    "merlin-dataloader==23.8.0",
     ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
     # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
     "urllib3<2",
@@ -70,6 +69,9 @@ test = [
 tutorials = [
     "leidenalg",
     "gprofiler",
+]
+merlin = [
+    "merlin-dataloader==23.8.0",
 ]
 
 [tool.coverage.run]
