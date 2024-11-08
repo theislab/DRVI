@@ -61,6 +61,7 @@ doc = [
     "ipython",
     "sphinx-copybutton",
     "pandas",
+    "pyarrow",
 ]
 test = [
     "pytest",
