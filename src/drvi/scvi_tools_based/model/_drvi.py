@@ -19,11 +19,8 @@ from drvi.scvi_tools_based.merlin_data import (
     MerlinDataSplitter,
     MerlinTransformedDataLoader,
 )
-from drvi.scvi_tools_based.merlin_data.fields import (
-    MerlinCategoricalJointObsField,
-    MerlinCategoricalObsField,
-    MerlinLayerField,
-    MerlinNumericalJointObsField,
+from drvi.scvi_tools_based.merlin_data import (
+    fields as melin_fields,
 )
 from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
@@ -185,10 +182,10 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         setup_method_args["drvi_version"] = drvi.__version__
 
         fields = [
-            MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
-            MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
-            MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
-            MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
+            melin_fields.MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
+            melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
+            melin_fields.MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
+            melin_fields.MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
         ]
         merlin_manager = MerlinDataManager(fields, setup_method_args=setup_method_args)
         merlin_manager.register_fields(merlin_data, **kwargs)
