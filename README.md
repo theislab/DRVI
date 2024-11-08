@@ -67,4 +67,3 @@ If DRVI is helpful in your research, please consider citing the following paper:
 [link-api]: https://drvi.readthedocs.io/latest/api.html
 [link-tutorials]: https://drvi.readthedocs.io/latest/tutorials.html
 [link-pypi]: https://pypi.org/project/drvi-py
-
