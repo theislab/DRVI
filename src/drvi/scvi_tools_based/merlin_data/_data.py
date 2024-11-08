@@ -3,8 +3,6 @@ import os
 from typing import Literal
 from uuid import uuid4
 
-import merlin.dtypes
-import merlin.schema
 import pandas as pd
 import pyarrow.parquet as pq
 from scvi.data import _constants
@@ -227,6 +225,8 @@ class MerlinData:
         merlin.io.Dataset
             The dataset object.
         """
+        import merlin.io
+
         if split == "default":
             split = self.default_track
         sub_sample_frac = self.sub_sample_frac

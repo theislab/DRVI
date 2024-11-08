@@ -1,5 +1,3 @@
-import merlin.dtypes
-import merlin.schema
 import pyarrow as pa
 
 
@@ -13,6 +11,9 @@ def read_first_row(path):
 
 def transfer_type_from_pyarrow(schema, first_row=None):
     """Transfer pyarrow schema to merlin schema."""
+    import merlin.dtypes
+    import merlin.schema
+
     if isinstance(schema, pa.Schema):
         fields = []
         for field in schema:
