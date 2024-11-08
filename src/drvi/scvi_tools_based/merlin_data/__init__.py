@@ -1,16 +1,15 @@
-import imp
+import importlib
 import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    imp.find_module("merlin")
+if importlib.util.find_spec("merlin"):
     from . import fields
     from ._data import MerlinData
     from ._data_loader import MerlinTransformedDataLoader
     from ._data_manager import MerlinDataManager
     from ._data_splitter import MerlinDataSplitter
-except ImportError:
+else:
     fields = None
     MerlinData = None
     MerlinTransformedDataLoader = None
