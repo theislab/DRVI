@@ -35,7 +35,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     Parameters
     ----------
     adata
-        AnnData object that has been registered via :meth:`~mypackage.MyModel.setup_anndata`.
+        AnnData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
     n_latent
         Dimensionality of the latent space.
     encoder_dims
@@ -49,7 +49,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     categorical_covariates
         Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
     **model_kwargs
-        Keyword args for :class:`~mypackage.MyModule`
+        Keyword args for :class:`~drvi.model.DRVI`
 
     Examples
     --------
