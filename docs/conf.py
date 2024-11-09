@@ -31,7 +31,7 @@ release = info["Version"]
 
 bibtex_bibfiles = ["references.bib"]
 templates_path = ["_templates"]
-nitpicky = False  # Warn about broken links
+nitpicky = True  # Warn about broken links
 needs_sphinx = "4.0"
 
 html_context = {
