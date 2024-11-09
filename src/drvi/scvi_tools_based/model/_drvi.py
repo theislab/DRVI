@@ -81,7 +81,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passes an instalce of MerlinData and still get this error, "
+                "If you have passed an instalce of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
 
@@ -244,6 +244,6 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passes an instalce of MerlinData and still get this error, "
+                "If you have passed an instalce of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
