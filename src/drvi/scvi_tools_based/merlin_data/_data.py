@@ -3,8 +3,7 @@ import os
 from typing import Literal
 from uuid import uuid4
 
-import merlin.dtypes
-import merlin.schema
+import merlin.io
 import pandas as pd
 import pyarrow.parquet as pq
 from scvi.data import _constants

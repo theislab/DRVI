@@ -19,11 +19,8 @@ from drvi.scvi_tools_based.merlin_data import (
     MerlinDataSplitter,
     MerlinTransformedDataLoader,
 )
-from drvi.scvi_tools_based.merlin_data.fields import (
-    MerlinCategoricalJointObsField,
-    MerlinCategoricalObsField,
-    MerlinLayerField,
-    MerlinNumericalJointObsField,
+from drvi.scvi_tools_based.merlin_data import (
+    fields as melin_fields,
 )
 from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
@@ -38,7 +35,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     Parameters
     ----------
     adata
-        AnnData object that has been registered via :meth:`~mypackage.MyModel.setup_anndata`.
+        AnnData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
     n_latent
         Dimensionality of the latent space.
     encoder_dims
@@ -52,7 +49,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     categorical_covariates
         Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
     **model_kwargs
-        Keyword args for :class:`~mypackage.MyModule`
+        Keyword args for :class:`~drvi.model.DRVI`
 
     Examples
     --------
@@ -77,12 +74,16 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         super().__init__(adata)
 
         # TODO: Remove later. Currently used to detect autoreload problems sooner.
-        if isinstance(adata, MerlinData):
-            self._data_splitter_cls = MerlinDataSplitter
-        elif isinstance(adata, AnnData):
+        if isinstance(adata, AnnData):
             pass
+        elif MerlinData is not None and isinstance(adata, MerlinData):
+            self._data_splitter_cls = MerlinDataSplitter
         else:
-            raise ValueError("Only AnnData and MerlinData is supported")
+            raise ValueError(
+                "Only AnnData and MerlinData are supported. "
+                "If you have passes an instalce of MerlinData and still get this error, "
+                "make sure merlin is installed as a dependency."
+            )
 
         categorical_covariates_info = FeatureInfoList(categorical_covariates, axis="obs", default_dim=10)
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
@@ -185,10 +186,10 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         setup_method_args["drvi_version"] = drvi.__version__
 
         fields = [
-            MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
-            MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
-            MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
-            MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
+            melin_fields.MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
+            melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
+            melin_fields.MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
+            melin_fields.MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
         ]
         merlin_manager = MerlinDataManager(fields, setup_method_args=setup_method_args)
         merlin_manager.register_fields(merlin_data, **kwargs)
@@ -224,7 +225,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             return super()._make_data_loader(
                 adata, indices, batch_size, shuffle, data_loader_class, **data_loader_kwargs
             )
-        elif isinstance(adata, MerlinData):
+        elif MerlinData is not None and isinstance(adata, MerlinData):
             adata_manager = self.get_anndata_manager(adata)
             if adata_manager is None:
                 raise AssertionError(
@@ -241,4 +242,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
                 **data_loader_kwargs,
             )
         else:
-            raise ValueError("Only AnnData and MerlinData is supported")
+            raise ValueError(
+                "Only AnnData and MerlinData are supported. "
+                "If you have passes an instalce of MerlinData and still get this error, "
+                "make sure merlin is installed as a dependency."
+            )
