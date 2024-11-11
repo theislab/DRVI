@@ -19,14 +19,6 @@ urls.Documentation = "https://drvi.readthedocs.io/"
 urls.Source = "https://github.com/theislab/drvi"
 urls.Home-page = "https://github.com/theislab/drvi"
 
-# This configuration makes 'drvi' the importable name
-[tool.hatch.metadata]
-dynamic = ["name"]
-
-[tool.hatch.build]
-targets.sdist.include = ["drvi"]
-targets.wheel.include = ["drvi"]
-
 # Please make an issue if you need wider range of versions
 dependencies = [
     "torch>=2.1.0,<2.4",
@@ -49,6 +41,14 @@ dependencies = [
     # for debug logging (referenced from the issue template)
     "session-info",
 ]
+
+# This configuration makes 'drvi' the importable name
+[tool.hatch.metadata]
+dynamic = ["name"]
+
+[tool.hatch.build]
+targets.sdist.include = ["drvi"]
+targets.wheel.include = ["drvi"]
 
 [project.optional-dependencies]
 dev = [
