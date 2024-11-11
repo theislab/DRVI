@@ -49,7 +49,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     categorical_covariates
         Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
     **model_kwargs
-        Keyword args for :class:`~drvi.model.DRVI`
+        Keyword args for :class:`~drvi.model.DRVIModule`
 
     Examples
     --------
