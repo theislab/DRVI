@@ -7,10 +7,10 @@
 
 [badge-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml/badge.svg
 [badge-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml/badge.svg
-[link-build]: https://github.com/theislab/drvi/actions/workflows/build.yml
-[link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yml
+[link-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml
+[link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml
 [badge-docs]: https://img.shields.io/readthedocs/drvi/latest.svg?label=Read%20the%20Docs
-[badge-pyver]: https://img.shields.io/pypi/pyversions/drvi
+[badge-pyver]: https://img.shields.io/pypi/pyversions/drvi-py
 
 Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
