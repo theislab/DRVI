@@ -9,4 +9,5 @@
     :toctree: generated
 
     model.DRVI
+    model.DRVIModule
 ```
