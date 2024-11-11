@@ -1,11 +1,17 @@
 # DRVI
 
+[![Build][badge-build]][link-build]
 [![Tests][badge-tests]][link-tests]
 [![Documentation][badge-docs]][link-docs]
+[![Python Version][badge-pyver]][link-pypi]
 
-[badge-tests]: https://img.shields.io/github/actions/workflow/status/theislab/drvi/test.yaml?branch=main
+[badge-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml/badge.svg
+[badge-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml/badge.svg
+[link-build]: https://github.com/theislab/drvi/actions/workflows/build.yml
 [link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yml
-[badge-docs]: https://img.shields.io/readthedocs/drvi
+[badge-docs]: https://img.shields.io/readthedocs/drvi/latest.svg?label=Read%20the%20Docs
+[badge-pyver]: https://img.shields.io/pypi/pyversions/drvi
+[link-pypi]: https://pypi.org/project/drvi-py/
 
 Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
