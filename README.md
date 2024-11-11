@@ -11,8 +11,8 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 <h1 align="center">
     <picture>
-        <source srcset=".github/misc/concept.svg">
-        <img width="800" src=".github/misc/concept.svg" alt="DRVI concept">
+        <source srcset="https://raw.githubusercontent.com/theislab/DRVI/main/.github/misc/concept.svg">
+        <img width="800" src="https://raw.githubusercontent.com/theislab/DRVI/main/.github/misc/concept.svg" alt="DRVI concept">
     </picture>
 </h1>
 
@@ -59,11 +59,15 @@ If you found a bug, please use the [issue tracker][issue-tracker].
 
 If DRVI is helpful in your research, please consider citing the following paper:
 
-> t.b.a
+```
+> Moinfar, Amir Ali, and Fabian J. Theis. 2024.
+> **"Unsupervised Deep Disentangled Representation of Single-Cell Omics."**
+> bioRxiv. https://doi.org/10.1101/2024.11.06.622266.
+```
 
 [issue-tracker]: https://github.com/theislab/drvi/issues
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
-[link-api]: https://drvi.readthedocs.io/latest/api.html
+[link-api]: https://drvi.readthedocs.io/latest/api/index.html
 [link-tutorials]: https://drvi.readthedocs.io/latest/tutorials.html
 [link-pypi]: https://pypi.org/project/drvi-py
