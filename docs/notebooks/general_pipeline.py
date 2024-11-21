@@ -132,10 +132,11 @@ model
 # For cpu training you should add the following line to the model.train parameters:
 # accelerator="cpu", devices=1,
 #
-# For cpu training you should add the following line to the model.train parameters:
+# For mps acceleration on macbooks, add the following line to the model.train parameters:
 # accelerator="mps", devices=1,
 #
 # For gpu training don't provide any additional parameter.
+# More details here: https://lightning.ai/docs/pytorch/stable/accelerators/gpu_basic.html
 
 n_epochs = 400
 
