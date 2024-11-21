@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.15.2
+#       jupytext_version: 1.16.4
 #   kernelspec:
-#     display_name: drvi
+#     display_name: drvi-repr
 #     language: python
-#     name: drvi
+#     name: drvi-repr
 # ---
 
 # # General training and interpretability pipeline
@@ -61,7 +61,13 @@ plt.rcParams["figure.figsize"] = (3, 3)
 # # Check if the file exists
 # if [ ! -f tmp/immune_all.h5ad ]; then
 #   # Download the file if it does not exist
-#   wget -O tmp/immune_all.h5ad https://figshare.com/ndownloader/files/25717328
+#   { # try
+#       wget -O tmp/immune_all.h5ad https://figshare.com/ndownloader/files/25717328
+#       #save your output
+#   } || \
+#   { # catch
+#       curl -L https://figshare.com/ndownloader/files/25717328 -o tmp/immune_all.h5ad
+#   }
 #   echo "File downloaded successfully."
 # else
 #   echo "File already exists."
@@ -121,14 +127,41 @@ model = DRVI(
     decoder_dims=[128, 128],
 )
 model
-# -
+
+# +
+# For cpu training you should add the following line to the model.train parameters:
+# accelerator="cpu", devices=1,
+#
+# For mps acceleration on macbooks, add the following line to the model.train parameters:
+# accelerator="mps", devices=1,
+#
+# For gpu training don't provide any additional parameter.
+# More details here: https://lightning.ai/docs/pytorch/stable/accelerators/gpu_basic.html
+
+n_epochs = 400
 
 # train the model
 model.train(
-    max_epochs=400,
+    max_epochs=n_epochs,
     early_stopping=False,
     early_stopping_patience=20,
+    # mps
+    # accelerator="mps", devices=1,
+    # cpu
+    # accelerator="cpu", devices=1,
+    # gpu: no additional parameter
+    #
+    # No need to provide `plan_kwargs` if n_epochs >= 400.
+    plan_kwargs={
+        "n_epochs_kl_warmup": n_epochs,
+    },
 )
+
+# Runtime:
+# The runtime for CPU laptop (M1) is 208 minutes
+# The runtime for Macbook gpu (M1) is 64 minutes
+# The runtime for GPU (A100) is 17 minutes
+# -
 
 # Save the model
 model.save("tmp/drvi_general_pipeline_immune_128", overwrite=True)

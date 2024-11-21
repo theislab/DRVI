@@ -25,8 +25,22 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 Please refer to the [documentation][link-docs]. In particular, the
 
--   [API documentation][link-api]
--   [Tutorials][link-tutorials]
+-   [Tutorials][link-tutorials], specially
+    -   [A demo](https://drvi.readthedocs.io/latest/notebooks/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
+-   [API documentation][link-api], specially
+    -   [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
+    -   [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
+    -   [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+
+## System requirements
+
+We recommend running DRVI on a recent Linux distribution.
+DRVI is actively tested on the latest LTS version of Ubuntu (currently 24.04 LTS).
+
+[//]: # "TODO: remove ubuntu version later"
+
+For optimal performance, we highly recommend using a GPU with CUDA capabilities.
+While CPU-based systems are supported, GPU-powered systems are strongly recommended for optimal performance.
 
 ## Installation
 
@@ -35,7 +49,9 @@ Python installed, we recommend installing [Mambaforge](https://github.com/conda-
 
 There are several options to install drvi:
 
-1. Install the latest release of `drvi-py` from [PyPI][link-pypi]:
+[//]: # "TODO: remove install time!"
+
+1. Install the latest release of `drvi-py` from [PyPI][link-pypi], which should take around two minutes:
 
 ```bash
 pip install drvi-py
@@ -46,6 +62,11 @@ pip install drvi-py
 ```bash
 pip install git+https://github.com/theislab/drvi.git@main
 ```
+
+Please be sure to install a version of [PyTorch][pytorch-home] that is compatible with your GPU.
+Dependencies are installed automatically, please take a look at the versions for different dependencies in `pyproject.toml` if needed.
+
+[pytorch-home]: https://pytorch.org/
 
 ## Release notes
 
@@ -66,6 +87,11 @@ If DRVI is helpful in your research, please consider citing the following paper:
 > **Unsupervised deep disentangled representation of single-cell omics.**
 > bioRxiv 2024.11.06.622266 (2024) [doi:10.1101/2024.11.06.622266](https://doi.org/10.1101/2024.11.06.622266).
 
+## Reproducibility
+
+Code, notebooks, and instructions to reproduce the results from the paper are available at the [reproducibility repository][repr-repo].
+
+[repr-repo]: https://github.com/theislab/drvi_reproducibility
 [issue-tracker]: https://github.com/theislab/drvi/issues
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
