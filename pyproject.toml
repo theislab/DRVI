@@ -89,7 +89,7 @@ test = [
 ]
 tutorials = [
     "leidenalg",
-    "gprofiler",
+    "gprofiler-official==0.3.5",
 ]
 merlin = [
     "merlin-dataloader==23.8.0",
