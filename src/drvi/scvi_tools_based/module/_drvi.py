@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Literal
 
 import numpy as np
@@ -83,7 +83,10 @@ class DRVIModule(BaseModuleClass):
     prior_init_dataloader
         Dataloader constructed to initialize the prior (or maintain in vamp).
     var_activation
-        Callable used to ensure positivity of the variational distributions' variance.
+        The activation function to ensure positivity of the variatinal distribution. Defaults to "exp".
+    mean_activation
+        The activation function at the end of mean encoder. Defaults to "identity".
+        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_vaule}".
     encoder_layer_factory
         A layer Factory instance for build encoder layers
     decoder_layer_factory
@@ -145,7 +148,8 @@ class DRVIModule(BaseModuleClass):
         ] = "pnb_softmax",
         prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
         prior_init_dataloader: DataLoader | None = None,
-        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        var_activation: Literal["exp", "pow2"] = "exp",
+        mean_activation: str = "identity",
         encoder_layer_factory: LayerFactory = None,
         decoder_layer_factory: LayerFactory = None,
         extra_encoder_kwargs: dict | None = None,
@@ -201,6 +205,7 @@ class DRVIModule(BaseModuleClass):
             affine_batch_norm=affine_batch_norm_encoder,
             use_layer_norm=use_layer_norm_encoder,
             var_activation=var_activation,
+            mean_activation=mean_activation,
             layer_factory=encoder_layer_factory,
             covariate_modeling_strategy=covariate_modeling_strategy,
             categorical_covariate_dims=categorical_covariate_dims if self.encode_covariates else [],
