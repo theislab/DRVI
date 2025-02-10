@@ -16,9 +16,7 @@ class FeatureInfoList:
         self.axis = axis
         if any(fi.dim is None for fi in self.feature_info_list):
             if total_dim is None and default_dim is None:
-                raise ValueError(
-                    f"missing dim in {feature_info_str_list}\n" f"Please provide `total_dim` or `default_dim`"
-                )
+                raise ValueError(f"missing dim in {feature_info_str_list}\nPlease provide `total_dim` or `default_dim`")
             if total_dim is not None:
                 self._fill_with_total_dim(total_dim)
             if default_dim is not None:
