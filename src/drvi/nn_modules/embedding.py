@@ -39,9 +39,7 @@ class FreezableEmbedding(nn.Embedding):
         if self._freeze_hook is None:
             return f"Emb({self.num_embeddings}, {self.embedding_dim})"
         else:
-            return (
-                f"Emb({self.num_embeddings}, {self.embedding_dim} | " f"freeze: {self.n_freeze_x}, {self.n_freeze_y})"
-            )
+            return f"Emb({self.num_embeddings}, {self.embedding_dim} | freeze: {self.n_freeze_x}, {self.n_freeze_y})"
 
 
 class MultiEmbedding(nn.Module):
@@ -103,7 +101,7 @@ class MultiEmbedding(nn.Module):
     def load_weights_from_trained_module(self, other, freeze_old=False):
         assert len(self.emb_list) >= len(other.emb_list)
         if len(self.emb_list) > len(other.emb_list):
-            logging.warning(f"Extending feature embedding {other} to {self} " f"with more feature categories.")
+            logging.warning(f"Extending feature embedding {other} to {self} with more feature categories.")
         else:
             logging.info(f"Extending feature embedding {other} to {self}")
         for self_emb, other_emb in zip(self.emb_list, other.emb_list, strict=False):
