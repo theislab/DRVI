@@ -95,6 +95,9 @@ def make_traverse_adata(
     else:
         cat_vector = None
 
+    if model.adata_manager.get_state_registry(scvi.REGISTRY_KEYS.CONT_COVS_KEY):
+        raise NotImplementedError("Interpretability of models with continuous covariates are not implemented yet.")
+
     # lib size
     lib_vector = np.ones(n_samples) * 1e4
     lib_vector = lib_vector[span_adata.obs["sample_id"]]
