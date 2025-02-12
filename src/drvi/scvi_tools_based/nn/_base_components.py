@@ -1,6 +1,6 @@
 import collections
 import math
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Literal
 
 import torch
@@ -390,8 +390,10 @@ class Encoder(nn.Module):
         Minimum value for the variance;
         used for numerical stability
     var_activation
-        Callable used to ensure positivity of the variance.
-        Defaults to :meth:`torch.exp`.
+        The activation function to ensure positivity of the variance. Defaults to "exp".
+    mean_activation
+        The activation function at the end of mean encoder. Defaults to "identity".
+        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_vaule}".
     layer_factory
         A layer Factory instance for building layers
     layers_location
@@ -419,7 +421,8 @@ class Encoder(nn.Module):
         dropout_rate: float = 0.1,
         distribution: str = "normal",
         var_eps: float = 1e-4,
-        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        var_activation: Literal["exp", "pow2"] = "exp",
+        mean_activation: str = "identity",
         layer_factory: LayerFactory = None,
         covariate_modeling_strategy: Literal[
             "one_hot",
@@ -497,8 +500,24 @@ class Encoder(nn.Module):
         elif var_activation == "pow2":
             self.var_activation = lambda x: torch.pow(x, 2)
         else:
-            assert callable(var_activation)
-            self.var_activation = var_activation
+            raise NotImplementedError()
+
+        if mean_activation == "identity":
+            self.mean_activation = nn.Identity()
+        elif mean_activation == "relu":
+            self.mean_activation = nn.ReLU()
+        elif mean_activation.startswith("leaky_relu"):
+            if mean_activation == "leaky_relu":
+                mean_activation = "leaky_relu_0.01"
+            slope = float(mean_activation.split("leaky_relu_")[1])
+            self.mean_activation = nn.LeakyReLU(negative_slope=slope)
+        elif mean_activation.startswith("elu"):
+            if mean_activation == "elu":
+                mean_activation = "elu_1.0"
+            alpha = float(mean_activation.split("elu_")[1])
+            self.mean_activation = nn.ELU(alpha=alpha)
+        else:
+            raise NotImplementedError()
 
     def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor, cont_full_tensor: torch.Tensor = None):
         r"""The forward computation for a single sample.
@@ -524,7 +543,7 @@ class Encoder(nn.Module):
             x = torch.cat((x, cont_full_tensor), dim=-1)
         # Parameters for latent distribution
         q = self.encoder(self.input_dropout(x), cat_full_tensor) if self.encoder is not None else x
-        q_m = self.mean_encoder(q, cat_full_tensor)
+        q_m = self.mean_activation(self.mean_encoder(q, cat_full_tensor))
         q_v = self.var_activation(self.var_encoder(q, cat_full_tensor)) + self.var_eps
         dist = Normal(q_m, q_v.sqrt())
         latent = self.z_transformation(dist.rsample())

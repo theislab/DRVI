@@ -105,6 +105,13 @@ class TestDRVIModel:
             adata, n_latent=32, n_split_latent=8, split_method="split", split_aggregation="max"
         )
 
+    def test_simple_integration_mean_activation(self):
+        adata = self.make_test_adata()
+        self._general_integration_test(adata, n_latent=32, n_split_latent=32, mean_activation="identity")
+        self._general_integration_test(adata, n_latent=32, n_split_latent=32, mean_activation="relu")
+        self._general_integration_test(adata, n_latent=32, n_split_latent=32, mean_activation="leaky_relu_0.4")
+        self._general_integration_test(adata, n_latent=32, n_split_latent=32, mean_activation="elu_0.4")
+
     def test_decoder_reusing(self):
         adata = self.make_test_adata()
         for reuse_strategy in ["nowhere"]:
