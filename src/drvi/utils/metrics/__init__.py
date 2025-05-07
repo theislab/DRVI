@@ -5,6 +5,7 @@ from ._pairwise import (
     nn_alignment_score,
     spearman_correlataion_score,
 )
+from ._benchmark import DiscreteDisentanglementBenchmark
 
 __all__ = [
     "nn_alignment_score",
@@ -14,4 +15,5 @@ __all__ = [
     "most_similar_averaging_score",
     "latent_matching_score",
     "most_similar_gap_score",
+    "DiscreteDisentanglementBenchmark",
 ]
