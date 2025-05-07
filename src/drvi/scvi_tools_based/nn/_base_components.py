@@ -499,6 +499,8 @@ class Encoder(nn.Module):
             self.var_activation = torch.exp
         elif var_activation == "pow2":
             self.var_activation = lambda x: torch.pow(x, 2)
+        elif var_activation == '2sig':
+            self.var_activation = lambda x: 2 * torch.sigmoid(x)
         else:
             raise NotImplementedError()
 
@@ -516,6 +518,11 @@ class Encoder(nn.Module):
                 mean_activation = "elu_1.0"
             alpha = float(mean_activation.split("elu_")[1])
             self.mean_activation = nn.ELU(alpha=alpha)
+        elif mean_activation.startswith("celu"):
+            if mean_activation == "celu":
+                mean_activation = "celu_1.0"
+            alpha = float(mean_activation.split("celu_")[1])
+            self.mean_activation = nn.CELU(alpha=alpha)
         else:
             raise NotImplementedError()
 
