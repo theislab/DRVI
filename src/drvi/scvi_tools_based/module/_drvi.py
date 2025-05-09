@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Literal
 
 import numpy as np
@@ -148,8 +148,8 @@ class DRVIModule(BaseModuleClass):
         ] = "pnb_softmax",
         prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
         prior_init_dataloader: DataLoader | None = None,
-        var_activation: Literal["exp", "pow2"] = "exp",
-        mean_activation: str = "identity",
+        var_activation: Callable | Literal["exp", "pow2", "2sig"] | Callable = "exp",
+        mean_activation: Callable | str = "identity",
         encoder_layer_factory: LayerFactory = None,
         decoder_layer_factory: LayerFactory = None,
         extra_encoder_kwargs: dict | None = None,

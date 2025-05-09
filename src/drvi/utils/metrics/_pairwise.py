@@ -4,53 +4,71 @@ from scipy import stats
 from sklearn.feature_selection import mutual_info_classif
 
 
-def _nn_alignment_score_per_dim(var_continues, ct_cat_series):
+def check_discrete_metric_input(gt_cat_series=None, gt_one_hot=None):
+    if gt_cat_series is not None and gt_one_hot is not None:
+        raise ValueError("Only one of gt_cat_series or gt_one_hot should be provided.")
+    if gt_cat_series is None and gt_one_hot is None:
+        raise ValueError("Either gt_cat_series or gt_one_hot must be provided.")
+
+
+def get_one_hot_encoding(gt_cat_series):
+    return np.eye(len(gt_cat_series.cat.categories))[gt_cat_series.cat.codes]
+
+
+def _nn_alignment_score_per_dim(var_continues, gt_01):
     order = var_continues.argsort()
-    ct_cat_series = ct_cat_series[order]
-    ct_01 = np.eye(len(ct_cat_series.cat.categories))[ct_cat_series.cat.codes]
+    gt_01 = gt_01[order]
     alignment = np.clip(
         (
-            np.sum(ct_01[:-1, :] * ct_01[1:, :], axis=0) / (np.sum(ct_01, axis=0) - 1)
+            np.sum(gt_01[:-1, :] * gt_01[1:, :], axis=0) / (np.sum(gt_01, axis=0) - 1)
         )  # fraction of cells of this type that are next to a cell of the same type
-        - (np.sum(ct_01, axis=0) / ct_01.shape[0]),  # cancel random neighbors when CT is frequent
+        - (np.sum(gt_01, axis=0) / gt_01.shape[0]),  # cancel random neighbors when GT (ground-truth) is frequent
         0,
         None,
-    ) / (1 - (np.sum(ct_01, axis=0) / ct_01.shape[0]))
+    ) / (1 - (np.sum(gt_01, axis=0) / gt_01.shape[0]))
     return alignment
 
 
-def _local_mutual_info_score_per_binary_ct(all_vars_continues, ct_binary):
-    mi_score = mutual_info_classif(all_vars_continues, ct_binary, n_jobs=-1)
-    ct_prob = np.sum(ct_binary == 1) / ct_binary.shape[0]
-    ct_entropy = stats.entropy([ct_prob, 1 - ct_prob])
-    return mi_score / ct_entropy
+def nn_alignment_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None):
+    check_discrete_metric_input(gt_cat_series, gt_one_hot)
+    gt_01 = get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
 
-
-def nn_alignment_score(all_vars_continues, ct_cat_series):
     n_vars = all_vars_continues.shape[1]
-    result = np.zeros([n_vars, len(ct_cat_series.cat.categories)])
+    result = np.zeros([n_vars, gt_01.shape[1]])
     for i in range(n_vars):
-        result[i, :] = _nn_alignment_score_per_dim(all_vars_continues[:, i], ct_cat_series)
+        result[i, :] = _nn_alignment_score_per_dim(all_vars_continues[:, i], gt_01)
     return result
 
 
-def local_mutual_info_score(all_vars_continues, ct_cat_series):
+def _local_mutual_info_score_per_binary_gt(all_vars_continues, gt_binary):
+    mi_score = mutual_info_classif(all_vars_continues, gt_binary, n_jobs=-1)
+    gt_prob = np.sum(gt_binary == 1) / gt_binary.shape[0]
+    gt_entropy = stats.entropy([gt_prob, 1 - gt_prob])
+    return mi_score / gt_entropy
+
+
+def local_mutual_info_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None):
+    check_discrete_metric_input(gt_cat_series, gt_one_hot)
+    gt_01 = get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
+
     n_vars = all_vars_continues.shape[1]
-    result = np.zeros([n_vars, len(ct_cat_series.cat.categories)])
-    ct_01 = np.eye(len(ct_cat_series.cat.categories))[ct_cat_series.cat.codes].T
-    for j in range(ct_01.shape[0]):
-        result[:, j] = _local_mutual_info_score_per_binary_ct(all_vars_continues, ct_01[j])
+    result = np.zeros([n_vars, gt_01.shape[1]])
+    for j in range(gt_01.shape[1]):
+        result[:, j] = _local_mutual_info_score_per_binary_gt(all_vars_continues, gt_01[:, j])
     return result
 
 
-def global_dim_mutual_info_score(all_vars_continues, ct_cat_series):
-    mi_score = mutual_info_classif(all_vars_continues, ct_cat_series)
-    ct_entropy = stats.entropy(pd.Series(ct_cat_series).value_counts(normalize=True, sort=False))
-    return mi_score / ct_entropy
+def spearman_correlataion_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None):
+    check_discrete_metric_input(gt_cat_series, gt_one_hot)
+    gt_01 = get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
 
-
-def spearman_correlataion_score(all_vars_continues, ct_cat_series):
     n_vars = all_vars_continues.shape[1]
-    ct_01 = np.eye(len(ct_cat_series.cat.categories))[ct_cat_series.cat.codes]
-    result = np.abs(stats.spearmanr(all_vars_continues, ct_01).statistic[:n_vars, n_vars:])
+    result = np.abs(stats.spearmanr(all_vars_continues, gt_01).statistic[:n_vars, n_vars:])
     return result
+
+
+def global_dim_mutual_info_score(all_vars_continues, gt_cat_series):
+    # This metric is not used in any analysis, but is provided for completeness.
+    mi_score = mutual_info_classif(all_vars_continues, gt_cat_series)
+    gt_entropy = stats.entropy(pd.Series(gt_cat_series).value_counts(normalize=True, sort=False))
+    return mi_score / gt_entropy

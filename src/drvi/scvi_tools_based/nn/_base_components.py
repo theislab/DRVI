@@ -1,6 +1,6 @@
 import collections
 import math
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Literal
 
 import torch
@@ -421,8 +421,8 @@ class Encoder(nn.Module):
         dropout_rate: float = 0.1,
         distribution: str = "normal",
         var_eps: float = 1e-4,
-        var_activation: Literal["exp", "pow2"] = "exp",
-        mean_activation: str = "identity",
+        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        mean_activation: Callable | str = "identity",
         layer_factory: LayerFactory = None,
         covariate_modeling_strategy: Literal[
             "one_hot",
@@ -499,8 +499,11 @@ class Encoder(nn.Module):
             self.var_activation = torch.exp
         elif var_activation == "pow2":
             self.var_activation = lambda x: torch.pow(x, 2)
+        elif var_activation == "2sig":
+            self.var_activation = lambda x: 2 * torch.sigmoid(x)
         else:
-            raise NotImplementedError()
+            assert callable(var_activation)
+            self.var_activation = var_activation
 
         if mean_activation == "identity":
             self.mean_activation = nn.Identity()
@@ -516,8 +519,14 @@ class Encoder(nn.Module):
                 mean_activation = "elu_1.0"
             alpha = float(mean_activation.split("elu_")[1])
             self.mean_activation = nn.ELU(alpha=alpha)
+        elif mean_activation.startswith("celu"):
+            if mean_activation == "celu":
+                mean_activation = "celu_1.0"
+            alpha = float(mean_activation.split("celu_")[1])
+            self.mean_activation = nn.CELU(alpha=alpha)
         else:
-            raise NotImplementedError()
+            assert callable(mean_activation)
+            self.mean_activation = mean_activation
 
     def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor, cont_full_tensor: torch.Tensor = None):
         r"""The forward computation for a single sample.
