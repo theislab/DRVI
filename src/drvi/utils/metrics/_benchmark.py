@@ -29,8 +29,8 @@ class DiscreteDisentanglementBenchmark:
         discrete_target=None,
         one_hot_target=None,
         dim_titles=None,
-        metrics=["SMI", "SPN", "ASC"],
-        aggregation_methods=["LMS", "MSAS", "MSGS"],
+        metrics=("SMI", "SPN", "ASC"),
+        aggregation_methods=("LMS", "MSAS", "MSGS"),
     ):
         if discrete_target is None and one_hot_target is None:
             raise ValueError("Either discrete_target or one_hot_target must be provided.")
@@ -71,7 +71,7 @@ class DiscreteDisentanglementBenchmark:
         self.aggregated_results = {}
 
     @staticmethod
-    def _compute_metrics(embed, one_hot_target, dim_titles=None, metrics=tuple()):
+    def _compute_metrics(embed, one_hot_target, dim_titles=None, metrics=()):
         if dim_titles is None:
             dim_titles = [f"dim_{d}" for d in range(embed.shape[1])]
 
@@ -87,7 +87,7 @@ class DiscreteDisentanglementBenchmark:
         return results
 
     @staticmethod
-    def _aggregate_metrics(results, aggregation_methods=tuple()):
+    def _aggregate_metrics(results, aggregation_methods=()):
         aggregated_results = {}
         for aggregation_method in aggregation_methods:
             for metric_name in results:
