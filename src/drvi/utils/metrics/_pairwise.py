@@ -28,6 +28,7 @@ def _nn_alignment_score_per_dim(var_continues, gt_01):
     ) / (1 - (np.sum(gt_01, axis=0) / gt_01.shape[0]))
     return alignment
 
+
 def nn_alignment_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None):
     check_discrete_metric_input(gt_cat_series, gt_one_hot)
     gt_01 = get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
@@ -37,6 +38,7 @@ def nn_alignment_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None):
     for i in range(n_vars):
         result[i, :] = _nn_alignment_score_per_dim(all_vars_continues[:, i], gt_01)
     return result
+
 
 def _local_mutual_info_score_per_binary_gt(all_vars_continues, gt_binary):
     mi_score = mutual_info_classif(all_vars_continues, gt_binary, n_jobs=-1)
