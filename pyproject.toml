@@ -118,13 +118,6 @@ python = [ "3.13" ]
 [tool.hatch.envs.hatch-test]
 features = [ "test" ]
 
-
-[tool.coverage.run]
-source = ["drvi"]
-omit = [
-    "**/test_*.py",
-]
-
 [tool.ruff]
 line-length = 120
 src = ["src"]
