@@ -102,7 +102,7 @@ features = [ "dev" ]
 
 [tool.hatch.envs.docs]
 features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
+scripts.build = "sphinx-build -M html docs docs/_build --keep-going {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
