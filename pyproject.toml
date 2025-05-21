@@ -170,7 +170,7 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = [ "{{ cookiecutter.package_name }}" ]
+source = ["drvi"]
 omit = [
   "**/test_*.py",
 ]
