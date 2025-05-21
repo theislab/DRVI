@@ -92,9 +92,20 @@ source_suffix = {
 }
 
 intersphinx_mapping = {
+    # General
     "python": ("https://docs.python.org/3", None),
-    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    # Numerical
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    # Deep learning
+    "torch": ("https://docs.pytorch.org/docs/main", None),
+    "lightning": ("https://lightning.ai/docs/pytorch/stable/", None),
+    # Special
+    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    "mudata": ("https://mudata.readthedocs.io/en/stable/", None),
+    "scvi-tools": ("https://docs.scvi-tools.org/en/stable/", None),
 }
 
 # List of patterns, relative to source directory, that match files and
