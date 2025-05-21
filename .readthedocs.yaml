@@ -13,7 +13,7 @@ build:
       - uv pip install .[doc]
     build:
       html:
-        - uv run python -c "import jax"
+        - uv run python -c "import drvi"
         - uvx hatch run docs:build
         - mv docs/_build $READTHEDOCS_OUTPUT
 
