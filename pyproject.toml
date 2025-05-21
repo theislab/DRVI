@@ -35,23 +35,19 @@ classifiers = [
 
 # Please make an issue if you need wider range of versions
 dependencies = [
-    "torch>=2.1.0,<2.4",
-    "lightning>=2.0,<2.1",
-    "scanpy==1.9.5",
+    "torch>=2.1.0",
+    "lightning>=2.0",
+    "scanpy>=1.9.5",
     "scikit-learn>=1.5.1",
-    "scipy>=1.11.3,<1.13",
-    "scvi-tools==1.0.4",
+    "scipy>=1.11.3",
+    "scvi-tools>=1.0.4",
     ## TODO: Remove when scvi-tools and jax become ok again
     "jax<=0.4.20",
     "jaxlib<=0.4.20",
     ## END_TODO
-    "anndata>=0.10.2,<0.11",
-    "numpy>=1.16.1",  # for np.linspace
+    "anndata>=0.10.2",
+    "numpy>=1.16.1,<2.0.0",  # for np.linspace
     "pandas>=1.2.0",
-    ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
-    # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
-    "urllib3<2",
-    ## END_TODO
     # for debug logging (referenced from the issue template)
     "session-info",
 ]
