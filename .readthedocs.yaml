@@ -11,7 +11,7 @@ build:
       - asdf global uv latest
     build:
       html:
-        - git submodule update --init --recursive
+        - ls docs/tutorials -alh
         - uvx hatch run docs:build
         - mv docs/_build $READTHEDOCS_OUTPUT
 
