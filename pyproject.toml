@@ -74,6 +74,7 @@ optional-dependencies.doc = [
     "ipykernel",
     "ipython",
     "sphinx-copybutton",
+    "sphinx-tabs",
     "pandas",
 ]
 optional-dependencies.test = [
