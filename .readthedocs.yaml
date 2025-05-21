@@ -9,11 +9,8 @@ build:
       - asdf plugin add uv
       - asdf install uv latest
       - asdf global uv latest
-      - uv venv
-      - uv pip install .[doc]
     build:
       html:
-        - uv run python -c "import drvi"
         - uvx hatch run docs:build
         - mv docs/_build $READTHEDOCS_OUTPUT
 
