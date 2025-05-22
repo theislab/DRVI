@@ -351,6 +351,7 @@ def _umap_of_relevant_genes(
     dim_subset: Sequence[str] | None = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
+    **kwargs,
 ):
     if max_cells_to_plot is not None and adata.n_obs > max_cells_to_plot:
         adata = sc.pp.subsample(adata, n_obs=max_cells_to_plot, copy=True)
@@ -376,7 +377,7 @@ def _umap_of_relevant_genes(
 
         adata.obs[dim_title] = list(embed[adata.obs.index, embed.var[title_col] == real_dim_title].X[:, 0])
         ax = sc.pl.embedding(
-            adata, "X_umap_method", color=[dim_title], cmap=_cmap, vcenter=0, show=False, frameon=False
+            adata, "X_umap_method", color=[dim_title], cmap=_cmap, vcenter=0, show=False, frameon=False, **kwargs
         )
         ax.text(0.92, 0.05, ax.get_title(), size=15, ha="left", color="black", rotation=90, transform=ax.transAxes)
         ax.set_title("")
@@ -391,6 +392,7 @@ def _umap_of_relevant_genes(
             gene_symbols=gene_symbols,
             show=False,
             frameon=False,
+            **kwargs,
         )
         if n_top_genes == 1 or len(relevant_genes) == 1:
             axes = [axes]
@@ -413,11 +415,21 @@ def plot_relevant_genes_on_umap(
     dim_subset: Sequence[str] = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
+    **kwargs,
 ):
     plot_info = iterate_on_top_differential_vars(
         traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
     )
 
     return _umap_of_relevant_genes(
-        adata, embed, plot_info, layer, title_col, gene_symbols, dim_subset, n_top_genes, max_cells_to_plot
+        adata,
+        embed,
+        plot_info,
+        layer,
+        title_col,
+        gene_symbols,
+        dim_subset,
+        n_top_genes,
+        max_cells_to_plot,
+        **kwargs,
     )

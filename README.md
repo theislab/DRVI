@@ -96,5 +96,5 @@ Code, notebooks, and instructions to reproduce the results from the paper are av
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
 [link-api]: https://drvi.readthedocs.io
-[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials.html
+[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
 [link-pypi]: https://pypi.org/project/drvi-py
