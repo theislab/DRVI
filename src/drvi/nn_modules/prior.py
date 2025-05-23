@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torch.distributions import Normal, kl_divergence
 
+from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
 # Standard, VaMP, GMM from Karin's CSI repo
 
 
@@ -65,7 +67,7 @@ class VampPrior(Prior):
         self.encoder.train(False)
         if self.input_type == "scfemb":
             z = self.encoder({**self.pi_aux_data, **self.pi_tensor_data})
-            output = z["qz_mean"], z["qz_var"]
+            output = z[MODULE_KEYS.QZM_KEY], z[MODULE_KEYS.QZV_KEY]
         elif self.input_type == "scvi":
             x, args, kwargs = self.preparation_function({**self.pi_aux_data, **self.pi_tensor_data})
             q_m, q_v, latent = self.encoder(x, *args, **kwargs)

@@ -7,6 +7,8 @@ import torch
 from anndata import AnnData
 from torch.nn import functional as F
 
+from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,9 +70,9 @@ class GenerativeMixin:
                         scvi.REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                     },
                     inference_outputs={
-                        "z": z_tensor,
-                        "library": lib_tensor,
-                        "gene_likelihood_additional_info": {},
+                        MODULE_KEYS.Z_KEY: z_tensor,
+                        MODULE_KEYS.LIBRARY_KEY: lib_tensor,
+                        MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: {},
                     },
                 )
                 gen_output = self.module.generative(**gen_input)
@@ -106,7 +108,7 @@ class GenerativeMixin:
         return_mean
             Return the mean of the distribution or the full distribution.
         """
-        step_func = lambda gen_output, store: store.append(gen_output["params"]["mean"].detach().cpu())
+        step_func = lambda gen_output, store: store.append(gen_output[MODULE_KEYS.PX_PARAMS_KEY]["mean"].detach().cpu())
         aggregation_func = lambda store: torch.cat(store, dim=0).numpy(force=True)
 
         return self.iterate_on_decoded_latent_samples(
@@ -195,7 +197,9 @@ class GenerativeMixin:
 
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
+                    "mean"
+                ]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
                     log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
                 )  # n_samples x (n_splits + 1) x n_genes
@@ -203,7 +207,7 @@ class GenerativeMixin:
                     dim=-1
                 )  # n_samples x n_splits
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs["original_params"]["mean"]).sum(
+                effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"]).sum(
                     dim=-1
                 )  # n_samples x n_splits
             else:
@@ -278,13 +282,15 @@ class GenerativeMixin:
 
         def calculate_effect(inference_outputs, generative_outputs, losses, store):
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
+                    "mean"
+                ]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
                     log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
                 )  # n_samples x (n_splits + 1) x n_genes
                 effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs["original_params"]["mean"])
+                effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
             effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)
