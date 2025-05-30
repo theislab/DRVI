@@ -421,7 +421,7 @@ class Encoder(nn.Module):
         dropout_rate: float = 0.1,
         distribution: str = "normal",
         var_eps: float = 1e-4,
-        var_activation: Callable | Literal["exp", "pow2"] = "exp",
+        var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
         mean_activation: Callable | str = "identity",
         layer_factory: LayerFactory = None,
         covariate_modeling_strategy: Literal[

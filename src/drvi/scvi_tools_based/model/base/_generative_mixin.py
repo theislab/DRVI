@@ -5,6 +5,7 @@ import numpy as np
 import scvi
 import torch
 from anndata import AnnData
+from scvi import REGISTRY_KEYS
 from torch.nn import functional as F
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,10 @@ class GenerativeMixin:
         step_func: Callable,
         aggregation_func: Callable,
         lib: np.ndarray | None = None,
-        cat_key: np.ndarray | None = None,
-        cont_key: np.ndarray | None = None,
+        cat_values: np.ndarray | None = None,
+        cont_values: np.ndarray | None = None,
         batch_size=scvi.settings.batch_size,
+        map_cat_values: bool = False,
     ) -> np.ndarray:
         r"""Iterate over decoder outputs and aggregate the results.
 
@@ -37,15 +39,28 @@ class GenerativeMixin:
             Function to aggregate the step results.
         lib
             Library size array.
-        cat_key
+        cat_values
             Categorical covariates (required if model has categorical key).
-        cont_key
+        cont_values
             Continuous covariates.
         batch_size
             Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
+        map_cat_values
+            Whether to map categorical covariates in cat_values to integers based on anndata manager pipeline
         """
         store = []
         self.module.eval()
+
+        if cat_values is not None and map_cat_values:
+            if cat_values.ndim == 1:  # For a user not noticing cat_values should be 2d!
+                cat_values = cat_values.reshape(-1, 1)
+            mapped_values = np.zeros_like(cat_values)
+            for i, (_label, map_keys) in enumerate(
+                self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)["mappings"].items()
+            ):
+                cat_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
+                mapped_values[:, i] = np.vectorize(cat_mapping.get)(cat_values[:, i])
+            cat_values = mapped_values.astype(np.int32)
 
         with torch.no_grad():
             for i in np.arange(0, z.shape[0], batch_size):
@@ -55,17 +70,16 @@ class GenerativeMixin:
                     lib_tensor = torch.tensor([1e4] * slice.shape[0])
                 else:
                     lib_tensor = torch.tensor(lib[slice])
-                cat_tensor = torch.tensor(cat_key[slice]) if cat_key is not None else None
+                cat_tensor = torch.tensor(cat_values[slice]) if cat_values is not None else None
+                cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
                 batch_tensor = None
 
                 gen_input = self.module._get_generative_input(
                     tensors={
-                        scvi.REGISTRY_KEYS.BATCH_KEY: batch_tensor,
-                        scvi.REGISTRY_KEYS.LABELS_KEY: None,
-                        scvi.REGISTRY_KEYS.CONT_COVS_KEY: torch.log(lib_tensor).unsqueeze(-1)
-                        if self.summary_stats.get("n_extra_continuous_covs", 0) == 1
-                        else None,
-                        scvi.REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
+                        REGISTRY_KEYS.BATCH_KEY: batch_tensor,
+                        REGISTRY_KEYS.LABELS_KEY: None,
+                        REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
+                        REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                     },
                     inference_outputs={
                         "z": z_tensor,
@@ -83,9 +97,10 @@ class GenerativeMixin:
         self,
         z: np.ndarray,
         lib: np.ndarray | None = None,
-        cat_key: np.ndarray | None = None,
-        cont_key: np.ndarray | None = None,
+        cat_values: np.ndarray | None = None,
+        cont_values: np.ndarray | None = None,
         batch_size=scvi.settings.batch_size,
+        map_cat_values: bool = False,
     ) -> np.ndarray:
         r"""Return the distribution produces by the decoder for the given latent samples.
 
@@ -97,14 +112,14 @@ class GenerativeMixin:
             Latent samples.
         lib
             Library size array.
-        cat_key
+        cat_values
             Categorical covariates (required if model has categorical key).
-        cont_key
+        cont_values
             Continuous covariates.
         batch_size
             Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
-        return_mean
-            Return the mean of the distribution or the full distribution.
+        map_cat_valuse
+            Whether to map categorical covariates in cat_values to integers based on anndata manager pipeline
         """
         step_func = lambda gen_output, store: store.append(gen_output["params"]["mean"].detach().cpu())
         aggregation_func = lambda store: torch.cat(store, dim=0).numpy(force=True)
@@ -114,9 +129,10 @@ class GenerativeMixin:
             step_func=step_func,
             aggregation_func=aggregation_func,
             lib=lib,
-            cat_key=cat_key,
-            cont_key=cont_key,
+            cat_values=cat_values,
+            cont_values=cont_values,
             batch_size=batch_size,
+            map_cat_values=map_cat_values,
         )
 
     @torch.inference_mode()
