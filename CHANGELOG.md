@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
--
+## [0.1.6] - 2025-05-30
+
+-   Fix categorical lookup for reconstruction
 
 ## [0.1.6] - 2025-05-22
 
