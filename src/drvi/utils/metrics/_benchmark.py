@@ -4,12 +4,19 @@ import numpy as np
 import pandas as pd
 
 from drvi.utils.metrics._aggregation import latent_matching_score, most_similar_averaging_score, most_similar_gap_score
-from drvi.utils.metrics._pairwise import local_mutual_info_score, nn_alignment_score, spearman_correlataion_score
+from drvi.utils.metrics._pairwise import (
+    discrete_mutual_info_score,
+    local_mutual_info_score,
+    nn_alignment_score,
+    spearman_correlataion_score,
+)
 
 AVAILABLE_METRICS = {
     "ASC": spearman_correlataion_score,
     "SPN": nn_alignment_score,
-    "SMI": local_mutual_info_score,
+    # SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
+    "SMI-cont": local_mutual_info_score,
+    "SMI-disc": discrete_mutual_info_score,
 }
 
 
@@ -21,7 +28,7 @@ AVAILABLE_AGGREGATION_METHODS = {
 
 
 class DiscreteDisentanglementBenchmark:
-    version = "v1"
+    version = "v2"
 
     def __init__(
         self,
@@ -29,8 +36,9 @@ class DiscreteDisentanglementBenchmark:
         discrete_target=None,
         one_hot_target=None,
         dim_titles=None,
-        metrics=("SMI", "SPN", "ASC"),
+        metrics=("SMI-disc", "SPN", "ASC"),
         aggregation_methods=("LMS", "MSAS", "MSGS"),
+        additional_metric_params=None,
     ):
         if discrete_target is None and one_hot_target is None:
             raise ValueError("Either discrete_target or one_hot_target must be provided.")
@@ -66,19 +74,20 @@ class DiscreteDisentanglementBenchmark:
         self.dim_titles = dim_titles
         self.metrics = metrics
         self.aggregation_methods = aggregation_methods
+        self.additional_metric_params = additional_metric_params if additional_metric_params is not None else {}
 
         self.results = {}
         self.aggregated_results = {}
 
-    @staticmethod
-    def _compute_metrics(embed, one_hot_target, dim_titles=None, metrics=()):
+    def _compute_metrics(self, embed, one_hot_target, dim_titles=None, metrics=()):
         if dim_titles is None:
             dim_titles = [f"dim_{d}" for d in range(embed.shape[1])]
 
         results = {}
         for metric_name in metrics:
+            metric_params = self.additional_metric_params.get(metric_name, {})
             result_df = pd.DataFrame(
-                AVAILABLE_METRICS[metric_name](embed, gt_one_hot=one_hot_target.values),
+                AVAILABLE_METRICS[metric_name](embed, gt_one_hot=one_hot_target.values, **metric_params),
                 index=dim_titles,
                 columns=one_hot_target.columns,
             )
@@ -137,6 +146,7 @@ class DiscreteDisentanglementBenchmark:
             "metrics": self.metrics,
             "aggregation_methods": self.aggregation_methods,
             "dim_titles": self.dim_titles,
+            "additional_metric_params": self.additional_metric_params,
         }
 
         with open(path, "wb") as f:
@@ -152,7 +162,15 @@ class DiscreteDisentanglementBenchmark:
             metrics = data["metrics"]
         if aggregation_methods is None:
             aggregation_methods = data["aggregation_methods"]
-        instance = cls(embed, discrete_target, one_hot_target, data["dim_titles"], metrics, aggregation_methods)
+        instance = cls(
+            embed,
+            discrete_target,
+            one_hot_target,
+            data["dim_titles"],
+            metrics,
+            aggregation_methods,
+            additional_metric_params=data["additional_metric_params"],
+        )
         instance.results = data["results"]
         instance.aggregated_results = data["aggregated_results"]
         return instance

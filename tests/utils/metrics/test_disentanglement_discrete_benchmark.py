@@ -14,8 +14,10 @@ class TestDiscreteDisentanglementBenchmark:
 
         return categorical_features, categorical_features_01, fit_continuous_latent, random_continuous_latent
 
-    def _general_test_pipeline(self, continuous_latent, categorical_features=None, categorical_features_01=None):
-        METRICS = ["ASC", "SPN", "SMI"]
+    def _general_test_pipeline(
+        self, continuous_latent, categorical_features=None, categorical_features_01=None, **kwargs
+    ):
+        METRICS = ["ASC", "SPN", "SMI-cont", "SMI-disc"]
         AGGREGATION_METHODS = ["LMS", "MSAS", "MSGS"]
 
         benchmark = DiscreteDisentanglementBenchmark(
@@ -24,6 +26,7 @@ class TestDiscreteDisentanglementBenchmark:
             one_hot_target=categorical_features_01,
             metrics=METRICS,
             aggregation_methods=AGGREGATION_METHODS,
+            **kwargs,
         )
         benchmark.evaluate()
         return benchmark
@@ -86,3 +89,14 @@ class TestDiscreteDisentanglementBenchmark:
 
         for metric in results_gt:
             assert np.all(results_random[metric] < results_gt[metric]), f"Results for {metric} do not match"
+
+    def test_benchmarker_with_additional_metric_params(self):
+        categorical_features, categorical_features_01, fit_continuous_latent, random_continuous_latent = (
+            self.make_test_data()
+        )
+
+        self._general_test_pipeline(
+            continuous_latent=fit_continuous_latent,
+            categorical_features=categorical_features,
+            additional_metric_params={"SMI-disc": {"n_bins": 3}},
+        )
