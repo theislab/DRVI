@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.feature_selection import mutual_info_classif
+from sklearn.metrics.cluster import contingency_matrix, entropy, mutual_info_score
+from sklearn.preprocessing import KBinsDiscretizer
 
 
 def check_discrete_metric_input(gt_cat_series=None, gt_one_hot=None):
@@ -55,6 +57,25 @@ def local_mutual_info_score(all_vars_continues, gt_cat_series=None, gt_one_hot=N
     result = np.zeros([n_vars, gt_01.shape[1]])
     for j in range(gt_01.shape[1]):
         result[:, j] = _local_mutual_info_score_per_binary_gt(all_vars_continues, gt_01[:, j])
+    return result
+
+
+def discrete_mutual_info_score(all_vars_continues, gt_cat_series=None, gt_one_hot=None, n_bins=10):
+    check_discrete_metric_input(gt_cat_series, gt_one_hot)
+    gt_01 = get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
+
+    discretizer = KBinsDiscretizer(n_bins=n_bins, encode="ordinal", strategy="uniform", random_state=123)
+    all_vars_discrete = discretizer.fit_transform(all_vars_continues)
+
+    n_vars = all_vars_discrete.shape[1]
+    n_targets = gt_01.shape[1]
+    result = np.zeros([n_vars, n_targets])
+    for j in range(n_targets):
+        h_target = entropy(gt_01[:, j])
+        for i in range(n_vars):
+            contingency = contingency_matrix(all_vars_discrete[:, i], gt_01[:, j], sparse=True)
+            mi = mutual_info_score(None, None, contingency=contingency)
+            result[i, j] = mi / h_target
     return result
 
 
