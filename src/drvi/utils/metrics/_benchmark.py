@@ -12,7 +12,7 @@ from drvi.utils.metrics._pairwise import (
 )
 
 AVAILABLE_METRICS = {
-    # ASC is generally unsuitable for discrete targets. We suggest Kendall's tau instead.
+    # ASC is generally unsuitable for discrete targets.
     # More info: https://www.biorxiv.org/content/10.1101/2024.11.06.622266v1.full.pdf lines 985 to 989
     "ASC": spearman_correlataion_score,
     "SPN": nn_alignment_score,
