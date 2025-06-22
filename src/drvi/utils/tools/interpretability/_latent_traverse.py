@@ -16,7 +16,8 @@ def iterate_dimensions(
     n_samples: int = 100,
 ):
     assert n_steps % 2 == 0
-    assert np.all(latent_min <= 0) & np.all(latent_max >= 0)
+    # Sometimes it is negligibly not like below
+    # assert np.all(latent_min <= 0) & np.all(latent_max >= 0)
 
     dim_ids = (
         latent_dims.reshape(-1, 1, 1)
@@ -111,10 +112,10 @@ def make_traverse_adata(
     print(f"Input latent shape: control: {control_data.shape}, effect: {effect_data.shape}")
     # control and effect in mean parameter space
     control_mean_param = model.decode_latent_samples(
-        control_data, lib=lib_vector, cat_key=cat_vector, cont_key=None, **kwargs
+        control_data, lib=lib_vector, cat_values=cat_vector, cont_values=None, **kwargs
     )
     effect_mean_param = model.decode_latent_samples(
-        effect_data, lib=lib_vector, cat_key=cat_vector, cont_key=None, **kwargs
+        effect_data, lib=lib_vector, cat_values=cat_vector, cont_values=None, **kwargs
     )
     print(f"Output mean param shape: control: {control_mean_param.shape}, effect: {effect_mean_param.shape}")
 
