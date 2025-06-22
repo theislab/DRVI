@@ -2,9 +2,10 @@
 
 ## [Unreleased]
 
-## [0.1.8] -
+## [0.1.8] - 2025-06-22
 
--
+- Discretize latent dimension values in MI for benchmarking due to [this bug](https://github.com/scikit-learn/scikit-learn/issues/30772).
+- Fix a minor issue with `drvi.utils.tl.traverse_latent`
 
 ## [0.1.7] - 2025-05-30
 
