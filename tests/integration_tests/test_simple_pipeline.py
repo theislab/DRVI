@@ -60,11 +60,6 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
         return adata
 
-    def _assert_few_latents(self, embed):
-        n_non_vanished = (~(embed.var["vanished"])).sum()
-        print(f"# Non Vanished dims: {n_non_vanished}")
-        assert n_non_vanished < 4
-
     def test_whole_integration_and_interpretability(self):
         adata = self.make_test_adata()
 
