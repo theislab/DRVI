@@ -7,6 +7,7 @@ import torch
 from scvi.nn._utils import one_hot
 from torch import nn
 from torch.distributions import Normal
+from torch.nn import functional as F
 
 from drvi.nn_modules.embedding import MultiEmbedding
 from drvi.nn_modules.freezable import FreezableBatchNorm1d, FreezableLayerNorm
@@ -778,6 +779,9 @@ class DecoderDRVI(nn.Module):
                     if self.split_aggregation == "sum":
                         # to get average
                         params[param_name] = param_value.sum(dim=-2) / self.n_split
+                    elif self.split_aggregation == "sum_plus":
+                        # to get average after softplus
+                        params[param_name] = F.softplus(param_value).sum(dim=-2) / self.n_split
                     elif self.split_aggregation == "logsumexp":
                         # to cancel the effect of n_splits
                         params[param_name] = torch.logsumexp(param_value, dim=-2) - math.log(self.n_split)

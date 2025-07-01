@@ -261,6 +261,14 @@ class DRVIModule(BaseModuleClass):
             return NegativeBinomialNoiseModel(
                 dispersion="feature", mean_transformation="softmax", library_normalization="none"
             )
+        elif gene_likelihood in ["nb_softplus"]:
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="softplus", library_normalization="none"
+            )
+        elif gene_likelihood in ["nb_none"]:
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="none", library_normalization="none"
+            )
         elif gene_likelihood == "nb_orig_libnorm":
             return NegativeBinomialNoiseModel(
                 dispersion="feature", mean_transformation="softmax", library_normalization="x_lib"

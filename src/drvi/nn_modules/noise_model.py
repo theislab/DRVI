@@ -144,7 +144,7 @@ class PoissonNoiseModel(NoiseModel):
 class NegativeBinomialNoiseModel(NoiseModel):
     def __init__(self, dispersion="feature", mean_transformation="exp", library_normalization="x_lib"):
         super().__init__()
-        assert mean_transformation in ["exp", "softmax"]
+        assert mean_transformation in ["exp", "softmax", "softplus", "none"]
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
@@ -179,6 +179,13 @@ class NegativeBinomialNoiseModel(NoiseModel):
         elif self.mean_transformation == "softmax":
             trans_mean = torch.softmax(mean, dim=-1)
             trans_mean = library_size.unsqueeze(-1) * trans_mean
+        # `softplus` and `none` for ablation. Useless in practice.
+        elif self.mean_transformation == "softplus":
+            trans_mean = F.softplus(mean)
+            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+        elif self.mean_transformation == "none":
+            trans_mean = mean
+            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
         else:
             raise NotImplementedError()
         trans_r = torch.exp(r)
