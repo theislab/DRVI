@@ -29,33 +29,34 @@ logger = logging.getLogger(__name__)
 
 
 class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
-    """
-    DRVI model based on scvi-tools skelethon
+    """DRVI model based on scvi-tools framework for disentangled representation learning.
 
     Parameters
     ----------
-    adata
-        AnnData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
-    n_latent
+    adata : AnnData or MerlinData
+        AnnData object or MerlinData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
+    n_latent : int, default=32
         Dimensionality of the latent space.
-    encoder_dims
+    encoder_dims : Sequence[int], default=(128, 128)
         Number of nodes in hidden layers of the encoder.
-    decoder_dims
+    decoder_dims : Sequence[int], default=(128, 128)
         Number of nodes in hidden layers of the decoder.
-    prior
-        Prior model. defaults to normal.
-    prior_init_obs
-        When initializing priors from data, these observations are used.
-    categorical_covariates
-        Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
+    prior : {"normal", "gmm_x", "vamp_x"}, default="normal"
+        Prior model type.
+    prior_init_obs : np.ndarray or None, default=None
+        When using "gmm_x" or "vamp_x" priors, these observations are used to initialize the prior parameters.
+        Number of observations must match the x value in the prior name.
+    categorical_covariates : list[str], default=()
+        List of categorical covariates to condition on. Each covariate can specify its embedding dimension
+        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10.
     **model_kwargs
-        Keyword args for :class:`~drvi.model.DRVIModule`
+        Additional keyword arguments passed to :class:`~drvi.model.DRVIModule`.
 
     Examples
     --------
     >>> adata = anndata.read_h5ad(path_to_anndata)
-    >>> drvi.DRVI.setup_anndata(adata, categorical_covariate_keys=["batch"])
-    >>> vae = drvi.DRVI(adata)
+    >>> drvi.model.DRVI.setup_anndata(adata, categorical_covariate_keys=["batch"])
+    >>> vae = drvi.model.DRVI(adata)
     >>> vae.train()
     >>> adata.obsm["latent"] = vae.get_latent_representation()
     """
@@ -81,7 +82,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passed an instalce of MerlinData and still get this error, "
+                "If you have passed an instance of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
 
@@ -182,6 +183,30 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
     ):
+        """Setup MerlinData for use with DRVI.
+
+        Parameters
+        ----------
+        merlin_data : MerlinData
+            MerlinData object to register.
+        labels_key : str or None, default=None
+            Key in `merlin_data` for labels.
+        layer : str, default="X"
+            key in `merlin_data` to use as input.
+        is_count_data : bool, default=True
+            Whether the data is count data.
+        categorical_covariate_keys : list[str] or None, default=None
+            List of categorical covariate keys in `merlin_data`.
+        continuous_covariate_keys : list[str] or None, default=None
+            List of continuous covariate keys in `merlin_data`.
+        **kwargs
+            Additional keyword arguments passed to the MerlinDataManager registration.
+
+        Returns
+        -------
+        None
+            This method sets up the class for use with MerlinData and does not return anything.
+        """
         setup_method_args = cls._get_setup_method_args(**locals())
         setup_method_args["drvi_version"] = drvi.__version__
 
@@ -244,6 +269,6 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passed an instalce of MerlinData and still get this error, "
+                "If you have passed an instance of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
