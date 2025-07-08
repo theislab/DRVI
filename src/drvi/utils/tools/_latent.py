@@ -8,19 +8,55 @@ def set_latent_dimension_stats(
     model: DRVI,
     embed: AnnData,
     inplace: bool = True,
-    vanished_threshold=0.1,
+    vanished_threshold: float = 0.1,
 ):
-    """
-    Set the latent dimension statistics of a DRVI model into var of an embedding anndata.
+    """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
+
+    This function computes and stores various statistics for each latent dimension
+    in the embedding AnnData object. It calculates reconstruction effects, ordering,
+    and basic statistical measures (mean, std, min, max) for each dimension.
 
     Parameters
     ----------
-    model
-        DRVI model object.
-    embed
-        latent representation of the model.
-    inplace
-        Whether to modify the input AnnData object or return a new one.
+    model : DRVI
+        DRVI model object that has been trained and can compute reconstruction effects.
+    embed : AnnData
+        AnnData object containing the latent representation (embedding) of the model.
+        The latent dimensions should be in the `.X` attribute.
+    inplace : bool, default=True
+        Whether to modify the input AnnData object in-place or return a new copy.
+    vanished_threshold : float, default=0.1
+        Threshold for determining if a latent dimension has "vanished" (become inactive).
+        Dimensions with max absolute values below this threshold are marked as vanished.
+
+    Returns
+    -------
+    AnnData or None
+        If `inplace=True` (default), modifies the input AnnData object and returns None.
+        If `inplace=False`, returns a new AnnData object with the statistics added.
+
+    Notes
+    -----
+    The function adds the following columns to `embed.var`:
+
+    - `original_dim_id`: Original dimension indices
+    - `reconstruction_effect`: Reconstruction effect scores from the DRVI model
+    - `order`: Ranking of dimensions by reconstruction effect (descending)
+    - `max_value`: Maximum absolute value across all cells for each dimension
+    - `mean`: Mean value across all cells for each dimension
+    - `min`: Minimum value across all cells for each dimension
+    - `max`: Maximum value across all cells for each dimension
+    - `std`: Standard deviation of absolute values across all cells for each dimension
+    - `title`: Dimension titles in format "DR {order+1}"
+    - `vanished`: Boolean indicating if dimension is considered "vanished" (max_value < threshold)
+
+    Examples
+    --------
+    >>> # Assuming you have a trained DRVI model and latent representation
+    >>> latent_adata = model.get_latent_representation(adata, return_anndata=True)
+    >>> set_latent_dimension_stats(model, latent_adata, inplace=True)
+    >>> # Now latent_adata.var contains all the statistics
+    >>> print(latent_adata.var[["order", "reconstruction_effect", "vanished"]].head())
     """
     if not inplace:
         embed = embed.copy()

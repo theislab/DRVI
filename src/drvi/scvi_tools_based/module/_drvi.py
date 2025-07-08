@@ -23,77 +23,87 @@ TensorDict = dict[str, torch.Tensor]
 
 
 class DRVIModule(BaseModuleClass):
-    """
-    Skeleton Variational auto-encoder model.
-
-    Here we implement a basic version of scVI's underlying VAE :cite:p:`Lopez18`.
-    This implementation is for instructional purposes only.
+    """DRVI (Disentangled Representation Variational Inference) pytorch module.
 
     Parameters
     ----------
-    n_input
-        Number of input genes
-    n_latent
-        Dimensionality of the latent space
-    n_split_latent
-        Number of splits in the latent space. -1 means split all dimensions (n_split_latent=n_latent).
-    split_aggregation
-        How to aggregate splits in the last layer of the decoder
-    split_method
-        How to make splits.
-        "split" for splitting the latent space,
-        "power" for transforming the latent space to n_split vectors of size n_latent
-        "split_map" for splitting the latent space then map each to latent space using unique transformations
-    decoder_reuse_weights
-        Were to reuse the weights of the decoder layers when using splitting
-        Possible values are 'everywhere', 'last', 'intermediate', 'nowhere'. Defaults to "everywhere"/
-    encoder_dims
+    n_input : int
+        Number of input genes.
+    n_latent : int, default=32
+        Dimensionality of the latent space.
+    n_split_latent : int or None, default=-1
+        Number of splits in the latent space. -1 means split all dimensions
+        (n_split_latent=n_latent).
+    split_aggregation : {"sum", "logsumexp", "max"}, default="logsumexp"
+        How to aggregate splits in the last layer of the decoder.
+    split_method : {"split", "power", "split_map"}, default="split_map"
+        How to make splits:
+
+        - "split" : Split the latent space
+        - "power" : Transform the latent space to n_split vectors of size n_latent
+        - "split_map" : Split the latent space then map each to latent space
+          using unique transformations
+    decoder_reuse_weights : {"everywhere", "last", "intermediate", "nowhere"}, default="everywhere"
+        Where to reuse the weights of the decoder layers when using splitting.
+    encoder_dims : Sequence[int], default=(128, 128)
         Number of nodes in hidden layers of the encoder.
-    decoder_dims
+    decoder_dims : Sequence[int], default=(128, 128)
         Number of nodes in hidden layers of the decoder.
-    n_cats_per_cov
-        Number of categories for each categorical covariate
-    n_continuous_cov
-        Number of continuous covariates
-    encode_covariates
-        Whether to concatenate covariates to expression in encoder
-    deeply_inject_covariates
-        Whether to concatenate covariates into output of hidden layers in encoder/decoder. This option
-        only applies when `n_layers` >= 1. The covariates are concatenated to the input of subsequent hidden layers.
-    categorical_covariate_dims
-        Emb dim of covariate keys if applicable
-    covariate_modeling_strategy
-        The strategy model takes to remove covariates
-    use_batch_norm
+    n_cats_per_cov : Iterable[int] or None, default=()
+        Number of categories for each categorical covariate.
+    n_continuous_cov : int, default=0
+        Number of continuous covariates.
+    encode_covariates : bool, default=False
+        Whether to concatenate covariates to expression in encoder.
+    deeply_inject_covariates : bool, default=False
+        Whether to concatenate covariates into output of hidden layers in encoder/decoder.
+        This option only applies when `n_layers` >= 1. The covariates are concatenated
+        to the input of subsequent hidden layers.
+    categorical_covariate_dims : Sequence[int], default=()
+        Embedding dimension of covariate keys if applicable.
+    covariate_modeling_strategy : {"one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear"}, default="one_hot"
+        The strategy model takes to remove covariates.
+    use_batch_norm : {"encoder", "decoder", "none", "both"}, default="none"
         Whether to use batch norm in layers.
-    affine_batch_norm
+    affine_batch_norm : {"encoder", "decoder", "none", "both"}, default="both"
         Whether to use affine batch norm in layers.
-    use_layer_norm
+    use_layer_norm : {"encoder", "decoder", "none", "both"}, default="both"
         Whether to use layer norm in layers.
-    input_dropout_rate
-        Dropout rate to apply to the input
-    encoder_dropout_rate
-        Dropout rate to apply to each of the encoder hidden layers
-    decoder_dropout_rate
-        Dropout rate to apply to each of the decoder hidden layers
-    gene_likelihood
-        gene likelihood model
-    prior
-        Prior model. defaults to normal.
-    prior_init_dataloader
+    fill_in_the_blanks_ratio : float, default=0.0
+        Ratio for fill-in-the-blanks training.
+    input_dropout_rate : float, default=0.0
+        Dropout rate to apply to the input.
+    encoder_dropout_rate : float, default=0.1
+        Dropout rate to apply to each of the encoder hidden layers.
+    decoder_dropout_rate : float, default=0.0
+        Dropout rate to apply to each of the decoder hidden layers.
+    gene_likelihood : {"normal", "normal_v", "normal_sv", "poisson", "poisson_orig", "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec", "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none", "nb_orig_libnorm", "pnb", "pnb_sv", "pnb_softmax"}, default="pnb_softmax"
+        Gene likelihood model. Options include:
+
+        - "normal", "normal_v", "normal_sv" : Normal distributions
+        - "poisson", "poisson_orig" : Poisson distributions
+        - "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec",
+          "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none",
+          "nb_orig_libnorm" : Negative binomial distributions
+        - "pnb", "pnb_sv", "pnb_softmax" : Log negative binomial distributions
+    prior : {"normal", "gmm_x", "vamp_x"}, default="normal"
+        Prior model.
+    prior_init_dataloader : DataLoader or None, default=None
         Dataloader constructed to initialize the prior (or maintain in vamp).
-    var_activation
-        The activation function to ensure positivity of the variatinal distribution. Defaults to "exp".
-    mean_activation
-        The activation function at the end of mean encoder. Defaults to "identity".
-        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_vaule}".
-    encoder_layer_factory
-        A layer Factory instance for build encoder layers
-    decoder_layer_factory
-        A layer Factory instance for build decoder layers
-    extra_encoder_kwargs
+    var_activation : callable or {"exp", "pow2", "2sig"}, default="exp"
+        The activation function to ensure positivity of the variational distribution.
+        Options include "exp", "pow2", "2sig" or a custom callable.
+    mean_activation : callable or str, default="identity"
+        The activation function at the end of mean encoder.
+        Options include "identity", "relu", "leaky_relu", "leaky_relu_{slope}",
+        "elu", "elu_{min_value}" or a custom callable.
+    encoder_layer_factory : LayerFactory, default=None
+        A layer Factory instance for building encoder layers.
+    decoder_layer_factory : LayerFactory, default=None
+        A layer Factory instance for building decoder layers.
+    extra_encoder_kwargs : dict or None, default=None
         Extra keyword arguments passed into encoder.
-    extra_decoder_kwargs
+    extra_decoder_kwargs : dict or None, default=None
         Extra keyword arguments passed into decoder.
     """
 
@@ -141,6 +151,8 @@ class DRVIModule(BaseModuleClass):
             "nb_loglibnorm_all",
             "nb_orig",
             "nb_softmax",
+            "nb_softplus",
+            "nb_none",
             "nb_orig_libnorm",
             "pnb",
             "pnb_sv",
@@ -148,7 +160,7 @@ class DRVIModule(BaseModuleClass):
         ] = "pnb_softmax",
         prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
         prior_init_dataloader: DataLoader | None = None,
-        var_activation: Callable | Literal["exp", "pow2", "2sig"] | Callable = "exp",
+        var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
         mean_activation: Callable | str = "identity",
         encoder_layer_factory: LayerFactory = None,
         decoder_layer_factory: LayerFactory = None,
@@ -237,6 +249,23 @@ class DRVIModule(BaseModuleClass):
         self.fully_deterministic = False
 
     def _construct_gene_likelihood_module(self, gene_likelihood):
+        """Construct the gene likelihood module based on the specified type.
+
+        Parameters
+        ----------
+        gene_likelihood : str
+            Type of gene likelihood model to construct.
+
+        Returns
+        -------
+        object
+            Constructed gene likelihood module.
+
+        Raises
+        ------
+        NotImplementedError
+            If the gene likelihood type is not supported.
+        """
         if gene_likelihood == "normal":
             return NormalNoiseModel(model_var="fixed=1")
         elif gene_likelihood == "normal_v":
@@ -261,6 +290,14 @@ class DRVIModule(BaseModuleClass):
             return NegativeBinomialNoiseModel(
                 dispersion="feature", mean_transformation="softmax", library_normalization="none"
             )
+        elif gene_likelihood in ["nb_softplus"]:
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="softplus", library_normalization="none"
+            )
+        elif gene_likelihood in ["nb_none"]:
+            return NegativeBinomialNoiseModel(
+                dispersion="feature", mean_transformation="none", library_normalization="none"
+            )
         elif gene_likelihood == "nb_orig_libnorm":
             return NegativeBinomialNoiseModel(
                 dispersion="feature", mean_transformation="softmax", library_normalization="x_lib"
@@ -275,6 +312,27 @@ class DRVIModule(BaseModuleClass):
             raise NotImplementedError()
 
     def _construct_prior(self, prior, prior_init_dataloader=None):
+        """Construct the prior model based on the specified type.
+
+        Parameters
+        ----------
+        prior : str
+            Type of prior model to construct.
+        prior_init_dataloader : DataLoader or None, default=None
+            Dataloader for initializing the prior (required for some prior types).
+
+        Returns
+        -------
+        object
+            Constructed prior model.
+
+        Raises
+        ------
+        ValueError
+            If VaMP prior is specified without a dataloader.
+        NotImplementedError
+            If the prior type is not supported.
+        """
         if prior == "normal":
             return StandardPrior()
         elif prior.startswith("gmm_"):
@@ -311,7 +369,18 @@ class DRVIModule(BaseModuleClass):
             raise NotImplementedError()
 
     def _get_inference_input(self, tensors):
-        """Parse the dictionary to get appropriate args"""
+        """Parse the dictionary to get appropriate args.
+
+        Parameters
+        ----------
+        tensors : dict
+            Dictionary containing tensor data.
+
+        Returns
+        -------
+        dict
+            Dictionary with parsed input data.
+        """
         x = tensors[REGISTRY_KEYS.X_KEY]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
@@ -321,6 +390,22 @@ class DRVIModule(BaseModuleClass):
         return input_dict
 
     def _input_pre_processing(self, x, cont_covs=None, cat_covs=None):
+        """Pre-process input data for the model.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor data.
+        cont_covs : torch.Tensor or None, default=None
+            Continuous covariates.
+        cat_covs : torch.Tensor or None, default=None
+            Categorical covariates.
+
+        Returns
+        -------
+        dict
+            Dictionary containing pre-processed input data.
+        """
         # log the input to the variational distribution for numerical stability
         x_, gene_likelihood_additional_info = self.gene_likelihood_module.initial_transformation(x)
         # Note: this is different from scvi implementation of library size that is log transformed
@@ -339,10 +424,23 @@ class DRVIModule(BaseModuleClass):
 
     @auto_move_data
     def inference(self, x, cont_covs=None, cat_covs=None):
-        """
-        High level inference method.
+        """High level inference method.
 
         Runs the inference (encoder) model.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor data.
+        cont_covs : torch.Tensor or None, default=None
+            Continuous covariates.
+        cat_covs : torch.Tensor or None, default=None
+            Categorical covariates.
+
+        Returns
+        -------
+        dict
+            Dictionary containing inference outputs including latent variables.
         """
         pre_processed_input = self._input_pre_processing(x, cont_covs, cat_covs).copy()
         x_ = pre_processed_input["encoder_input"]
@@ -381,6 +479,20 @@ class DRVIModule(BaseModuleClass):
         return outputs
 
     def _get_generative_input(self, tensors, inference_outputs):
+        """Prepare input for the generative model.
+
+        Parameters
+        ----------
+        tensors : dict
+            Dictionary containing tensor data.
+        inference_outputs : dict
+            Outputs from the inference step.
+
+        Returns
+        -------
+        dict
+            Dictionary containing input for generative model.
+        """
         z = inference_outputs["z"]
         if self.fully_deterministic:
             z = inference_outputs["qz_m"]
@@ -401,7 +513,26 @@ class DRVIModule(BaseModuleClass):
 
     @auto_move_data
     def generative(self, z, library, gene_likelihood_additional_info, cont_covs=None, cat_covs=None):
-        """Runs the generative model."""
+        """Runs the generative model.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Latent variables.
+        library : torch.Tensor
+            Library size information.
+        gene_likelihood_additional_info : dict
+            Additional information for gene likelihood computation.
+        cont_covs : torch.Tensor or None, default=None
+            Continuous covariates.
+        cat_covs : torch.Tensor or None, default=None
+            Categorical covariates.
+
+        Returns
+        -------
+        dict
+            Dictionary containing generative model outputs.
+        """
         if self.shared_covariate_emb is not None:
             cat_covs = self.shared_covariate_emb(cat_covs.int())
         # form the likelihood
@@ -426,7 +557,24 @@ class DRVIModule(BaseModuleClass):
         generative_outputs,
         kl_weight: float = 1.0,
     ):
-        """Loss function."""
+        """Loss function.
+
+        Parameters
+        ----------
+        tensors : dict
+            Dictionary containing tensor data.
+        inference_outputs : dict
+            Outputs from the inference step.
+        generative_outputs : dict
+            Outputs from the generative step.
+        kl_weight : float, default=1.0
+            Weight for KL divergence term.
+
+        Returns
+        -------
+        LossOutput
+            Loss output object containing various loss components.
+        """
         x = tensors[REGISTRY_KEYS.X_KEY]
         x_mask = inference_outputs["x_mask"]
         qz_m = inference_outputs["qz_m"]
@@ -474,17 +622,17 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors
-            Tensors dict
-        n_samples
-            Number of required samples for each cell
-        library_size
-            Library size to scale scamples to
+        tensors : dict
+            Dictionary containing tensor data.
+        n_samples : int, default=1
+            Number of required samples for each cell.
+        library_size : int, default=1
+            Library size to scale samples to.
 
         Returns
         -------
-        x_new
-            tensor with shape (n_cells, n_genes, n_samples)
+        torch.Tensor
+            Tensor with shape (n_cells, n_genes, n_samples).
         """
         inference_kwargs = dict(n_samples=n_samples)  # noqa: C408
         (
@@ -508,8 +656,20 @@ class DRVIModule(BaseModuleClass):
     @torch.no_grad()
     @auto_move_data
     def marginal_ll(self, tensors: TensorDict, n_mc_samples: int):
-        # Note: Not tested
-        """Marginal ll."""
+        """Compute marginal log-likelihood.
+
+        Parameters
+        ----------
+        tensors : TensorDict
+            Dictionary containing tensor data.
+        n_mc_samples : int
+            Number of Monte Carlo samples for estimation.
+
+        Returns
+        -------
+        float
+            Marginal log-likelihood value.
+        """
         sample_batch = tensors[REGISTRY_KEYS.X_KEY]
 
         to_sum = torch.zeros(sample_batch.size()[0], n_mc_samples)

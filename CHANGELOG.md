@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.9] - 2025-07-01
+
+- Add DRVI-APnoEXP baseline
+- Imorove documnetation for all classes and functions in repository
+
 ## [0.1.8] - 2025-06-22
 
 - Discretize latent dimension values in MI for benchmarking due to [this bug](https://github.com/scikit-learn/scikit-learn/issues/30772).

@@ -10,7 +10,32 @@ from matplotlib import pyplot as plt
 from drvi.utils.plotting import cmap
 
 
-def make_balanced_subsample(adata, col, min_count=10):
+def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> AnnData:
+    """Create a balanced subsample of AnnData based on a categorical column.
+
+    This function creates a balanced subsample by sampling an equal number of cells
+    from each category in the specified column, ensuring balanced representation.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object to subsample.
+    col : str
+        Column name in `adata.obs` containing categorical labels for balancing.
+    min_count : int, default=10
+        Minimum number of samples per category. If a category has fewer samples
+        than this, sampling will be done with replacement.
+
+    Returns
+    -------
+    AnnData
+        Balanced subsample of the input AnnData object.
+
+    Notes
+    -----
+    The function uses a fixed random state (0) for reproducible results.
+    If a category has fewer samples than `min_count`, sampling is done with replacement.
+    """
     n_sample_per_cond = adata.obs[col].value_counts().min()
     balanced_sample_index = (
         adata.obs.groupby(col)
@@ -27,25 +52,63 @@ def plot_latent_dimension_stats(
     log_scale: bool | Literal["try"] = "try",
     ncols: int = 5,
     columns: Sequence[str] = ("reconstruction_effect", "max_value", "mean", "std"),
-    titles: dict[str, str] = None,
+    titles: dict[str, str] | None = None,
     remove_vanished: bool = False,
     show: bool = True,
 ):
-    """
-    Plot the statistics of latent dimensions.
+    """Plot the statistics of latent dimensions.
 
-    Args:
-    - embed (AnnData): The annotated data object containing the latent dimensions.
-    - figsize (Tuple[int, int], optional): The size of the figure (width, height). Default is (5, 3).
-    - log_scale (Union[bool, Literal['try']], optional): Whether to use a log scale for the y-axis. If 'try', the log scale is used if the minimum value is greater than 0. Default is 'try'.
-    - ncols (int, optional): The maximum number of columns in the subplot grid. Default is 5.
-    - columns (Sequence[str], optional): The columns to plot from the `embed` object. Default is ('reconstruction_effect', 'max_value', 'mean', 'std').
-    - titles (Dict[str, str], optional): The titles for each column in the plot.
-    - show (bool, optional): Whether to display the plot. If False, figure is returned. Default is True.
+    This function creates line plots showing various statistics of latent dimensions
+    across their ranking order. It can optionally distinguish between vanished and
+    non-vanished dimensions.
+
+    Parameters
+    ----------
+    embed : AnnData
+        Annotated data object containing the latent dimensions and their statistics
+        in the `.var` attribute.
+    figsize : tuple[int, int], default=(5, 3)
+        The size of each subplot (width, height) in inches.
+    log_scale : bool or {"try"}, default="try"
+        Whether to use a log scale for the y-axis. If "try", log scale is used
+        only if the minimum value is greater than 0.
+    ncols : int, default=5
+        The maximum number of columns in the subplot grid.
+    columns : Sequence[str], default=("reconstruction_effect", "max_value", "mean", "std")
+        The columns from `embed.var` to plot. These should be numeric columns
+        containing dimension statistics.
+    titles : dict[str, str] or None, default=None
+        Custom titles for each column in the plot. If None, default titles are used.
+    remove_vanished : bool, default=False
+        Whether to exclude vanished dimensions from the plot.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
-    - plt (matplotlib.pyplot module): The matplotlib.pyplot module if show is False.
+    matplotlib.figure.Figure or None
+        The matplotlib figure object if `show=False`, otherwise None.
+
+    Notes
+    -----
+    The function expects the following columns in `embed.var`:
+    - `order`: Ranking of dimensions
+    - `vanished`: Boolean indicating vanished dimensions
+    - The columns specified in the `columns` parameter
+
+    If `remove_vanished=False`, a legend is added to distinguish between
+    vanished (black dots) and non-vanished (blue dots) dimensions.
+
+    Examples
+    --------
+    >>> # Default plot
+    >>> plot_latent_dimension_stats(embed)
+    >>>
+    >>> # Plot basic statistics
+    >>> plot_latent_dimension_stats(embed, columns=["reconstruction_effect", "max_value"])
+    >>> # Plot with custom titles and log scale
+    >>> titles = {"reconstruction_effect": "Reconstruction Impact", "max_value": "Max Activation"}
+    >>> plot_latent_dimension_stats(embed, titles=titles, log_scale=True)
     """
     if titles is None:
         titles = {
@@ -130,11 +193,11 @@ def plot_latent_dimension_stats(
 
 
 def plot_latent_dims_in_umap(
-    embed,
+    embed: AnnData,
     title_col: str = "title",
-    additional_columns=(),
+    additional_columns: Sequence[str] = (),
     max_cells_to_plot: int | None = None,
-    order_col="order",
+    order_col: str = "order",
     dim_subset: Sequence[str] | None = None,
     directional: bool = False,
     remove_vanished: bool = True,
@@ -143,28 +206,73 @@ def plot_latent_dims_in_umap(
     show: bool = True,
     **kwargs,
 ):
-    """
-    Plot the latent dimensions of a UMAP embedding.
+    """Plot the latent dimensions on a UMAP embedding.
 
-    Args:
-        embed (AnnData): Annotated data object containing the UMAP embedding.
-        title_col (str, optional): Name of the column in `embed.var` to use as titles for each dimension.
-                                   If None, default titles will be used.
-        additional_columns (tuple, optional): Additional columns to plot alongside the latent dimensions.
-        max_cells_to_plot (int, optional): Maximum number of cells to plot. If the number of cells in `embed`
-                                           is greater than `max_cells_to_plot`, a subsample will be taken.
-        order_col (str, optional): The column in the `embed.var` DataFrame to use for ordering the dimensions. Ignored if `dim_subset` is provided.
-        dim_subset (Sequence[str], optional): The subset of dimensions to plot. Defaults to None.
-        directional (bool, optional): Consider + and - directions as two separate dimensions. Default is False.
-        remove_vanished (bool, optional): Whether to remove the vanished dimensions from the plot. Default is True.
-        rearrange_titles (bool, optional): Whether to rearrange the titles to bottom right of the plot. Default is True.
-        color_bar_rescale_ratio (float, optional): The ratio to rescale the height of colorbars. Default is 1.0.
-        show (bool, optional): Whether to display the plot. If False, the plot is returned. Default is True.
-        **kwargs: Additional keyword arguments to be passed to `sc.pl.umap`.
+    This function creates UMAP plots for each latent dimension, showing how cells
+    are distributed in the UMAP space based on their values for each dimension.
+    It can optionally handle directional dimensions and subsample cells for performance.
+
+    Parameters
+    ----------
+    embed : AnnData
+        Annotated data object containing the UMAP embedding in `.obsm['X_umap']`
+        and latent dimensions in `.X`.
+    title_col : str, default="title"
+        Name of the column in `embed.var` to use as titles for each dimension.
+        If None, default titles will be used.
+    additional_columns : Sequence[str], default=()
+        Additional columns from `embed.obs` to plot alongside the latent dimensions.
+    max_cells_to_plot : int or None, default=None
+        Maximum number of cells to plot. If the number of cells in `embed`
+        is greater than this value, a subsample will be taken.
+    order_col : str, default="order"
+        The column in `embed.var` to use for ordering the dimensions.
+        Ignored if `dim_subset` is provided.
+    dim_subset : Sequence[str] or None, default=None
+        The subset of dimensions to plot. If provided, overrides `order_col`.
+    directional : bool, default=False
+        Whether to consider positive and negative directions as separate dimensions.
+        If True, creates separate plots for + and - directions.
+    remove_vanished : bool, default=True
+        Whether to remove vanished dimensions from the plot.
+    rearrange_titles : bool, default=True
+        Whether to rearrange titles to the bottom right of each plot.
+    color_bar_rescale_ratio : float, default=1.0
+        Ratio to rescale the height of colorbars.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the figure object.
+    **kwargs
+        Additional keyword arguments passed to `sc.pl.umap`.
 
     Returns
     -------
-        matplotlib.figure.Figure: The UMAP plot figure if show is False.
+    matplotlib.figure.Figure or None
+        The UMAP plot figure if `show=False`, otherwise None.
+
+    Raises
+    ------
+    ValueError
+        If required columns (`order_col` or "vanished") are not found in `embed.var`.
+
+    Notes
+    -----
+    The function expects the following columns in `embed.var`:
+    - `order_col`: For ordering dimensions (default: "order")
+    - `title_col`: For dimension titles (default: "title")
+    - `vanished`: Boolean indicating vanished dimensions (if `remove_vanished=True`)
+    - `min`, `max`: For setting color scale limits
+
+    When `directional=True`, the function creates separate plots for positive
+    and negative directions, effectively doubling the number of plots.
+
+    Examples
+    --------
+    >>> # Basic UMAP plot of latent dimensions
+    >>> plot_latent_dims_in_umap(embed)
+    >>> # Plot with directional dimensions and custom subset
+    >>> plot_latent_dims_in_umap(embed, directional=True, dim_subset=["DR 1", "DR 2"])
+    >>> # Plot with additional metadata columns
+    >>> plot_latent_dims_in_umap(embed, additional_columns=["cell_type", "batch"])
     """
     if order_col not in embed.var:
         raise ValueError(
@@ -258,25 +366,72 @@ def plot_latent_dims_in_heatmap(
     show: bool = True,
     **kwargs,
 ):
-    """
-    Plot the latent dimensions in a heatmap.
+    """Plot the latent dimensions in a heatmap.
+
+    This function creates a heatmap showing the values of latent dimensions
+    across different categories. It can optionally create balanced subsamples
+    and sort dimensions based on categorical differences.
 
     Parameters
     ----------
-        embed (AnnData): The annotated data object containing the latent dimensions.
-        categorical_column (str): The column in the `embed.obs` DataFrame that represents the categorical variable.
-        title_col (str, optional): The column in the `embed.var` DataFrame to use as the title for each dimension. Defaults to None.
-        sort_by_categorical (bool, optional): Whether to sort the dimensions based on the categorical variable. Defaults to True.
-        make_balanced (bool, optional): Whether to make a balanced subsample of the data based on the categorical variable. Defaults to True.
-        order_col (str, optional): The column in the `embed.var` DataFrame to use for ordering the dimensions. Discarded if sort_by_categorical is set. Defaults to 'order'.
-        remove_vanished (bool, optional): Whether to remove the vanished dimensions from the plot. Default is True.
-        figsize (Tuple[int, int], optional): The size of the figure. Defaults to None.
-        show (bool, optional): Whether to show the plot. Defaults to True.
-        **kwargs: Additional keyword arguments to be passed to the `sc.pl.heatmap` function.
+    embed : AnnData
+        Annotated data object containing the latent dimensions in `.X`
+        and categorical metadata in `.obs`.
+    categorical_column : str
+        The column in `embed.obs` that represents the categorical variable
+        for grouping cells.
+    title_col : str or None, default="title"
+        The column in `embed.var` to use as titles for each dimension.
+        If None, uses the dimension indices.
+    sort_by_categorical : bool, default=False
+        Whether to sort dimensions based on their maximum absolute values
+        within each category. If True, `order_col` is ignored.
+    make_balanced : bool, default=True
+        Whether to create a balanced subsample of the data based on the
+        categorical variable using `make_balanced_subsample`.
+    order_col : str or None, default="order"
+        The column in `embed.var` to use for ordering the dimensions.
+        Ignored if `sort_by_categorical=True`.
+    remove_vanished : bool, default=True
+        Whether to remove vanished dimensions from the plot.
+    figsize : tuple[int, int] or None, default=None
+        The size of the figure (width, height) in inches.
+        If None, automatically calculated based on number of categories.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the plot object.
+    **kwargs
+        Additional keyword arguments passed to `sc.pl.heatmap`.
 
     Returns
     -------
-        plot if Show is not False.
+    matplotlib.axes.Axes or None
+        The heatmap axes if `show=False`, otherwise None.
+
+    Raises
+    ------
+    ValueError
+        If required columns (`order_col` or "vanished") are not found in `embed.var`.
+
+    Notes
+    -----
+    The function expects the following columns in `embed.var`:
+    - `order_col`: For ordering dimensions (if `sort_by_categorical=False`)
+    - `title_col`: For dimension titles
+    - `vanished`: Boolean indicating vanished dimensions (if `remove_vanished=True`)
+
+    If `figsize=None`, the figure height is automatically calculated as
+    `len(unique_categories) / 6` to accommodate all categories.
+
+    The heatmap uses a red-blue color map centered at 0, with no dendrogram.
+
+    Examples
+    --------
+    >>> # Basic heatmap of latent dimensions by cell type
+    >>> plot_latent_dims_in_heatmap(embed, categorical_column="cell_type")
+    >>> # Heatmap with balanced sampling and custom sorting
+    >>> plot_latent_dims_in_heatmap(embed, categorical_column="condition", sort_by_categorical=True, make_balanced=True)
+    >>> # Heatmap with custom figure size
+    >>> plot_latent_dims_in_heatmap(embed, categorical_column="batch", figsize=(12, 8))
     """
     if order_col is not None and order_col not in embed.var:
         raise ValueError(
