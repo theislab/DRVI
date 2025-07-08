@@ -6,24 +6,142 @@ from torch.distributions import Normal, kl_divergence
 
 
 class Prior(nn.Module):
+    """Abstract base class for prior distributions in variational autoencoders.
+
+    This class defines the interface for different prior distributions that can be
+    used in variational autoencoders. The prior distribution is used to regularize
+    the latent space and compute the KL divergence with the posterior.
+
+    Notes
+    -----
+    Subclasses must implement:
+    - `kl`: Method to compute KL divergence with the posterior distribution
+    """
+
     def __init__(self):
         super().__init__()
 
     def kl(self, qz):
+        """Compute KL divergence between posterior and prior.
+
+        Parameters
+        ----------
+        qz : Distribution
+            The posterior distribution (usually Normal).
+
+        Returns
+        -------
+        torch.Tensor
+            KL divergence between posterior and prior.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by subclasses.
+        """
         raise NotImplementedError()
 
 
 class StandardPrior(Prior):
+    """Standard normal prior distribution.
+
+    This is the most commonly used prior in variational autoencoders.
+    It assumes a standard normal distribution N(0, I) for the latent variables.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from torch.distributions import Normal
+    >>> # Create standard prior
+    >>> prior = StandardPrior()
+    >>> # Create a posterior distribution
+    >>> qz = Normal(torch.randn(10, 5), torch.ones(10, 5))
+    >>> # Compute KL divergence
+    >>> kl = prior.kl(qz)
+    >>> print(kl.shape)  # torch.Size([10, 5])
+    """
+
     def __init__(self):
         super().__init__()
 
     def kl(self, qz):
+        """Compute KL divergence with standard normal prior.
+
+        Parameters
+        ----------
+        qz : Normal
+            The posterior distribution (must be Normal).
+
+        Returns
+        -------
+        torch.Tensor
+            KL divergence between qz and N(0, I).
+
+        Notes
+        -----
+        For Normal distributions, the KL divergence has a closed-form solution:
+        KL(q||p) = 0.5 * (μ² + σ² - log(σ²) - 1)
+        where μ and σ are the mean and standard deviation of q.
+        """
         # 1 x N
         assert isinstance(qz, Normal)
         return kl_divergence(qz, Normal(torch.zeros_like(qz.mean), torch.ones_like(qz.mean)))
 
 
 class VampPrior(Prior):
+    """VampPrior (Variational Mixture of Posteriors) prior distribution.
+
+    This prior uses a mixture of posteriors as the prior distribution,
+    which can capture more complex structure in the data than a standard
+    normal prior.
+
+    This is adapted from https://github.com/jmtomczak/intro_dgm/main/vaes/vae_priors_example.ipynb
+
+    Parameters
+    ----------
+    n_components : int
+        Number of mixture components.
+    encoder : nn.Module
+        Encoder network to compute posterior parameters for pseudo-inputs.
+    model_input : dict
+        Dictionary containing input data for pseudo-inputs.
+    trainable_keys : tuple, default=("x",)
+        Keys in model_input that should be trainable parameters.
+    fixed_keys : tuple, default=()
+        Keys in model_input that should be fixed parameters.
+    input_type : {"scvi", "scfemb"}, default="scvi"
+        Type of input format expected by the encoder.
+    preparation_function : callable, optional
+        Function to prepare inputs for the encoder.
+
+    Notes
+    -----
+    VampPrior learns a set of pseudo-inputs and uses the posterior
+    distributions of these pseudo-inputs as mixture components for
+    the prior. This allows the prior to adapt to the data distribution.
+
+    The prior is computed as:
+    p(z) = Σ_k w_k * q(z|u_k)
+    where u_k are the pseudo-inputs and w_k are mixing weights.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from torch import nn
+    >>> # Create a simple encoder
+    >>> class SimpleEncoder(nn.Module):
+    ...     def __init__(self):
+    ...         super().__init__()
+    ...         self.fc = nn.Linear(10, 4)
+    ...
+    ...     def forward(self, x):
+    ...         return self.fc(x), torch.ones_like(self.fc(x))
+    >>> # Create model input
+    >>> model_input = {"x": torch.randn(5, 10)}
+    >>> # Create VampPrior
+    >>> prior = VampPrior(n_components=5, encoder=SimpleEncoder(), model_input=model_input, trainable_keys=("x",))
+    """
+
     # Adapted from https://github.com/jmtomczak/intro_dgm/main/vaes/vae_priors_example.ipynb
     # K - components, I - inputs, L - latent, N - samples
     def __init__(
@@ -60,6 +178,18 @@ class VampPrior(Prior):
         self.w = torch.nn.Parameter(torch.zeros(n_components, 1, 1))  # K x 1 x 1
 
     def get_params(self):
+        """Get the parameters of the mixture components.
+
+        Returns
+        -------
+        tuple
+            (means, variances) of the mixture components.
+
+        Notes
+        -----
+        This method computes the posterior parameters for each pseudo-input
+        by passing them through the encoder network.
+        """
         # u->encoder->mean, var
         original_mode = self.encoder.training
         self.encoder.train(False)
@@ -77,6 +207,24 @@ class VampPrior(Prior):
         return output  # (K x L), (K x L)
 
     def log_prob(self, z):
+        """Compute log probability of latent variables under the prior.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Latent variables with shape (N, L).
+
+        Returns
+        -------
+        torch.Tensor
+            Log probability with shape (N, L).
+
+        Notes
+        -----
+        The log probability is computed as:
+        log p(z) = log Σ_k w_k * q(z|u_k)
+        where the sum is computed using logsumexp for numerical stability.
+        """
         # Mixture of gaussian computed on K x N x L
         z = z.unsqueeze(0)  # 1 x N x L
 
@@ -95,22 +243,93 @@ class VampPrior(Prior):
         return log_prob  # N x L
 
     def kl(self, qz):
+        """Compute KL divergence using Monte Carlo estimation.
+
+        Parameters
+        ----------
+        qz : Normal
+            The posterior distribution.
+
+        Returns
+        -------
+        torch.Tensor
+            KL divergence between posterior and VampPrior.
+
+        Notes
+        -----
+        The KL divergence is estimated using Monte Carlo sampling:
+        KL(q||p) = E_q[log q(z) - log p(z)]
+        where z ~ q(z) is sampled from the posterior.
+        """
         assert isinstance(qz, Normal)
         z = qz.rsample()
         return qz.log_prob(z) - self.log_prob(z)
 
     def get_extra_state(self):
+        """Get extra state for serialization.
+
+        Returns
+        -------
+        dict
+            Extra state information.
+        """
         return {
             "pi_aux_data": self.pi_aux_data,
             "input_type": self.input_type,
         }
 
     def set_extra_state(self, state):
+        """Set extra state from serialization.
+
+        Parameters
+        ----------
+        state : dict
+            Extra state information.
+        """
         self.pi_aux_data = state["pi_aux_data"]
         self.input_type = state["input_type"]
 
 
 class GaussianMixtureModelPrior(Prior):
+    """Gaussian Mixture Model prior distribution.
+
+    This prior uses a mixture of Gaussian distributions with learnable
+    parameters. Unlike VampPrior, the mixture components are not tied
+    to the encoder network.
+
+    Parameters
+    ----------
+    n_components : int
+        Number of mixture components.
+    n_latent : int
+        Dimensionality of the latent space.
+    data : tuple, optional
+        Initial means and variances as (means, variances).
+    trainable_priors : bool, default=True
+        Whether the prior parameters should be trainable.
+
+    Notes
+    -----
+    This prior learns the means, variances, and mixing weights of a
+    Gaussian mixture model directly. It's simpler than VampPrior but
+    may not capture data-specific structure as well.
+
+    The prior is computed as:
+    p(z) = Σ_k w_k * N(z|μ_k, σ_k²)
+    where μ_k, σ_k², and w_k are learnable parameters.
+
+    Examples
+    --------
+    >>> import torch
+    >>> # Create GMM prior
+    >>> prior = GaussianMixtureModelPrior(n_components=3, n_latent=5)
+    >>> # Create a posterior distribution
+    >>> qz = torch.distributions.Normal(torch.randn(10, 5), torch.ones(10, 5))
+    >>> # Compute KL divergence
+    >>> kl = prior.kl(qz)
+    >>> print(kl.shape)  # torch.Size([10, 5])
+    """
+
     # Based on VampPrior class
 
     def __init__(
@@ -136,6 +355,24 @@ class GaussianMixtureModelPrior(Prior):
         self.w = torch.nn.Parameter(torch.zeros(self.p_m.shape[0], 1, 1))  # K x 1 x 1
 
     def log_prob(self, z):
+        """Compute log probability of latent variables under the prior.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Latent variables with shape (N, L).
+
+        Returns
+        -------
+        torch.Tensor
+            Log probability with shape (N, L).
+
+        Notes
+        -----
+        The log probability is computed as:
+        log p(z) = log Σ_k w_k * N(z|μ_k, σ_k²)
+        where the sum is computed using logsumexp for numerical stability.
+        """
         # Mixture of gaussian computed on K x N x L
         z = z.unsqueeze(0)  # 1 x N x L
 
@@ -152,6 +389,24 @@ class GaussianMixtureModelPrior(Prior):
         return log_prob  # N x L
 
     def kl(self, qz):
+        """Compute KL divergence using Monte Carlo estimation.
+
+        Parameters
+        ----------
+        qz : Normal
+            The posterior distribution.
+
+        Returns
+        -------
+        torch.Tensor
+            KL divergence between posterior and GMM prior.
+
+        Notes
+        -----
+        The KL divergence is estimated using Monte Carlo sampling:
+        KL(q||p) = E_q[log q(z) - log p(z)]
+        where z ~ q(z) is sampled from the posterior.
+        """
         assert isinstance(qz, Normal)
         z = qz.rsample()
         return qz.log_prob(z) - self.log_prob(z)
