@@ -12,7 +12,38 @@ from drvi.utils.tools import iterate_on_top_differential_vars
 from drvi.utils.tools.interpretability._latent_traverse import get_dimensions_of_traverse_data
 
 
-def make_heatmap_groups(ordered_list):
+def make_heatmap_groups(ordered_list: list) -> tuple[list[tuple[int, int]], list]:
+    """Create group positions and labels for scanpy heatmap visualization of marker genes.
+
+    This helper function processes an ordered list to identify groups of
+    consecutive identical elements and returns their positions and labels.
+    It's used to create group annotations for scanpy heatmap plots.
+
+    Parameters
+    ----------
+    ordered_list : list
+        List of elements where consecutive identical elements form groups.
+
+    Returns
+    -------
+    tuple[list[tuple[int, int]], list]
+        A tuple containing:
+        - List of tuples with (start_index, end_index) for each group
+        - List of group labels (unique values from ordered_list)
+
+    Notes
+    -----
+    The function uses `itertools.groupby` to identify consecutive groups
+    of identical elements. Each group is represented by its start and end
+    indices (inclusive).
+
+    Examples
+    --------
+    >>> # Simple example
+    >>> groups, labels = make_heatmap_groups(["A", "A", "B", "B", "B", "A"])
+    >>> print(f"Groups: {groups}")  # [(0, 1), (2, 4), (5, 5)]
+    >>> print(f"Labels: {labels}")  # ['A', 'B', 'A']
+    """
     n_groups, group_names = zip(
         *[(len(list(group)), key) for (key, group) in itertools.groupby(ordered_list)], strict=False
     )
@@ -32,24 +63,85 @@ def differential_vars_heatmap(
     show: bool = True,
     **kwargs,
 ):
-    """
-    Generate a heatmap of differential variables based on traverse data.
+    """Generate a heatmap of differential variables based on traverse data.
+
+    This function creates a comprehensive heatmap visualization showing how
+    genes respond to latent dimension traversals. The heatmap displays
+    stepwise effects across all latent dimensions and genes, with genes
+    grouped by their maximum effect dimension.
 
     Parameters
     ----------
-    - traverse_adata (AnnData): Annotated data object containing traverse data.
-    - key (str): Key used to access traverse effect data in `traverse_adata.varm`.
-    - title_col (str): Column name in `traverse_adata.obs` to use as dimension labels.
-    - score_threshold (float): Threshold value for filtering variables based on the score.
-    - remove_vanished (bool): Whether to remove variables that have vanished.
-    - remove_unaffected (bool): Whether to remove variables that have no effect.
-    - figsize (Optional[Tuple[int, int]]): Size of the figure (width, height).
-    - show (bool): Whether to show the heatmap.
-    - **kwargs: Additional keyword arguments to be passed to `sc.pl.heatmap`.
+    traverse_adata : AnnData
+        AnnData object containing traverse data from `traverse_latent` or
+        `make_traverse_adata`. Must contain differential effect data for the specified key.
+    key : str
+        Key prefix for the differential variables in `traverse_adata.varm`.
+        Should correspond to a key used in `find_differential_effects` or
+        `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
+    title_col : str, default="title"
+        Column name in `traverse_adata.obs` to use as dimension labels.
+        These titles will be used for axis labels and grouping.
+    score_threshold : float, default=0.0
+        Threshold value for filtering genes based on their maximum effect score.
+        Only genes with maximum effects above this threshold will be included.
+    remove_vanished : bool, default=True
+        Whether to remove latent dimensions that have vanished (have no effect).
+        This helps focus the visualization on meaningful dimensions.
+    remove_unaffected : bool, default=False
+        Whether to remove genes that have no significant effect (below score_threshold).
+        When True, only genes with effects above the threshold are shown.
+    figsize : tuple[int, int], optional
+        Size of the figure (width, height) in inches. If None, automatically
+        calculated based on the number of dimensions.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the plot object.
+    **kwargs
+        Additional keyword arguments passed to `sc.pl.heatmap`.
 
     Returns
     -------
-    - None if show is True, otherwise the plot.
+    matplotlib.axes.Axes or None
+        The heatmap plot axes if `show=False`, otherwise None.
+
+    Raises
+    ------
+    KeyError
+        If required data is missing from `traverse_adata`.
+    ValueError
+        If the specified key doesn't exist in the AnnData object.
+
+    Notes
+    -----
+    The function performs the following steps:
+    1. Calculates maximum effects for each gene in both positive and negative directions
+    2. Identifies which dimension has the maximum effect for each gene
+    3. Groups genes by their maximum effect dimension
+    4. Creates a heatmap showing stepwise effects across all dimensions
+    5. Applies filtering based on score threshold and vanished dimensions
+
+    **Visualization Features:**
+
+    - **Color scale**: Red-blue diverging colormap centered at 0
+    - **Gene grouping**: Genes are grouped by their maximum effect dimension
+    - **Dimension ordering**: Dimensions are ordered by their `order` column
+    - **Gene ordering**: Within each group, genes are ordered by effect magnitude
+
+    **Interpretation:**
+
+    - **Red colors**: Positive effects (increased expression)
+    - **Blue colors**: Negative effects (decreased expression)
+    - **Intensity**: Magnitude of the effect
+    - **Gene groups**: Genes with similar maximum effects are grouped together
+
+    Examples
+    --------
+    >>> # Basic heatmap with combined scores
+    >>> differential_vars_heatmap(traverse_adata, "combined_score")
+    >>> # Heatmap with custom parameters
+    >>> differential_vars_heatmap(
+    ...     traverse_adata, "max_possible", score_threshold=1.0, remove_unaffected=True, figsize=(15, 8)
+    ... )
     """
     n_latent, n_steps, n_samples, n_vars = get_dimensions_of_traverse_data(traverse_adata)
 
@@ -166,20 +258,50 @@ def _bar_plot_top_differential_vars(
     ncols: int = 5,
     show: bool = True,
 ):
-    """
-    Plot the top differential variables in a bar plot.
+    """Plot the top differential variables in a group of bar plots.
+
+    This internal function creates horizontal bar plots showing the top genes
+    for each latent dimension based on their differential effect scores.
 
     Parameters
     ----------
-        plot_info (Sequence[Tuple[str, pd.Series]]): Information about the top differential variables.
-        dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
-        n_top_genes (int, optional): Number of top genes to plot. Defaults to 10.
-        ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
-        show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
+    plot_info : Sequence[tuple[str, pd.Series]]
+        Information about the top differential variables. Each tuple contains
+        a dimension title and a pandas Series of gene scores.
+    dim_subset : Sequence[str], optional
+        List of dimensions to plot in the bar plot. If None, all dimensions
+        from plot_info are plotted.
+    n_top_genes : int, default=10
+        Number of top genes to plot for each dimension.
+    ncols : int, default=5
+        Number of columns in the plot grid.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
-        None if show is True, otherwise the figure.
+    matplotlib.figure.Figure or None
+        The figure object if `show=False`, otherwise None.
+
+    Notes
+    -----
+    The function creates a grid of horizontal bar plots, with each subplot
+    showing the top genes for one latent dimension. Genes are sorted by
+    their effect scores in descending order.
+
+    **Plot Features:**
+
+    - **Horizontal bars**: Gene names on y-axis, scores on x-axis
+    - **Color**: Sky blue bars for all genes
+    - **Grid**: No grid lines for cleaner appearance
+    - **Layout**: Automatic grid layout based on number of dimensions
+
+    Examples
+    --------
+    >>> # Basic bar plot
+    >>> _bar_plot_top_differential_vars(plot_info)
+    >>> # Custom layout
+    >>> _bar_plot_top_differential_vars(plot_info, n_top_genes=15, ncols=3, show=False)
     """
     if dim_subset is not None:
         plot_info = dict(plot_info)
@@ -224,25 +346,91 @@ def show_top_differential_vars(
     ncols: int = 5,
     show: bool = True,
 ):
-    """
-    Show top differential variables in a bar plot.
+    """Show top differential variables in a bar plot.
+
+    This function creates a comprehensive visualization of the top differentially
+    expressed genes for each latent dimension. It generates horizontal bar plots
+    showing the genes with the highest effect scores for each dimension.
 
     Parameters
     ----------
-        traverse_adata (AnnData): Annotated data object containing the variables to be plotted.
-        key (str): Key to access the traverse effect variables in `traverse_adata.varm`.
-        title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
-        order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.  Ignored if `dim_subset` is provided.
-        dim_subset (Sequence[sre]): List of dimensions to plot in the bar plot. If not specified all dimensions are plotted.
-        gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
-        score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
-        n_top_genes (int, optional): Number of top genes to plot. Defaults to 10.
-        ncols (int, optional): Number of columns in the plot grid. Defaults to 5.
-        show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
+    traverse_adata : AnnData
+        AnnData object containing the differential analysis results from
+        `calculate_differential_vars`. Must contain differential effect data
+        for the specified key.
+    key : str
+        Key prefix for the differential variables in `traverse_adata.varm`.
+        Should correspond to a key used in `find_differential_effects` or
+        `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
+    title_col : str, default="title"
+        Column name in `traverse_adata.obs` that contains the titles for each dimension.
+        These titles will be used as subplot titles.
+    order_col : str, default="order"
+        Column name in `traverse_adata.obs` that specifies the order of dimensions.
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
+    dim_subset : Sequence[str], optional
+        List of dimensions to plot in the bar plot. If None, all dimensions
+        with significant effects are plotted.
+    gene_symbols : str, optional
+        Column name in `traverse_adata.var` that contains gene symbols.
+        If provided, gene symbols will be used in the plot instead of gene indices.
+        Useful for converting between gene IDs and readable gene names.
+    score_threshold : float, default=0.0
+        Threshold value for gene scores. Only genes with scores above this
+        threshold will be plotted.
+    n_top_genes : int, default=10
+        Number of top genes to plot for each dimension.
+    ncols : int, default=5
+        Number of columns in the plot grid.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
-        None if show is True, otherwise the figure.
+    matplotlib.figure.Figure or None
+        The figure object if `show=False`, otherwise None.
+
+    Raises
+    ------
+    KeyError
+        If required data is missing from `traverse_adata`.
+    ValueError
+        If the specified key doesn't exist in the AnnData object.
+
+    Notes
+    -----
+    The function performs the following steps:
+    1. Extracts top differential variables using `iterate_on_top_differential_vars`
+    2. Filters dimensions based on `dim_subset` if provided
+    3. Creates horizontal bar plots for each dimension
+    4. Displays top `n_top_genes` genes sorted by their effect scores
+
+    **Visualization Features:**
+
+    - **Gene symbols**: If provided, gene symbols will be used instead of gene indices.
+    - **Grid layout**: Automatic grid based on number of dimensions and `ncols`
+    - **Horizontal bars**: Gene names on y-axis, scores on x-axis
+    - **Color coding**: Sky blue bars for all genes
+    - **Dimension titles**: Each subplot shows the dimension title
+    - **Gene ordering**: Genes sorted by effect score (highest first)
+
+    **Interpretation:**
+
+    - **Bar length**: Represents the magnitude of the differential effect
+    - **Gene position**: Higher bars indicate stronger effects
+    - **Dimension separation**: Each subplot shows effects for one latent dimension
+    - **Direction indicators**: Dimension titles include "+" or "-" to indicate effect direction
+
+    Examples
+    --------
+    >>> # Basic visualization with combined scores
+    >>> show_top_differential_vars(traverse_adata, "combined_score")
+    >>> # Custom parameters with gene symbols
+    >>> show_top_differential_vars(
+    ...     traverse_adata, "max_possible", gene_symbols="gene_symbol", score_threshold=1.0, n_top_genes=15, ncols=3
+    ... )
+    >>> # Subset of dimensions
+    >>> show_top_differential_vars(traverse_adata, "combined_score", dim_subset=["DR 5+", "DR 12+", "DR 14+"])
     """
     plot_info = iterate_on_top_differential_vars(
         traverse_adata, key, title_col, order_col, gene_symbols, score_threshold
@@ -265,27 +453,106 @@ def show_differential_vars_scatter_plot(
     show: bool = True,
     **kwargs,
 ):
-    """
-    Show a scatter plot of differential variables conidering multiple criteria.
+    """Show a scatter plot of differential variables considering multiple criteria.
+
+    This function creates scatter plots comparing different differential effect
+    (usaully "max_possible" and "min_possible") measures for each latent dimension.
+    It is color-coded by the combined score. It's useful for understanding how
+    different analysis methods relate to each other and identifying genes
+    that show consistent effects across multiple criteria. The top 20 genes
+    are labeled with their names.
 
     Parameters
     ----------
-    - traverse_adata (AnnData): Annotated data object containing the variables to be plotted.
-    - key_x (str): Key to access the first variable in `traverse_adata.varm`.
-    - key_y (str): Key to access the second variable in `traverse_adata.varm`.
-    - key_combined (str): Key to access the combined variable in `traverse_adata.varm`.
-    - title_col (str, optional): Column name in `traverse_adata.obs` that contains the titles for each dimension. Defaults to 'title'.
-    - order_col (str, optional): Column name in `traverse_adata.obs` that specifies the order of dimensions. Defaults to 'order'.  Ignored if `dim_subset` is provided.
-    - gene_symbols (str, optional): Column name in `traverse_adata.var` that contains gene symbols. If provided, gene symbols will be used in the plot instead of gene indices. Defaults to None.
-    - score_threshold (float, optional): Threshold value for gene scores. Only genes with scores above this threshold will be plotted. Defaults to 0.
-    - dim_subset (Optional[Sequence[str]], optional): Subset of dimensions to plot. If None, all dimensions will be plotted. Defaults to None.
-    - ncols (int, optional): Number of columns in the plot grid. Defaults to 3.
-    - show (bool, optional): Whether to display the plot. If False, the plot will be returned as a Figure object. Defaults to True.
-    - **kwargs: Additional keyword arguments to be passed to the scatter plot.
+    traverse_adata : AnnData
+        AnnData object containing the differential analysis results from
+        `calculate_differential_vars`. Must contain differential effect data
+        for all specified keys.
+    key_x : str
+        Key for the x-axis variable in `traverse_adata.varm`.
+        Typically "max_possible" or "min_possible".
+    key_y : str
+        Key for the y-axis variable in `traverse_adata.varm`.
+        Typically "min_possible" or "max_possible".
+    key_combined : str
+        Key for the color-coded variable in `traverse_adata.varm`.
+        Typically "combined_score" for the final combined effect.
+    title_col : str, default="title"
+        Column name in `traverse_adata.obs` that contains the titles for each dimension.
+        These titles will be used as subplot titles.
+    order_col : str, default="order"
+        Column name in `traverse_adata.obs` that specifies the order of dimensions.
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
+    gene_symbols : str, optional
+        Column name in `traverse_adata.var` that contains gene symbols.
+        If provided, gene symbols will be used for point labels instead of gene indices.
+    score_threshold : float, default=0.0
+        Threshold value for gene scores. Only genes with combined scores above
+        this threshold will be plotted.
+    dim_subset : Sequence[str], optional
+        Subset of dimensions to plot. If None, all dimensions with significant
+        effects are plotted.
+    ncols : int, default=3
+        Number of columns in the plot grid.
+    show : bool, default=True
+        Whether to display the plot. If False, returns the figure object.
+    **kwargs
+        Additional keyword arguments passed to the scatter plot (e.g., alpha, s for point size).
 
     Returns
     -------
-    - None if show is True, otherwise the figure.
+    matplotlib.figure.Figure or None
+        The figure object if `show=False`, otherwise None.
+
+    Raises
+    ------
+    KeyError
+        If required data is missing from `traverse_adata`.
+    ValueError
+        If any of the specified keys don't exist in the AnnData object.
+
+    Notes
+    -----
+    The function performs the following steps:
+    1. Extracts differential variables for all three keys (x, y, combined)
+    2. Creates scatter plots for each dimension comparing the two measures
+    3. Color-codes points by the combined score
+    4. Labels the top 20 genes by combined score
+
+    **Interpretation:**
+
+    - **X-axis**: Effect measure from `key_x` (e.g., max_possible)
+    - **Y-axis**: Effect measure from `key_y` (e.g., min_possible)
+    - **Color**: Combined score from `key_combined`
+    - **Point position**: Relationship between the two measures
+    - **Labeled points**: Genes with highest combined scores
+
+    **Common Use Cases:**
+
+    - Compare max_possible vs min_possible effects
+    - Identify genes with consistent effects across methods
+    - Validate the combined scoring approach
+    - Understand the relationship between different effect measures
+
+    Examples
+    --------
+    >>> # Compare max_possible vs min_possible with combined score
+    >>> show_differential_vars_scatter_plot(traverse_adata, "max_possible", "min_possible", "combined_score")
+    >>> # Custom parameters with gene symbols
+    >>> show_differential_vars_scatter_plot(
+    ...     traverse_adata,
+    ...     "max_possible",
+    ...     "min_possible",
+    ...     "combined_score",
+    ...     gene_symbols="gene_symbol",
+    ...     score_threshold=1.0,
+    ...     alpha=0.7,
+    ...     s=20,
+    ... )
+    >>> # Subset of dimensions
+    >>> show_differential_vars_scatter_plot(
+    ...     traverse_adata, "max_possible", "min_possible", "combined_score", dim_subset=["DR 5+", "DR 12+", "DR 14+"]
+    ... )
     """
     plot_info = {}
     for key in [key_x, key_y, key_combined]:
@@ -353,6 +620,77 @@ def _umap_of_relevant_genes(
     max_cells_to_plot: int | None = None,
     **kwargs,
 ):
+    """Plot UMAP embeddings for specific latent dimensions together with UMAP embeddings of relevant genes.
+
+    This internal function creates UMAP visualizations showing how genes
+    associated with specific latent dimensions are expressed across cells.
+    The latent dimension values are color-coded by the latent dimension values.
+    The top genes are color-coded by the gene expression.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing single-cell data with UMAP coordinates.
+        Must have UMAP coordinates in `embed.obsm["X_umap"]`.
+    embed : AnnData
+        AnnData object containing latent representations and dimension metadata.
+        Must have columns in `.var` corresponding to `title_col`.
+    plot_info : Sequence[tuple[str, pd.Series]]
+        Information about the top differential variables. Each tuple contains
+        a dimension title and a pandas Series of gene scores.
+    layer : str, optional
+        Layer name in `adata` to use for gene expression visualization.
+        If None, uses `.X`.
+    title_col : str, default="title"
+        Column name in `embed.var` that contains dimension titles.
+    gene_symbols : str, optional
+        Column name in `adata.var` that contains gene symbols.
+        If provided, gene symbols will be used instead of gene indices.
+    dim_subset : Sequence[str], optional
+        List of dimensions to plot. If None, all dimensions from plot_info are plotted.
+    n_top_genes : int, default=10
+        Number of top genes to visualize for each dimension.
+    max_cells_to_plot : int, optional
+        Maximum number of cells to include in the plot. If None, all cells are plotted.
+        Useful for large datasets to improve performance.
+    **kwargs
+        Additional keyword arguments passed to `sc.pl.embedding`.
+
+    Returns
+    -------
+    None
+        Displays the plots directly.
+
+    Notes
+    -----
+    The function creates two types of visualizations for each dimension:
+    1. **Latent dimension values**: Shows how the latent dimension varies across cells
+    2. **Top gene expression**: Shows expression patterns of the top genes for that dimension
+
+    **Visualization features:**
+
+    - **UMAP coordinates**: Uses UMAP embedding from the embed object
+    - **Cell subsetting**: Can limit number of cells for performance
+    - **Gene labeling**: Shows gene names in plot titles
+    - **Dimension labeling**: Shows dimension names in plot titles
+
+    Examples
+    --------
+    >>> # Basic UMAP visualization
+    >>> plot_info = iterate_on_top_differential_vars(traverse_adata, "combined_score")
+    >>> _umap_of_relevant_genes(adata, embed, plot_info)
+    >>> # With custom parameters
+    >>> _umap_of_relevant_genes(
+    ...     adata,
+    ...     embed,
+    ...     plot_info,
+    ...     layer="counts",
+    ...     title_col="title",
+    ...     gene_symbols="gene_symbol",
+    ...     n_top_genes=5,
+    ...     max_cells_to_plot=5000,
+    ... )
+    """
     if max_cells_to_plot is not None and adata.n_obs > max_cells_to_plot:
         adata = sc.pp.subsample(adata, n_obs=max_cells_to_plot, copy=True)
 
@@ -417,6 +755,112 @@ def plot_relevant_genes_on_umap(
     max_cells_to_plot: int | None = None,
     **kwargs,
 ):
+    """Plot relevant genes on UMAP embedding.
+
+    This function creates UMAP visualizations showing how genes associated
+    with specific latent dimensions are expressed across cells. It creates
+    UMAP visualizations showing how genes associated with specific latent
+    dimensions are expressed across cells. The latent dimension values are
+    color-coded by the latent dimension values. The top genes are color-coded
+    by the gene expression.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing single-cell data with gene expression.
+        This is the original data used for training the model.
+    embed : AnnData
+        AnnData object containing latent representations and dimension metadata.
+        Must have UMAP coordinates in `embed.obsm["X_umap"]` and dimension
+        information in `.var` columns.
+    traverse_adata : AnnData
+        AnnData object containing differential analysis results from
+        `calculate_differential_vars`. Must contain differential effect data
+        for the specified key.
+    traverse_adata_key : str
+        Key prefix for the differential variables in `traverse_adata.varm`.
+        Should correspond to a key used in `find_differential_effects` or
+        `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
+    layer : str, optional
+        Layer name in `adata` to use for gene expression visualization.
+        If None, uses `.X`. Common options include "counts", "logcounts", etc.
+    title_col : str, default="title"
+        Column name in `embed.var` that contains dimension titles.
+        These titles will be used to match dimensions between objects.
+    order_col : str, default="order"
+        Column name in `embed.var` that specifies the order of dimensions.
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
+    gene_symbols : str, optional
+        Column name in `adata.var` that contains gene symbols.
+        If provided, gene symbols will be used instead of gene indices.
+    score_threshold : float, default=0.0
+        Threshold value for gene scores. Only genes with scores above this
+        threshold will be visualized.
+    dim_subset : Sequence[str], optional
+        List of dimensions to plot. If None, all dimensions with significant
+        effects are plotted.
+    n_top_genes : int, default=10
+        Number of top genes to visualize for each dimension.
+    max_cells_to_plot : int, optional
+        Maximum number of cells to include in the plot. If None, all cells are plotted.
+        Useful for large datasets to improve performance and reduce memory usage.
+    **kwargs
+        Additional keyword arguments passed to `sc.pl.embedding`.
+
+    Returns
+    -------
+    None
+        Displays the plots directly.
+
+    Raises
+    ------
+    KeyError
+        If required data is missing from any of the AnnData objects.
+    ValueError
+        If the specified key doesn't exist in traverse_adata.
+
+    Notes
+    -----
+    The function performs the following steps:
+    1. Extracts top differential variables using `iterate_on_top_differential_vars`
+    2. For each dimension, creates two visualizations:
+       - UMAP of Latent dimension values across cells
+       - UMAPs of Expression patterns of top genes for that dimension
+
+    **Interpretation:**
+
+    - **Latent dimension plots**: Show how the dimension varies across cell types
+    - **Gene expression plots**: Show expression patterns of dimension-specific genes
+    - **Color intensity**: Indicates magnitude of values/expression
+
+    **Common Use Cases:**
+
+    - **Biological validation**: Verify that latent dimensions capture meaningful biology
+    - **Gene discovery**: Identify genes associated with specific processes
+    - **Model interpretation**: Understand what biological processes each dimension represents
+    - **Quality assessment**: Evaluate the biological relevance of the model
+
+    Examples
+    --------
+    >>> # Basic UMAP visualization with combined scores
+    >>> plot_relevant_genes_on_umap(adata, embed, traverse_adata, "combined_score")
+    >>> # With custom parameters
+    >>> plot_relevant_genes_on_umap(
+    ...     adata,
+    ...     embed,
+    ...     traverse_adata,
+    ...     "max_possible",
+    ...     layer="logcounts",
+    ...     gene_symbols="gene_symbol",
+    ...     score_threshold=1.0,
+    ...     n_top_genes=5,
+    ...     max_cells_to_plot=5000,
+    ... )
+    >>> # Subset of dimensions
+    >>> plot_relevant_genes_on_umap(
+    ...     adata, embed, traverse_adata, "combined_score", dim_subset=["DR 5+", "DR 12+", "DR 14+"]
+    ... )
+    """
     plot_info = iterate_on_top_differential_vars(
         traverse_adata, traverse_adata_key, title_col, order_col, gene_symbols, score_threshold
     )
