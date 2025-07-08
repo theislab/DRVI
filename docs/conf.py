@@ -37,9 +37,10 @@ needs_sphinx = "4.0"
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
-    "github_repo": "https://github.com/theislab/drvi",
+    "github_repo": "drvi",
     "github_version": "main",
     "conf_py_path": "/docs/",
+    "source_suffix": ".py",
 }
 
 # -- General configuration ---------------------------------------------------
