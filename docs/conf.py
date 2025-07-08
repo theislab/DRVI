@@ -55,7 +55,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",  # Enable source code links
     "sphinxcontrib.bibtex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
@@ -87,10 +86,6 @@ nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
 typehints_defaults = "braces"
-
-# -- Viewcode extension configuration ----------------------------------------
-viewcode_follow_imports = False
-viewcode_import = False
 
 source_suffix = {
     ".rst": "restructuredtext",
@@ -138,6 +133,7 @@ html_theme_options = {
     "path_to_docs": "docs/",
     "navigation_with_keys": False,
     "show_source": True,  # Show source links in the theme
+    "use_source_button": True,  # Enable source button that links to GitHub
 }
 
 pygments_style = "default"
