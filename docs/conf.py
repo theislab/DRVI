@@ -34,6 +34,7 @@ templates_path = ["_templates"]
 nitpicky = True  # Warn about broken links
 needs_sphinx = "4.0"
 
+# -- GitHub integration for source links -------------------------------------
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
@@ -54,7 +55,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",  # Enable source code links
     "sphinxcontrib.bibtex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
@@ -86,11 +86,6 @@ nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
 typehints_defaults = "braces"
-
-# -- Viewcode extension configuration ----------------------------------------
-# Enable source code links for all documented functions and classes
-viewcode_follow_imports = True
-viewcode_import = True
 
 source_suffix = {
     ".rst": "restructuredtext",
