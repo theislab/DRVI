@@ -209,6 +209,7 @@ class GenerativeMixin:
         >>> cat_covs = np.array([0, 1, 0, 1] * 25)  # batch labels
         >>> reconstructed = model.decode_latent_samples(z, cat_values=cat_covs)
         """
+
         def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
             store.append(gen_output["params"]["mean"].detach().cpu())
 
