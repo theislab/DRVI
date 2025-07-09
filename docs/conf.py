@@ -37,7 +37,7 @@ needs_sphinx = "4.0"
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
-    "github_repo": "https://github.com/theislab/drvi",
+    "github_repo": "drvi",
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
@@ -51,6 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
@@ -65,7 +66,7 @@ extensions = [
 autosummary_generate = True
 autodoc_member_order = "groupwise"
 default_role = "literal"
-napoleon_google_docstring = False
+napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = True  # having a separate entry generally helps readability
@@ -100,7 +101,7 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     # Deep learning
-    "torch": ("https://docs.pytorch.org/docs/main", None),
+    "torch": ("https://docs.pytorch.org/docs/stable", None),
     "lightning": ("https://lightning.ai/docs/pytorch/stable/", None),
     # Special
     "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
@@ -130,6 +131,7 @@ html_theme_options = {
     "use_repository_button": True,
     "path_to_docs": "docs/",
     "navigation_with_keys": False,
+    "use_source_button": True,
 }
 
 pygments_style = "default"
@@ -138,4 +140,33 @@ nitpick_ignore = [
     # If building the documentation fails because of a missing link that is outside your control,
     # you can add an exception to this list.
     #     ("py:class", "igraph.Graph"),
+    # PyTorch references that are not properly resolved
+    ("py:class", "Module"),
+    ("py:class", "torch.nn.modules.Module"),
+    ("py:class", "torch.nn.Parameter"),
+    ("py:class", "Tensor"),
+    ("py:class", "optional"),
+    ("py:class", "torch.utils.hooks.RemovableHandle"),
+    ("py:class", "Dropout"),
+    ("py:class", "BatchNorm"),
+    ("py:class", "Parameter"),
+    ("py:attr", "state_dict"),
+    ("py:attr", "strict"),
+    ("py:attr", "assign"),
+    ("py:attr", "persistent"),
+    ("py:attr", "grad_input"),
+    ("py:attr", "grad_output"),
+    ("py:attr", "requires_grad"),
+    ("py:attr", "dst_type"),
+    ("py:attr", "dtype"),
+    ("py:attr", "device"),
+    ("py:attr", "non_blocking"),
+    ("py:func", "add_module"),
+    ("py:func", "register_module_forward_hook"),
+    ("py:func", "register_module_forward_pre_hook"),
+    ("py:func", "register_module_full_backward_hook"),
+    ("py:func", "register_module_full_backward_pre_hook"),
+    # DRVI internal references
+    ("py:class", "drvi.scvi_tools_based.merlin_data._data.MerlinData"),
+    ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

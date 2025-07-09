@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from anndata import AnnData
@@ -29,13 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
-    """
-    DRVI model based on scvi-tools skelethon
+    """DRVI model based on scvi-tools framework for disentangled representation learning.
 
     Parameters
     ----------
     adata
-        AnnData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
+        AnnData object or MerlinData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
     n_latent
         Dimensionality of the latent space.
     encoder_dims
@@ -43,19 +42,21 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     decoder_dims
         Number of nodes in hidden layers of the decoder.
     prior
-        Prior model. defaults to normal.
+        Prior model type.
     prior_init_obs
-        When initializing priors from data, these observations are used.
+        When using "gmm_x" or "vamp_x" priors, these observations are used to initialize the prior parameters.
+        Number of observations must match the x value in the prior name.
     categorical_covariates
-        Categorical Covariates as a list of texts. You can specify emb dimension by appending @dim to each cpvariate.
+        List of categorical covariates to condition on. Each covariate can specify its embedding dimension
+        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10.
     **model_kwargs
-        Keyword args for :class:`~drvi.model.DRVIModule`
+        Additional keyword arguments passed to :class:`~drvi.model.DRVIModule`.
 
     Examples
     --------
     >>> adata = anndata.read_h5ad(path_to_anndata)
-    >>> drvi.DRVI.setup_anndata(adata, categorical_covariate_keys=["batch"])
-    >>> vae = drvi.DRVI(adata)
+    >>> drvi.model.DRVI.setup_anndata(adata, categorical_covariate_keys=["batch"])
+    >>> vae = drvi.model.DRVI(adata)
     >>> vae.train()
     >>> adata.obsm["latent"] = vae.get_latent_representation()
     """
@@ -70,7 +71,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         prior_init_obs: np.ndarray | None = None,
         categorical_covariates: list[str] = (),
         **model_kwargs,
-    ):
+    ) -> None:
         super().__init__(adata)
 
         # TODO: Remove later. Currently used to detect autoreload problems sooner.
@@ -81,7 +82,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passed an instalce of MerlinData and still get this error, "
+                "If you have passed an instance of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
 
@@ -181,7 +182,31 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         categorical_covariate_keys: list[str] | None = None,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
-    ):
+    ) -> None:
+        """Setup MerlinData for use with DRVI.
+
+        Parameters
+        ----------
+        merlin_data
+            MerlinData object to register.
+        labels_key
+            Key in `merlin_data` for labels.
+        layer
+            key in `merlin_data` to use as input.
+        is_count_data
+            Whether the data is count data.
+        categorical_covariate_keys
+            List of categorical covariate keys in `merlin_data`.
+        continuous_covariate_keys
+            List of continuous covariate keys in `merlin_data`.
+        **kwargs
+            Additional keyword arguments passed to the MerlinDataManager registration.
+
+        Returns
+        -------
+        None
+            This method sets up the class for use with MerlinData and does not return anything.
+        """
         setup_method_args = cls._get_setup_method_args(**locals())
         setup_method_args["drvi_version"] = drvi.__version__
 
@@ -197,13 +222,13 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
     def _make_data_loader(
         self,
-        adata,
+        adata: AnnData | MerlinData,
         indices: Sequence[int] | None = None,
         batch_size: int | None = None,
         shuffle: bool = False,
-        data_loader_class=None,
+        data_loader_class: type | None = None,
         **data_loader_kwargs,
-    ):
+    ) -> Any:
         """Create a AnnDataLoader object for data iteration.
 
         Parameters
@@ -213,13 +238,18 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         indices
             Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
-            Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
+            Minibatch size for data loading into model.
         shuffle
-            Whether observations are shuffled each iteration though
+            Whether observations are shuffled each iteration though.
         data_loader_class
-            Class to use for data loader
+            Class to use for data loader.
         data_loader_kwargs
-            Kwargs to the class-specific data loader class
+            Kwargs to the class-specific data loader class.
+
+        Returns
+        -------
+        Any
+            Data loader object for iteration.
         """
         if isinstance(adata, AnnData):
             return super()._make_data_loader(
@@ -244,6 +274,6 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         else:
             raise ValueError(
                 "Only AnnData and MerlinData are supported. "
-                "If you have passed an instalce of MerlinData and still get this error, "
+                "If you have passed an instance of MerlinData and still get this error, "
                 "make sure merlin is installed as a dependency."
             )
