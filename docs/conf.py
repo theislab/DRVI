@@ -34,14 +34,12 @@ templates_path = ["_templates"]
 nitpicky = True  # Warn about broken links
 needs_sphinx = "4.0"
 
-# -- GitHub integration for source links -------------------------------------
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
     "github_repo": "drvi",
     "github_version": "main",
     "conf_py_path": "/docs/",
-    "source_suffix": ".py",
 }
 
 # -- General configuration ---------------------------------------------------
@@ -53,6 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
@@ -132,8 +131,8 @@ html_theme_options = {
     "use_repository_button": True,
     "path_to_docs": "docs/",
     "navigation_with_keys": False,
-    "show_source": True,  # Show source links in the theme
-    "use_source_button": True,  # Enable source button that links to GitHub
+    "show_source": True,
+    "use_source_button": True,
 }
 
 pygments_style = "default"
