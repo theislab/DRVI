@@ -67,23 +67,23 @@ class DiscreteDisentanglementBenchmark:
 
     Attributes
     ----------
-    embed : np.ndarray
+    embed
         Copy of the input latent representations.
-    one_hot_target : pd.DataFrame
+    one_hot_target
         One-hot encoded target variable.
-    dim_titles : list[str]
+    dim_titles
         Titles for each latent dimension.
-    metrics : tuple[str]
+    metrics
         Metrics used for evaluation.
-    aggregation_methods : tuple[str]
+    aggregation_methods
         Aggregation methods used.
-    additional_metric_params : dict
+    additional_metric_params
         Additional parameters for metrics.
-    results : dict
+    results
         Raw metric results for each dimension and category.
-    aggregated_results : dict
+    aggregated_results
         Aggregated scores across dimensions.
-    version : str
+    version
         Version identifier for serialization compatibility.
 
     Raises
