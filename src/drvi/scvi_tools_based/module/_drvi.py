@@ -40,8 +40,7 @@ class DRVIModule(BaseModuleClass):
         How to make splits (defaults to "split_map"):
         - "split" : Split the latent space
         - "power" : Transform the latent space to n_split vectors of size n_latent
-        - "split_map" : Split the latent space then map each to latent space
-          using unique transformations
+        - "split_map" : Split the latent space then map each to latent space using unique transformations
     decoder_reuse_weights
         Where to reuse the weights of the decoder layers when using splitting (defaults to "everywhere").
     encoder_dims
@@ -80,9 +79,7 @@ class DRVIModule(BaseModuleClass):
         Gene likelihood model (defaults to "pnb_softmax"). Options include:
         - "normal", "normal_v", "normal_sv" : Normal distributions
         - "poisson", "poisson_orig" : Poisson distributions
-        - "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec",
-          "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none",
-          "nb_orig_libnorm" : Negative binomial distributions
+        - "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec", "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none", "nb_orig_libnorm" : Negative binomial distributions
         - "pnb", "pnb_sv", "pnb_softmax" : Log negative binomial distributions
     prior
         Prior model (defaults to "normal").

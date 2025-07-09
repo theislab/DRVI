@@ -237,23 +237,23 @@ class GenerativeMixin:
 
         Parameters
         ----------
-        adata : AnnData
+        adata
             AnnData object with equivalent structure to initial AnnData.
             If None, defaults to the AnnData object used to initialize the model.
-        step_func : Callable
+        step_func
             Function to apply to the autoencoder output at each step.
             Should accept (inference_outputs, generative_outputs, losses, store)
             as arguments.
-        aggregation_func : Callable
+        aggregation_func
             Function to aggregate the step results from the store.
             Should accept the store list and return the final result.
-        indices : Sequence[int] or None, default=None
-            Indices of cells in adata to use. If None, all cells are used.
-        batch_size : int or None, default=None
+        indices
+            Indices of cells in adata to use. If None, all cells are used (defaults to None).
+        batch_size
             Minibatch size for data loading into model.
-            Defaults to scvi.settings.batch_size.
-        deterministic : bool, default=False
-            Makes model fully deterministic (e.g., no sampling in the bottleneck).
+            Defaults to scvi.settings.batch_size (defaults to None).
+        deterministic
+            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to False).
 
         Returns
         -------
