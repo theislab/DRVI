@@ -85,6 +85,7 @@ class DiscreteDisentanglementBenchmark:
         Aggregated scores across dimensions.
     version
         Version identifier for serialization compatibility.
+        :no-index:
 
     Raises
     ------
