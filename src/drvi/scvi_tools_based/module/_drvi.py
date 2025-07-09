@@ -27,84 +27,82 @@ class DRVIModule(BaseModuleClass):
 
     Parameters
     ----------
-    n_input : int
+    n_input
         Number of input genes.
-    n_latent : int, default=32
-        Dimensionality of the latent space.
-    n_split_latent : int or None, default=-1
+    n_latent
+        Dimensionality of the latent space (defaults to 32).
+    n_split_latent
         Number of splits in the latent space. -1 means split all dimensions
-        (n_split_latent=n_latent).
-    split_aggregation : {"sum", "logsumexp", "max"}, default="logsumexp"
-        How to aggregate splits in the last layer of the decoder.
-    split_method : {"split", "power", "split_map"}, default="split_map"
-        How to make splits:
-
+        (n_split_latent=n_latent) (defaults to -1).
+    split_aggregation
+        How to aggregate splits in the last layer of the decoder (defaults to "logsumexp").
+    split_method
+        How to make splits (defaults to "split_map"):
         - "split" : Split the latent space
         - "power" : Transform the latent space to n_split vectors of size n_latent
         - "split_map" : Split the latent space then map each to latent space
           using unique transformations
-    decoder_reuse_weights : {"everywhere", "last", "intermediate", "nowhere"}, default="everywhere"
-        Where to reuse the weights of the decoder layers when using splitting.
-    encoder_dims : Sequence[int], default=(128, 128)
-        Number of nodes in hidden layers of the encoder.
-    decoder_dims : Sequence[int], default=(128, 128)
-        Number of nodes in hidden layers of the decoder.
-    n_cats_per_cov : Iterable[int] or None, default=()
-        Number of categories for each categorical covariate.
-    n_continuous_cov : int, default=0
-        Number of continuous covariates.
-    encode_covariates : bool, default=False
-        Whether to concatenate covariates to expression in encoder.
-    deeply_inject_covariates : bool, default=False
+    decoder_reuse_weights
+        Where to reuse the weights of the decoder layers when using splitting (defaults to "everywhere").
+    encoder_dims
+        Number of nodes in hidden layers of the encoder (defaults to (128, 128)).
+    decoder_dims
+        Number of nodes in hidden layers of the decoder (defaults to (128, 128)).
+    n_cats_per_cov
+        Number of categories for each categorical covariate (defaults to empty tuple).
+    n_continuous_cov
+        Number of continuous covariates (defaults to 0).
+    encode_covariates
+        Whether to concatenate covariates to expression in encoder (defaults to False).
+    deeply_inject_covariates
         Whether to concatenate covariates into output of hidden layers in encoder/decoder.
         This option only applies when `n_layers` >= 1. The covariates are concatenated
-        to the input of subsequent hidden layers.
-    categorical_covariate_dims : Sequence[int], default=()
-        Embedding dimension of covariate keys if applicable.
-    covariate_modeling_strategy : {"one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear"}, default="one_hot"
-        The strategy model takes to remove covariates.
-    use_batch_norm : {"encoder", "decoder", "none", "both"}, default="none"
-        Whether to use batch norm in layers.
-    affine_batch_norm : {"encoder", "decoder", "none", "both"}, default="both"
-        Whether to use affine batch norm in layers.
-    use_layer_norm : {"encoder", "decoder", "none", "both"}, default="both"
-        Whether to use layer norm in layers.
-    fill_in_the_blanks_ratio : float, default=0.0
-        Ratio for fill-in-the-blanks training.
-    input_dropout_rate : float, default=0.0
-        Dropout rate to apply to the input.
-    encoder_dropout_rate : float, default=0.1
-        Dropout rate to apply to each of the encoder hidden layers.
-    decoder_dropout_rate : float, default=0.0
-        Dropout rate to apply to each of the decoder hidden layers.
-    gene_likelihood : {"normal", "normal_v", "normal_sv", "poisson", "poisson_orig", "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec", "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none", "nb_orig_libnorm", "pnb", "pnb_sv", "pnb_softmax"}, default="pnb_softmax"
-        Gene likelihood model. Options include:
-
+        to the input of subsequent hidden layers (defaults to False).
+    categorical_covariate_dims
+        Embedding dimension of covariate keys if applicable (defaults to empty tuple).
+    covariate_modeling_strategy
+        The strategy model takes to remove covariates (defaults to "one_hot").
+    use_batch_norm
+        Whether to use batch norm in layers (defaults to "none").
+    affine_batch_norm
+        Whether to use affine batch norm in layers (defaults to "both").
+    use_layer_norm
+        Whether to use layer norm in layers (defaults to "both").
+    fill_in_the_blanks_ratio
+        Ratio for fill-in-the-blanks training (defaults to 0.0).
+    input_dropout_rate
+        Dropout rate to apply to the input (defaults to 0.0).
+    encoder_dropout_rate
+        Dropout rate to apply to each of the encoder hidden layers (defaults to 0.1).
+    decoder_dropout_rate
+        Dropout rate to apply to each of the decoder hidden layers (defaults to 0.0).
+    gene_likelihood
+        Gene likelihood model (defaults to "pnb_softmax"). Options include:
         - "normal", "normal_v", "normal_sv" : Normal distributions
         - "poisson", "poisson_orig" : Poisson distributions
         - "nb", "nb_sv", "nb_libnorm", "nb_loglib_rec", "nb_libnorm_loglib_rec",
           "nb_loglibnorm_all", "nb_orig", "nb_softmax", "nb_softplus", "nb_none",
           "nb_orig_libnorm" : Negative binomial distributions
         - "pnb", "pnb_sv", "pnb_softmax" : Log negative binomial distributions
-    prior : {"normal", "gmm_x", "vamp_x"}, default="normal"
-        Prior model.
-    prior_init_dataloader : DataLoader or None, default=None
-        Dataloader constructed to initialize the prior (or maintain in vamp).
-    var_activation : callable or {"exp", "pow2", "2sig"}, default="exp"
+    prior
+        Prior model (defaults to "normal").
+    prior_init_dataloader
+        Dataloader constructed to initialize the prior (or maintain in vamp) (defaults to None).
+    var_activation
         The activation function to ensure positivity of the variational distribution.
-        Options include "exp", "pow2", "2sig" or a custom callable.
-    mean_activation : callable or str, default="identity"
+        Options include "exp", "pow2", "2sig" or a custom callable (defaults to "exp").
+    mean_activation
         The activation function at the end of mean encoder.
         Options include "identity", "relu", "leaky_relu", "leaky_relu_{slope}",
-        "elu", "elu_{min_value}" or a custom callable.
-    encoder_layer_factory : LayerFactory, default=None
-        A layer Factory instance for building encoder layers.
-    decoder_layer_factory : LayerFactory, default=None
-        A layer Factory instance for building decoder layers.
-    extra_encoder_kwargs : dict or None, default=None
-        Extra keyword arguments passed into encoder.
-    extra_decoder_kwargs : dict or None, default=None
-        Extra keyword arguments passed into decoder.
+        "elu", "elu_{min_value}" or a custom callable (defaults to "identity").
+    encoder_layer_factory
+        A layer Factory instance for building encoder layers (defaults to None).
+    decoder_layer_factory
+        A layer Factory instance for building decoder layers (defaults to None).
+    extra_encoder_kwargs
+        Extra keyword arguments passed into encoder (defaults to None).
+    extra_decoder_kwargs
+        Extra keyword arguments passed into decoder (defaults to None).
     """
 
     def __init__(
@@ -253,7 +251,7 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        gene_likelihood : str
+        gene_likelihood
             Type of gene likelihood model to construct.
 
         Returns
@@ -316,10 +314,10 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        prior : str
+        prior
             Type of prior model to construct.
-        prior_init_dataloader : DataLoader or None, default=None
-            Dataloader for initializing the prior (required for some prior types).
+        prior_init_dataloader
+            Dataloader for initializing the prior (required for some prior types) (defaults to None).
 
         Returns
         -------
@@ -373,7 +371,7 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors : dict
+        tensors
             Dictionary containing tensor data.
 
         Returns
@@ -394,12 +392,12 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input tensor data.
-        cont_covs : torch.Tensor or None, default=None
-            Continuous covariates.
-        cat_covs : torch.Tensor or None, default=None
-            Categorical covariates.
+        cont_covs
+            Continuous covariates (defaults to None).
+        cat_covs
+            Categorical covariates (defaults to None).
 
         Returns
         -------
@@ -430,12 +428,12 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input tensor data.
-        cont_covs : torch.Tensor or None, default=None
-            Continuous covariates.
-        cat_covs : torch.Tensor or None, default=None
-            Categorical covariates.
+        cont_covs
+            Continuous covariates (defaults to None).
+        cat_covs
+            Categorical covariates (defaults to None).
 
         Returns
         -------
@@ -483,9 +481,9 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors : dict
+        tensors
             Dictionary containing tensor data.
-        inference_outputs : dict
+        inference_outputs
             Outputs from the inference step.
 
         Returns
@@ -517,16 +515,16 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        z : torch.Tensor
+        z
             Latent variables.
-        library : torch.Tensor
+        library
             Library size information.
-        gene_likelihood_additional_info : dict
+        gene_likelihood_additional_info
             Additional information for gene likelihood computation.
-        cont_covs : torch.Tensor or None, default=None
-            Continuous covariates.
-        cat_covs : torch.Tensor or None, default=None
-            Categorical covariates.
+        cont_covs
+            Continuous covariates (defaults to None).
+        cat_covs
+            Categorical covariates (defaults to None).
 
         Returns
         -------
@@ -561,14 +559,14 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors : dict
+        tensors
             Dictionary containing tensor data.
-        inference_outputs : dict
+        inference_outputs
             Outputs from the inference step.
-        generative_outputs : dict
+        generative_outputs
             Outputs from the generative step.
-        kl_weight : float, default=1.0
-            Weight for KL divergence term.
+        kl_weight
+            Weight for KL divergence term (defaults to 1.0).
 
         Returns
         -------
@@ -622,12 +620,12 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors : dict
+        tensors
             Dictionary containing tensor data.
-        n_samples : int, default=1
-            Number of required samples for each cell.
-        library_size : int, default=1
-            Library size to scale samples to.
+        n_samples
+            Number of required samples for each cell (defaults to 1).
+        library_size
+            Library size to scale samples to (defaults to 1).
 
         Returns
         -------
@@ -660,9 +658,9 @@ class DRVIModule(BaseModuleClass):
 
         Parameters
         ----------
-        tensors : TensorDict
+        tensors
             Dictionary containing tensor data.
-        n_mc_samples : int
+        n_mc_samples
             Number of Monte Carlo samples for estimation.
 
         Returns

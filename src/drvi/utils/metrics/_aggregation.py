@@ -12,7 +12,7 @@ def most_similar_averaging_score(result_matrix: np.ndarray) -> float:
 
     Parameters
     ----------
-    result_matrix : np.ndarray
+    result_matrix
         Matrix of metric scores with shape (n_dimensions, n_categories).
         Each element [i, j] represents the score for dimension i and category j.
 
@@ -65,7 +65,7 @@ def latent_matching_score(result_matrix: np.ndarray) -> float:
 
     Parameters
     ----------
-    result_matrix : np.ndarray
+    result_matrix
         Matrix of metric scores with shape (n_dimensions, n_categories).
         Each element [i, j] represents the score for dimension i and category j.
 
@@ -119,7 +119,7 @@ def most_similar_gap_score(result_matrix: np.ndarray) -> float:
 
     Parameters
     ----------
-    result_matrix : np.ndarray
+    result_matrix
         Matrix of metric scores with shape (n_dimensions, n_categories).
         Each element [i, j] represents the score for dimension i and category j.
 

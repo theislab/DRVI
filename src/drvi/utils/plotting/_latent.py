@@ -18,13 +18,13 @@ def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> An
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         Annotated data object to subsample.
-    col : str
+    col
         Column name in `adata.obs` containing categorical labels for balancing.
-    min_count : int, default=10
+    min_count
         Minimum number of samples per category. If a category has fewer samples
-        than this, sampling will be done with replacement.
+        than this, sampling will be done with replacement (defaults to 10).
 
     Returns
     -------
@@ -64,25 +64,25 @@ def plot_latent_dimension_stats(
 
     Parameters
     ----------
-    embed : AnnData
+    embed
         Annotated data object containing the latent dimensions and their statistics
         in the `.var` attribute.
-    figsize : tuple[int, int], default=(5, 3)
-        The size of each subplot (width, height) in inches.
-    log_scale : bool or {"try"}, default="try"
+    figsize
+        The size of each subplot (width, height) in inches (defaults to (5, 3)).
+    log_scale
         Whether to use a log scale for the y-axis. If "try", log scale is used
-        only if the minimum value is greater than 0.
-    ncols : int, default=5
-        The maximum number of columns in the subplot grid.
-    columns : Sequence[str], default=("reconstruction_effect", "max_value", "mean", "std")
+        only if the minimum value is greater than 0 (defaults to "try").
+    ncols
+        The maximum number of columns in the subplot grid (defaults to 5).
+    columns
         The columns from `embed.var` to plot. These should be numeric columns
-        containing dimension statistics.
-    titles : dict[str, str] or None, default=None
-        Custom titles for each column in the plot. If None, default titles are used.
-    remove_vanished : bool, default=False
-        Whether to exclude vanished dimensions from the plot.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the figure object.
+        containing dimension statistics (defaults to ("reconstruction_effect", "max_value", "mean", "std")).
+    titles
+        Custom titles for each column in the plot. If None, default titles are used (defaults to None).
+    remove_vanished
+        Whether to exclude vanished dimensions from the plot (defaults to False).
+    show
+        Whether to display the plot. If False, returns the figure object (defaults to True).
 
     Returns
     -------
@@ -214,33 +214,33 @@ def plot_latent_dims_in_umap(
 
     Parameters
     ----------
-    embed : AnnData
+    embed
         Annotated data object containing the UMAP embedding in `.obsm['X_umap']`
         and latent dimensions in `.X`.
-    title_col : str, default="title"
+    title_col
         Name of the column in `embed.var` to use as titles for each dimension.
-        If None, default titles will be used.
-    additional_columns : Sequence[str], default=()
-        Additional columns from `embed.obs` to plot alongside the latent dimensions.
-    max_cells_to_plot : int or None, default=None
+        If None, default titles will be used (defaults to "title").
+    additional_columns
+        Additional columns from `embed.obs` to plot alongside the latent dimensions (defaults to empty tuple).
+    max_cells_to_plot
         Maximum number of cells to plot. If the number of cells in `embed`
-        is greater than this value, a subsample will be taken.
-    order_col : str, default="order"
+        is greater than this value, a subsample will be taken (defaults to None).
+    order_col
         The column in `embed.var` to use for ordering the dimensions.
-        Ignored if `dim_subset` is provided.
-    dim_subset : Sequence[str] or None, default=None
-        The subset of dimensions to plot. If provided, overrides `order_col`.
-    directional : bool, default=False
+        Ignored if `dim_subset` is provided (defaults to "order").
+    dim_subset
+        The subset of dimensions to plot. If provided, overrides `order_col` (defaults to None).
+    directional
         Whether to consider positive and negative directions as separate dimensions.
-        If True, creates separate plots for + and - directions.
-    remove_vanished : bool, default=True
-        Whether to remove vanished dimensions from the plot.
-    rearrange_titles : bool, default=True
-        Whether to rearrange titles to the bottom right of each plot.
-    color_bar_rescale_ratio : float, default=1.0
-        Ratio to rescale the height of colorbars.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the figure object.
+        If True, creates separate plots for + and - directions (defaults to False).
+    remove_vanished
+        Whether to remove vanished dimensions from the plot (defaults to True).
+    rearrange_titles
+        Whether to rearrange titles to the bottom right of each plot (defaults to True).
+    color_bar_rescale_ratio
+        Ratio to rescale the height of colorbars (defaults to 1.0).
+    show
+        Whether to display the plot. If False, returns the figure object (defaults to True).
     **kwargs
         Additional keyword arguments passed to `sc.pl.umap`.
 
@@ -374,31 +374,31 @@ def plot_latent_dims_in_heatmap(
 
     Parameters
     ----------
-    embed : AnnData
+    embed
         Annotated data object containing the latent dimensions in `.X`
         and categorical metadata in `.obs`.
-    categorical_column : str
+    categorical_column
         The column in `embed.obs` that represents the categorical variable
         for grouping cells.
-    title_col : str or None, default="title"
+    title_col
         The column in `embed.var` to use as titles for each dimension.
-        If None, uses the dimension indices.
-    sort_by_categorical : bool, default=False
+        If None, uses the dimension indices (defaults to "title").
+    sort_by_categorical
         Whether to sort dimensions based on their maximum absolute values
-        within each category. If True, `order_col` is ignored.
-    make_balanced : bool, default=True
+        within each category. If True, `order_col` is ignored (defaults to False).
+    make_balanced
         Whether to create a balanced subsample of the data based on the
-        categorical variable using `make_balanced_subsample`.
-    order_col : str or None, default="order"
+        categorical variable using `make_balanced_subsample` (defaults to True).
+    order_col
         The column in `embed.var` to use for ordering the dimensions.
-        Ignored if `sort_by_categorical=True`.
-    remove_vanished : bool, default=True
-        Whether to remove vanished dimensions from the plot.
-    figsize : tuple[int, int] or None, default=None
+        Ignored if `sort_by_categorical=True` (defaults to "order").
+    remove_vanished
+        Whether to remove vanished dimensions from the plot (defaults to True).
+    figsize
         The size of the figure (width, height) in inches.
-        If None, automatically calculated based on number of categories.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the plot object.
+        If None, automatically calculated based on number of categories (defaults to None).
+    show
+        Whether to display the plot. If False, returns the plot object (defaults to True).
     **kwargs
         Additional keyword arguments passed to `sc.pl.heatmap`.
 

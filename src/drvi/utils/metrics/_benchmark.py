@@ -40,30 +40,30 @@ class DiscreteDisentanglementBenchmark:
 
     Parameters
     ----------
-    embed : np.ndarray or pd.DataFrame
+    embed
         Latent representations to evaluate. Shape should be (n_samples, n_dimensions).
-    discrete_target : pd.Series or np.ndarray, optional
+    discrete_target
         Discrete categorical target variable. Should contain categorical labels
-        for each sample. Mutually exclusive with `one_hot_target`.
-    one_hot_target : pd.DataFrame or np.ndarray, optional
+        for each sample. Mutually exclusive with `one_hot_target` (defaults to None).
+    one_hot_target
         One-hot encoded target variable. Shape should be of shape (n_samples, n_categories).
-        Mutually exclusive with `discrete_target`.
-    dim_titles : list[str], optional
-        Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc.
-    metrics : tuple[str], default=("SMI-disc", "SPN", "ASC")
+        Mutually exclusive with `discrete_target` (defaults to None).
+    dim_titles
+        Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc. (defaults to None).
+    metrics
         Metrics to compute for evaluation. Available options:
         - "SMI-disc": Discrete mutual information score
         - "SPN": Nearest neighbor alignment score
         - "ASC": Spearman correlation score
-        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772)
-    aggregation_methods : tuple[str], default=("LMS", "MSAS", "MSGS")
+        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772) (defaults to ("SMI-disc", "SPN", "ASC")).
+    aggregation_methods
         Methods to aggregate metric scores across dimensions. Available options:
         - "LMS": Latent matching score
         - "MSAS": Most similar averaging score
-        - "MSGS": Most similar gap score
-    additional_metric_params : dict, optional
+        - "MSGS": Most similar gap score (defaults to ("LMS", "MSAS", "MSGS")).
+    additional_metric_params
         Additional parameters to pass to specific metrics. Keys should be metric
-        names, values should be parameter dictionaries.
+        names, values should be parameter dictionaries (defaults to None).
 
     Attributes
     ----------
@@ -200,13 +200,13 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        embed : np.ndarray
+        embed
             Latent representations to evaluate.
-        one_hot_target : pd.DataFrame
+        one_hot_target
             One-hot encoded target variable.
-        dim_titles : list[str], optional
-            Titles for each latent dimension.
-        metrics : tuple[str]
+        dim_titles
+            Titles for each latent dimension (defaults to None).
+        metrics
             Metrics to compute.
 
         Returns
@@ -236,9 +236,9 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        results : dict
+        results
             Raw metric results from `_compute_metrics`.
-        aggregation_methods : tuple[str]
+        aggregation_methods
             Aggregation methods to apply.
 
         Returns
@@ -367,7 +367,7 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        path : str
+        path
             File path where to save the benchmark data.
 
         Notes
@@ -409,18 +409,18 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        path : str
+        path
             File path to the saved benchmark data.
-        embed : np.ndarray or pd.DataFrame
+        embed
             Latent representations (must match the original data).
-        discrete_target : pd.Series or np.ndarray, optional
-            Discrete categorical target variable.
-        one_hot_target : pd.DataFrame or np.ndarray, optional
-            One-hot encoded target variable.
-        metrics : tuple[str], optional
-            Override the metrics from the saved data.
-        aggregation_methods : tuple[str], optional
-            Override the aggregation methods from the saved data.
+        discrete_target
+            Discrete categorical target variable (defaults to None).
+        one_hot_target
+            One-hot encoded target variable (defaults to None).
+        metrics
+            Override the metrics from the saved data (defaults to None).
+        aggregation_methods
+            Override the aggregation methods from the saved data (defaults to None).
 
         Returns
         -------
@@ -475,7 +475,7 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        path : str
+        path
             File path to the saved benchmark data.
 
         Returns
@@ -506,7 +506,7 @@ class DiscreteDisentanglementBenchmark:
 
         Parameters
         ----------
-        path : str
+        path
             File path to the saved benchmark data.
 
         Returns

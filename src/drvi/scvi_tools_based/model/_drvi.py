@@ -33,22 +33,22 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
     Parameters
     ----------
-    adata : AnnData or MerlinData
+    adata
         AnnData object or MerlinData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
-    n_latent : int, default=32
-        Dimensionality of the latent space.
-    encoder_dims : Sequence[int], default=(128, 128)
-        Number of nodes in hidden layers of the encoder.
-    decoder_dims : Sequence[int], default=(128, 128)
-        Number of nodes in hidden layers of the decoder.
-    prior : {"normal", "gmm_x", "vamp_x"}, default="normal"
-        Prior model type.
-    prior_init_obs : np.ndarray or None, default=None
+    n_latent
+        Dimensionality of the latent space (defaults to 32).
+    encoder_dims
+        Number of nodes in hidden layers of the encoder (defaults to (128, 128)).
+    decoder_dims
+        Number of nodes in hidden layers of the decoder (defaults to (128, 128)).
+    prior
+        Prior model type (defaults to "normal").
+    prior_init_obs
         When using "gmm_x" or "vamp_x" priors, these observations are used to initialize the prior parameters.
-        Number of observations must match the x value in the prior name.
-    categorical_covariates : list[str], default=()
+        Number of observations must match the x value in the prior name (defaults to None).
+    categorical_covariates
         List of categorical covariates to condition on. Each covariate can specify its embedding dimension
-        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10.
+        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10 (defaults to empty list).
     **model_kwargs
         Additional keyword arguments passed to :class:`~drvi.model.DRVIModule`.
 
@@ -187,18 +187,18 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
         Parameters
         ----------
-        merlin_data : MerlinData
+        merlin_data
             MerlinData object to register.
-        labels_key : str or None, default=None
-            Key in `merlin_data` for labels.
-        layer : str, default="X"
-            key in `merlin_data` to use as input.
-        is_count_data : bool, default=True
-            Whether the data is count data.
-        categorical_covariate_keys : list[str] or None, default=None
-            List of categorical covariate keys in `merlin_data`.
-        continuous_covariate_keys : list[str] or None, default=None
-            List of continuous covariate keys in `merlin_data`.
+        labels_key
+            Key in `merlin_data` for labels (defaults to None).
+        layer
+            key in `merlin_data` to use as input (defaults to "X").
+        is_count_data
+            Whether the data is count data (defaults to True).
+        categorical_covariate_keys
+            List of categorical covariate keys in `merlin_data` (defaults to None).
+        continuous_covariate_keys
+            List of continuous covariate keys in `merlin_data` (defaults to None).
         **kwargs
             Additional keyword arguments passed to the MerlinDataManager registration.
 
@@ -236,15 +236,15 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         adata
             AnnData or MerlinData object with equivalent structure to initial AnnData.
         indices
-            Indices of cells in adata to use. If `None`, all cells are used.
+            Indices of cells in adata to use. If `None`, all cells are used (defaults to None).
         batch_size
-            Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
+            Minibatch size for data loading into model (defaults to `scvi.settings.batch_size`).
         shuffle
-            Whether observations are shuffled each iteration though
+            Whether observations are shuffled each iteration though (defaults to False).
         data_loader_class
-            Class to use for data loader
+            Class to use for data loader (defaults to None).
         data_loader_kwargs
-            Kwargs to the class-specific data loader class
+            Kwargs to the class-specific data loader class.
         """
         if isinstance(adata, AnnData):
             return super()._make_data_loader(

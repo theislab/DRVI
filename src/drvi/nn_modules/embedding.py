@@ -16,14 +16,14 @@ class FreezableEmbedding(nn.Embedding):
 
     Parameters
     ----------
-    num_embeddings : int
+    num_embeddings
         Number of embeddings (vocabulary size).
-    embedding_dim : int
+    embedding_dim
         Dimension of each embedding vector.
-    n_freeze_x : int, default=0
-        Number of embedding indices to freeze (from the beginning).
-    n_freeze_y : int, default=0
-        Number of embedding dimensions to freeze (from the beginning).
+    n_freeze_x
+        Number of embedding indices to freeze (from the beginning) (defaults to 0).
+    n_freeze_y
+        Number of embedding dimensions to freeze (from the beginning) (defaults to 0).
     **kwargs
         Additional arguments passed to nn.Embedding.
 
@@ -60,10 +60,10 @@ class FreezableEmbedding(nn.Embedding):
 
         Parameters
         ----------
-        n_freeze_x : int, default=0
-            Number of embedding indices to freeze (from the beginning).
-        n_freeze_y : int, default=0
-            Number of embedding dimensions to freeze (from the beginning).
+        n_freeze_x
+            Number of embedding indices to freeze (from the beginning) (defaults to 0).
+        n_freeze_y
+            Number of embedding dimensions to freeze (from the beginning) (defaults to 0).
 
         Notes
         -----
@@ -85,7 +85,7 @@ class FreezableEmbedding(nn.Embedding):
 
         Parameters
         ----------
-        grad : torch.Tensor
+        grad
             Gradient tensor for the embedding weights.
 
         Returns
@@ -128,14 +128,14 @@ class MultiEmbedding(nn.Module):
 
     Parameters
     ----------
-    n_embedding_list : list[int]
+    n_embedding_list
         List of vocabulary sizes for each embedding table.
-    embedding_dim_list : list[int]
+    embedding_dim_list
         List of embedding dimensions for each embedding table.
-    init_method : str or callable, default="xavier_uniform"
-        Initialization method for embedding weights.
-    normalization : {"l2", None}, default=None
-        Normalization method to apply to concatenated embeddings.
+    init_method
+        Initialization method for embedding weights (defaults to "xavier_uniform").
+    normalization
+        Normalization method to apply to concatenated embeddings (defaults to None).
     **kwargs
         Additional arguments passed to FreezableEmbedding.
 
@@ -181,7 +181,7 @@ class MultiEmbedding(nn.Module):
 
         Parameters
         ----------
-        init_method : str or callable
+        init_method
             Initialization method to apply to each embedding layer.
 
         Notes
@@ -222,7 +222,7 @@ class MultiEmbedding(nn.Module):
 
         Parameters
         ----------
-        index_list : torch.Tensor
+        index_list
             Tensor of indices with shape (..., n_embeddings).
 
         Returns
@@ -269,10 +269,10 @@ class MultiEmbedding(nn.Module):
 
         Parameters
         ----------
-        other : MultiEmbedding
+        other
             Source MultiEmbedding module to load weights from.
-        freeze_old : bool, default=False
-            Whether to freeze the loaded weights.
+        freeze_old
+            Whether to freeze the loaded weights (defaults to False).
 
         Notes
         -----
@@ -310,7 +310,7 @@ class MultiEmbedding(nn.Module):
 
         Parameters
         ----------
-        n_freeze_list : list[int]
+        n_freeze_list
             Number of top embeddings to freeze for each table.
 
         Notes
@@ -366,9 +366,9 @@ class FeatureEmbedding(nn.Module):
 
     Parameters
     ----------
-    vocab_list : list[list[str]]
+    vocab_list
         List of vocabulary lists, one for each categorical feature.
-    embedding_dims : list[int]
+    embedding_dims
         List of embedding dimensions for each feature.
     **kwargs
         Additional arguments passed to MultiEmbedding.
@@ -472,7 +472,7 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        index_sentences : numpy.ndarray
+        index_sentences
             Array of categorical values with shape (..., n_features).
 
         Returns
@@ -498,9 +498,9 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        index_sentences : numpy.ndarray
+        index_sentences
             Array of categorical values with shape (..., n_features).
-        index_cache_key : str, optional
+        index_cache_key
             Cache key for storing computed indices.
 
         Returns
@@ -535,7 +535,7 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        state : dict
+        state
             Extra state information.
         """
         self.vocab_list = state["vocab_list"]
@@ -547,9 +547,9 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        sentences_array : numpy.ndarray
+        sentences_array
             Array of categorical sentences with shape (n_samples, n_features).
-        embedding_dims : numpy.ndarray or list
+        embedding_dims
             Embedding dimensions for each feature.
         **kwargs
             Additional arguments for FeatureEmbedding.
@@ -574,9 +574,9 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        sentences_df : pandas.DataFrame
+        sentences_df
             DataFrame of categorical sentences.
-        embedding_dims : pandas.DataFrame or list
+        embedding_dims
             Embedding dimensions for each feature.
         **kwargs
             Additional arguments for FeatureEmbedding.
@@ -598,7 +598,7 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        feature_embedding_instance : FeatureEmbedding
+        feature_embedding_instance
             Pretrained FeatureEmbedding instance.
 
         Returns
@@ -618,10 +618,10 @@ class FeatureEmbedding(nn.Module):
 
         Parameters
         ----------
-        other : FeatureEmbedding
+        other
             Source FeatureEmbedding module to load weights from.
-        freeze_old : bool, default=False
-            Whether to freeze the loaded weights.
+        freeze_old
+            Whether to freeze the loaded weights (defaults to False).
 
         Notes
         -----

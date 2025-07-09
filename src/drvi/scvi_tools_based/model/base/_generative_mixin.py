@@ -51,27 +51,27 @@ class GenerativeMixin:
 
         Parameters
         ----------
-        z : np.ndarray
+        z
             Latent samples with shape (n_samples, n_latent).
-        step_func : Callable
+        step_func
             Function to apply to the decoder output at each step.
             Should accept (generative_outputs, store) as arguments.
-        aggregation_func : Callable
+        aggregation_func
             Function to aggregate the step results from the store.
             Should accept the store list and return the final result.
-        lib : np.ndarray or None, default=None
+        lib
             Library size array with shape (n_samples,).
-            If None, defaults to 1e4 for all samples.
-        cat_values : np.ndarray or None, default=None
+            If None, defaults to 1e4 for all samples (defaults to None).
+        cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
-            Required if model has categorical covariates.
-        cont_values : np.ndarray or None, default=None
-            Continuous covariates with shape (n_samples, n_cont_covs).
-        batch_size : int, default=scvi.settings.batch_size
-            Minibatch size for data loading into model.
-        map_cat_values : bool, default=False
+            Required if model has categorical covariates (defaults to None).
+        cont_values
+            Continuous covariates with shape (n_samples, n_cont_covs) (defaults to None).
+        batch_size
+            Minibatch size for data loading into model (defaults to scvi.settings.batch_size).
+        map_cat_values
             Whether to map categorical covariates to integers based on
-            the AnnData manager pipeline.
+            the AnnData manager pipeline (defaults to False).
 
         Returns
         -------
@@ -165,21 +165,21 @@ class GenerativeMixin:
 
         Parameters
         ----------
-        z : np.ndarray
+        z
             Latent samples with shape (n_samples, n_latent).
-        lib : np.ndarray or None, default=None
+        lib
             Library size array with shape (n_samples,).
-            If None, defaults to 1e4 for all samples.
-        cat_values : np.ndarray or None, default=None
+            If None, defaults to 1e4 for all samples (defaults to None).
+        cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
-            Required if model has categorical covariates.
-        cont_values : np.ndarray or None, default=None
-            Continuous covariates with shape (n_samples, n_cont_covs).
-        batch_size : int, default=scvi.settings.batch_size
-            Minibatch size for data loading into model.
-        map_cat_values : bool, default=False
+            Required if model has categorical covariates (defaults to None).
+        cont_values
+            Continuous covariates with shape (n_samples, n_cont_covs) (defaults to None).
+        batch_size
+            Minibatch size for data loading into model (defaults to scvi.settings.batch_size).
+        map_cat_values
             Whether to map categorical covariates to integers based on
-            the AnnData manager pipeline.
+            the AnnData manager pipeline (defaults to False).
 
         Returns
         -------
@@ -198,14 +198,13 @@ class GenerativeMixin:
         --------
         >>> import numpy as np
         >>> # Generate random latent samples
-        >>> z = np.random.randn(100, 10)
-        >>> # Decode to get reconstructions
-        >>> reconstructions = model.decode_latent_samples(z)
-        >>> print(reconstructions.shape)  # (100, n_genes)
-        >>> # Use with covariates
-        >>> cat_covs = np.array([["A", "B", "A"]] * 100)
-        >>> cont_covs = np.random.randn(100, 2)
-        >>> reconstructions = model.decode_latent_samples(z, cat_values=cat_covs, cont_values=cont_covs)
+        >>> z = np.random.randn(100, 32)  # assuming 32 latent dimensions
+        >>> # Decode to get reconstructed means
+        >>> reconstructed = model.decode_latent_samples(z)
+        >>> print(reconstructed.shape)  # (100, n_genes)
+        >>> # With categorical covariates
+        >>> cat_covs = np.array([0, 1, 0, 1] * 25)  # batch labels
+        >>> reconstructed = model.decode_latent_samples(z, cat_values=cat_covs)
         """
         step_func = lambda gen_output, store: store.append(gen_output["params"]["mean"].detach().cpu())
         aggregation_func = lambda store: torch.cat(store, dim=0).numpy(force=True)
@@ -323,17 +322,17 @@ class GenerativeMixin:
 
         Parameters
         ----------
-        adata : AnnData or None, default=None
+        adata
             AnnData object with equivalent structure to initial AnnData.
-            If None, defaults to the AnnData object used to initialize the model.
-        add_to_counts : float, default=1.0
+            If None, defaults to the AnnData object used to initialize the model (defaults to None).
+        add_to_counts
             Value to add to the counts before computing the logarithm.
-            Used for numerical stability in log-space calculations.
-        aggregate_over_cells : bool, default=True
+            Used for numerical stability in log-space calculations (defaults to 1.0).
+        aggregate_over_cells
             Whether to aggregate the effect over cells and return a value per dimension.
-            If False, returns per-cell effects.
-        deterministic : bool, default=True
-            Makes model fully deterministic (e.g., no sampling in the bottleneck).
+            If False, returns per-cell effects (defaults to True).
+        deterministic
+            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to True).
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 
@@ -414,14 +413,14 @@ class GenerativeMixin:
 
         Parameters
         ----------
-        adata : AnnData or None, default=None
+        adata
             AnnData object with equivalent structure to initial AnnData.
-            If None, defaults to the AnnData object used to initialize the model.
-        add_to_counts : float, default=1.0
+            If None, defaults to the AnnData object used to initialize the model (defaults to None).
+        add_to_counts
             Value to add to the counts before computing the logarithm.
-            Used for numerical stability in log-space calculations.
-        deterministic : bool, default=True
-            Makes model fully deterministic (e.g., no sampling in the bottleneck).
+            Used for numerical stability in log-space calculations (defaults to 1.0).
+        deterministic
+            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to True).
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 

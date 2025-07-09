@@ -13,17 +13,17 @@ class StackedLinearLayer(nn.Module):
 
     Parameters
     ----------
-    n_channels : int
+    n_channels
         Number of channels/splits to process in parallel.
-    in_features : int
+    in_features
         Number of input features per channel.
-    out_features : int
+    out_features
         Number of output features per channel.
-    bias : bool, default=True
-        Whether to include bias terms for each channel.
-    device : torch.device, optional
+    bias
+        Whether to include bias terms for each channel (defaults to True).
+    device
         Device to place the layer on.
-    dtype : torch.dtype, optional
+    dtype
         Data type for the layer parameters.
 
     Notes
@@ -129,7 +129,7 @@ class StackedLinearLayer(nn.Module):
 
         Parameters
         ----------
-        input : torch.Tensor
+        input
             Input tensor with shape (batch_size, n_channels, in_features).
 
         Returns

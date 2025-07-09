@@ -25,41 +25,41 @@ class FCLayers(nn.Module):
 
     Parameters
     ----------
-    layers_dim : Sequence[int]
+    layers_dim
         Number of nodes in layers including input and output dimensions.
-    n_cat_list : Iterable[int], optional
+    n_cat_list
         A list containing, for each category of interest,
         the number of categories. Each category will be
         included using a one-hot encoding.
-    dropout_rate : float, default=0.1
-        Dropout rate to apply to each of the hidden layers.
-    split_size : int, default=-1
+    dropout_rate
+        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+    split_size
         The size of split if input is a 3d tensor otherwise -1.
-        This parameter is required to handle batch normalization.
-    reuse_weights : bool, default=True
-        Whether to reuse weights when having multiple splits.
-    use_batch_norm : bool, default=True
-        Whether to have `BatchNorm` layers or not.
-    affine_batch_norm : bool, default=True
-        Whether to have affine transformation in `BatchNorm` layers.
-    use_layer_norm : bool, default=False
-        Whether to have `LayerNorm` layers or not.
-    use_activation : bool, default=True
-        Whether to have layer activation or not.
-    bias : bool, default=True
-        Whether to learn bias in linear layers or not.
-    inject_covariates : bool, default=True
-        Whether to inject covariates in each layer, or just the first.
-    activation_fn : nn.Module, default=nn.ELU
-        Which activation function to use.
-    layer_factory : LayerFactory, optional
+        This parameter is required to handle batch normalization (defaults to -1).
+    reuse_weights
+        Whether to reuse weights when having multiple splits (defaults to True).
+    use_batch_norm
+        Whether to have `BatchNorm` layers or not (defaults to True).
+    affine_batch_norm
+        Whether to have affine transformation in `BatchNorm` layers (defaults to True).
+    use_layer_norm
+        Whether to have `LayerNorm` layers or not (defaults to False).
+    use_activation
+        Whether to have layer activation or not (defaults to True).
+    bias
+        Whether to learn bias in linear layers or not (defaults to True).
+    inject_covariates
+        Whether to inject covariates in each layer, or just the first (defaults to True).
+    activation_fn
+        Which activation function to use (defaults to nn.ELU).
+    layer_factory
         A layer Factory instance to build projection layers based on.
-    layers_location : {"intermediate", "first", "last"}, default="intermediate"
-        An indicator to tell the class where in the architecture these layers reside.
-    covariate_modeling_strategy : {"one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear"}, default="one_hot"
-        The strategy model to consider covariates.
-    covariate_embs_dim : Iterable[int], default=()
-        Dimensions for covariate embeddings when using embedding strategies.
+    layers_location
+        An indicator to tell the class where in the architecture these layers reside (defaults to "intermediate").
+    covariate_modeling_strategy
+        The strategy model to consider covariates (defaults to "one_hot").
+    covariate_embs_dim
+        Dimensions for covariate embeddings when using embedding strategies (defaults to empty tuple).
     """
 
     def __init__(
@@ -212,9 +212,9 @@ class FCLayers(nn.Module):
 
         Parameters
         ----------
-        previous_n_cats_per_cov : Sequence[int]
+        previous_n_cats_per_cov
             Previous number of categories per covariate.
-        n_cats_per_cov : Sequence[int]
+        n_cats_per_cov
             New number of categories per covariate.
         """
         if sum(previous_n_cats_per_cov) == sum(n_cats_per_cov):
@@ -296,9 +296,9 @@ class FCLayers(nn.Module):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Tensor of values with shape ``(batch_size, n_in,)`` or ``(batch_size, n_split, n_in)``.
-        cat_full_tensor : torch.Tensor
+        cat_full_tensor
             Tensor of category membership(s) for this sample.
 
         Returns
@@ -371,48 +371,48 @@ class Encoder(nn.Module):
 
     Parameters
     ----------
-    n_input : int
+    n_input
         The dimensionality of the input (data space).
-    n_output : int
+    n_output
         The dimensionality of the output (latent space).
-    layers_dim : Sequence[int], default=(128,)
-        The number of nodes per hidden layer as a sequence.
-    n_cat_list : Iterable[int], optional
+    layers_dim
+        The number of nodes per hidden layer as a sequence (defaults to (128,)).
+    n_cat_list
         A list containing the number of categories
         for each category of interest. Each category will be
         included using a one-hot encoding.
-    n_continuous_cov : int, default=0
-        The number of continuous covariates.
-    inject_covariates : bool, default=True
-        Whether to inject covariates in each layer, or just the first.
-    use_batch_norm : bool, default=True
-        Whether to use batch norm in layers.
-    affine_batch_norm : bool, default=True
-        Whether to use affine in batch norms.
-    use_layer_norm : bool, default=False
-        Whether to use layer norm in layers.
-    input_dropout_rate : float, default=0.0
-        Dropout rate to apply to the input.
-    dropout_rate : float, default=0.1
-        Dropout rate to apply to each of the hidden layers.
-    distribution : str, default="normal"
-        Distribution of z.
-    var_eps : float, default=1e-4
+    n_continuous_cov
+        The number of continuous covariates (defaults to 0).
+    inject_covariates
+        Whether to inject covariates in each layer, or just the first (defaults to True).
+    use_batch_norm
+        Whether to use batch norm in layers (defaults to True).
+    affine_batch_norm
+        Whether to use affine in batch norms (defaults to True).
+    use_layer_norm
+        Whether to use layer norm in layers (defaults to False).
+    input_dropout_rate
+        Dropout rate to apply to the input (defaults to 0.0).
+    dropout_rate
+        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+    distribution
+        Distribution of z (defaults to "normal").
+    var_eps
         Minimum value for the variance;
-        used for numerical stability.
-    var_activation : Callable | {"exp", "pow2", "2sig"}, default="exp"
-        The activation function to ensure positivity of the variance.
-    mean_activation : Callable | str, default="identity"
+        used for numerical stability (defaults to 1e-4).
+    var_activation
+        The activation function to ensure positivity of the variance (defaults to "exp").
+    mean_activation
         The activation function at the end of mean encoder.
-        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_value}".
-    layer_factory : LayerFactory, optional
+        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_value}" (defaults to "identity").
+    layer_factory
         A layer Factory instance for building layers.
-    covariate_modeling_strategy : {"one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear"}, default="one_hot"
-        The strategy model takes to model covariates.
-    categorical_covariate_dims : Sequence[int], default=()
-        Dimensions for categorical covariate embeddings.
-    return_dist : bool, default=False
-        Return directly the distribution of z instead of its parameters.
+    covariate_modeling_strategy
+        The strategy model takes to model covariates (defaults to "one_hot").
+    categorical_covariate_dims
+        Dimensions for categorical covariate embeddings (defaults to empty tuple).
+    return_dist
+        Return directly the distribution of z instead of its parameters (defaults to False).
     **kwargs
         Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
     """
@@ -548,11 +548,11 @@ class Encoder(nn.Module):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Tensor with shape (batch_size, n_input).
-        cat_full_tensor : torch.Tensor
+        cat_full_tensor
             Tensor containing encoding of categorical variables of size n_batch x n_total_cat.
-        cont_full_tensor : torch.Tensor, optional
+        cont_full_tensor
             Tensor containing continuous covariates.
 
         Returns
@@ -583,44 +583,44 @@ class DecoderDRVI(nn.Module):
 
     Parameters
     ----------
-    n_input : int
+    n_input
         The dimensionality of the input (latent space).
-    n_output : int
+    n_output
         The dimensionality of the output (data space).
-    gene_likelihood_module : NoiseModel
+    gene_likelihood_module
         Module defining the noise model for gene expression.
-    n_cat_list : Iterable[int], optional
+    n_cat_list
         A list containing the number of categories
         for each category of interest. Each category will be
         included using a one-hot encoding.
-    n_continuous_cov : int, default=0
-        The number of continuous covariates.
-    n_split : int, default=1
-        The number of splits for latent dim.
-    split_aggregation : {"sum", "logsumexp", "max"}, default="logsumexp"
-        How to aggregate splits in the last layer of the decoder.
-    split_method : {"split", "power", "split_map"}, default="split"
-        How to make splits.
-    reuse_weights : {"everywhere", "last", "intermediate", "nowhere"}, default="everywhere"
-        Where to reuse the weights of the decoder layers when using splitting.
-    layers_dim : Sequence[int], default=(128,)
-        The number of nodes per hidden layer as a sequence.
-    dropout_rate : float, default=0.1
-        Dropout rate to apply to each of the hidden layers.
-    inject_covariates : bool, default=True
-        Whether to inject covariates in each layer, or just the first.
-    use_batch_norm : bool, default=False
-        Whether to use batch norm in layers.
-    affine_batch_norm : bool, default=True
-        Whether to use affine in batch norms.
-    use_layer_norm : bool, default=False
-        Whether to use layer norm in layers.
-    layer_factory : LayerFactory, optional
+    n_continuous_cov
+        The number of continuous covariates (defaults to 0).
+    n_split
+        The number of splits for latent dim (defaults to 1).
+    split_aggregation
+        How to aggregate splits in the last layer of the decoder (defaults to "logsumexp").
+    split_method
+        How to make splits (defaults to "split").
+    reuse_weights
+        Where to reuse the weights of the decoder layers when using splitting (defaults to "everywhere").
+    layers_dim
+        The number of nodes per hidden layer as a sequence (defaults to (128,)).
+    dropout_rate
+        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+    inject_covariates
+        Whether to inject covariates in each layer, or just the first (defaults to True).
+    use_batch_norm
+        Whether to use batch norm in layers (defaults to False).
+    affine_batch_norm
+        Whether to use affine in batch norms (defaults to True).
+    use_layer_norm
+        Whether to use layer norm in layers (defaults to False).
+    layer_factory
         A layer Factory instance for building layers.
-    covariate_modeling_strategy : {"one_hot", "emb", "emb_shared", "one_hot_linear", "emb_linear", "emb_shared_linear"}, default="one_hot"
-        The strategy model takes to model covariates.
-    categorical_covariate_dims : Sequence[int], default=()
-        Dimensions for categorical covariate embeddings.
+    covariate_modeling_strategy
+        The strategy model takes to model covariates (defaults to "one_hot").
+    categorical_covariate_dims
+        Dimensions for categorical covariate embeddings (defaults to empty tuple).
     **kwargs
         Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
     """
@@ -754,15 +754,15 @@ class DecoderDRVI(nn.Module):
 
         Parameters
         ----------
-        z : torch.Tensor
+        z
             Tensor with shape ``(batch_size, n_input,)``.
-        cat_full_tensor : torch.Tensor
+        cat_full_tensor
             Tensor containing encoding of categorical variables of size n_batch x n_total_cat.
-        cont_full_tensor : torch.Tensor
+        cont_full_tensor
             Tensor containing continuous covariates.
-        library : torch.Tensor
+        library
             Library size tensor.
-        gene_likelihood_additional_info : dict
+        gene_likelihood_additional_info
             Additional info returned by gene likelihood module.
 
         Returns

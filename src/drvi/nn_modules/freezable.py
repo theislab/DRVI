@@ -10,7 +10,7 @@ def freezable(base_norm_class):
 
     Parameters
     ----------
-    base_norm_class : type
+    base_norm_class
         The base normalization class to make freezable.
 
     Returns
@@ -69,8 +69,8 @@ def freezable(base_norm_class):
 
             Parameters
             ----------
-            freeze_status : bool, default=True
-                Whether to freeze the normalization layer.
+            freeze_status
+                Whether to freeze the normalization layer (defaults to True).
 
             Notes
             -----

@@ -13,13 +13,13 @@ class LayerFactory:
 
     Parameters
     ----------
-    intermediate_arch : {"SAME", "FC"}, default="SAME"
-        Architecture type for intermediate layers.
+    intermediate_arch
+        Architecture type for intermediate layers (defaults to "SAME"):
         - "SAME": Use the same architecture as defined in subclasses
         - "FC": Use fully connected layers
-    residual_preferred : bool, default=False
+    residual_preferred
         Whether to wrap layers in residual connections when input and output
-        dimensions match.
+        dimensions match (defaults to False).
 
     Notes
     -----
@@ -42,12 +42,12 @@ class LayerFactory:
 
         Parameters
         ----------
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
+        bias
+            Whether to include bias term (defaults to True).
         **kwargs
             Additional keyword arguments.
 
@@ -68,14 +68,14 @@ class LayerFactory:
 
         Parameters
         ----------
-        d_channel : int
+        d_channel
             Number of channels/splits.
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
+        bias
+            Whether to include bias term (defaults to True).
         **kwargs
             Additional keyword arguments.
 
@@ -96,13 +96,13 @@ class LayerFactory:
 
         Parameters
         ----------
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
-        intermediate_layer : bool, optional
+        bias
+            Whether to include bias term (defaults to True).
+        intermediate_layer
             Whether this is an intermediate layer. If None, defaults to True.
         **kwargs
             Additional keyword arguments passed to layer creation.
@@ -151,15 +151,15 @@ class LayerFactory:
 
         Parameters
         ----------
-        d_channel : int
+        d_channel
             Number of channels/splits for the stacked layer.
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
-        intermediate_layer : bool, optional
+        bias
+            Whether to include bias term (defaults to True).
+        intermediate_layer
             Whether this is an intermediate layer. If None, defaults to True.
         **kwargs
             Additional keyword arguments passed to layer creation.
@@ -215,13 +215,13 @@ class FCLayerFactory(LayerFactory):
 
     Parameters
     ----------
-    intermediate_arch : {"SAME", "FC"}, default="SAME"
-        Architecture type for intermediate layers.
+    intermediate_arch
+        Architecture type for intermediate layers (defaults to "SAME"):
         - "SAME": Use fully connected layers (same as "FC")
         - "FC": Use fully connected layers
-    residual_preferred : bool, default=False
+    residual_preferred
         Whether to wrap layers in residual connections when input and output
-        dimensions match.
+        dimensions match (defaults to False).
 
     Notes
     -----
@@ -252,12 +252,12 @@ class FCLayerFactory(LayerFactory):
 
         Parameters
         ----------
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
+        bias
+            Whether to include bias term (defaults to True).
         **kwargs
             Additional keyword arguments (ignored for linear layers).
 
@@ -280,14 +280,14 @@ class FCLayerFactory(LayerFactory):
 
         Parameters
         ----------
-        d_channel : int
+        d_channel
             Number of channels/splits for the stacked layer.
-        d_in : int
+        d_in
             Input dimension.
-        d_out : int
+        d_out
             Output dimension.
-        bias : bool, default=True
-            Whether to include bias term.
+        bias
+            Whether to include bias term (defaults to True).
         **kwargs
             Additional keyword arguments (ignored for stacked linear layers).
 

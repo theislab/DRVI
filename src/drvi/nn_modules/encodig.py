@@ -18,7 +18,7 @@ class MultiOneHotEncoding(nn.Module):
 
     Parameters
     ----------
-    n_embedding_list : list[int]
+    n_embedding_list
         List of vocabulary sizes for each categorical feature.
     **kwargs
         Additional arguments (unused, kept for compatibility).
@@ -52,7 +52,7 @@ class MultiOneHotEncoding(nn.Module):
 
         Parameters
         ----------
-        index_list : torch.Tensor
+        index_list
             Tensor of indices with shape (..., n_features).
 
         Returns
@@ -91,7 +91,7 @@ class MultiOneHotEncoding(nn.Module):
 
         Parameters
         ----------
-        state : dict
+        state
             Extra state information.
         """
         self.n_embedding_list = state["n_embedding_list"]
@@ -122,7 +122,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
 
     Parameters
     ----------
-    vocab_list : list[list[str]]
+    vocab_list
         List of vocabulary lists, one for each categorical feature.
     **kwargs
         Additional arguments passed to FeatureEmbedding.
@@ -158,9 +158,9 @@ class FeatureOneHotEncoding(FeatureEmbedding):
 
         Parameters
         ----------
-        n_embedding_list : list[int]
+        n_embedding_list
             List of vocabulary sizes.
-        embedding_dims : list[int]
+        embedding_dims
             List of embedding dimensions (must equal vocabulary sizes).
         **kwargs
             Additional arguments for MultiOneHotEncoding.
@@ -186,7 +186,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
 
         Parameters
         ----------
-        sentences_array : numpy.ndarray
+        sentences_array
             Array of categorical sentences with shape (n_samples, n_features).
         **kwargs
             Additional arguments for FeatureOneHotEncoding.

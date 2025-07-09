@@ -22,18 +22,18 @@ def iterate_dimensions(
 
     Parameters
     ----------
-    latent_dims : np.ndarray
+    latent_dims
         Array of latent dimension indices to traverse.
-    latent_min : np.ndarray
+    latent_min
         Minimum values for each latent dimension (typically negative).
         Must have same length as `latent_dims`.
-    latent_max : np.ndarray
+    latent_max
         Maximum values for each latent dimension (typically positive).
         Must have same length as `latent_dims`.
-    n_steps : int, default=20
-        Number of steps in the traversal. Must be even (half negative, half positive).
-    n_samples : int, default=100
-        Number of samples to generate for each step.
+    n_steps
+        Number of steps in the traversal. Must be even (half negative, half positive) (defaults to 20).
+    n_samples
+        Number of samples to generate for each step (defaults to 100).
 
     Returns
     -------
@@ -140,22 +140,22 @@ def make_traverse_adata(
 
     Parameters
     ----------
-    model : DRVI
+    model
         Trained DRVI model for decoding latent representations.
-    embed : AnnData
+    embed
         AnnData object containing latent dimension statistics in `.var`.
         Must have columns: `original_dim_id`, `min`, `max`, `std`.
-    n_steps : int, default=20
-        Number of steps in the traversal. Must be even (half negative, half positive).
-    n_samples : int, default=100
-        Number of samples to generate for each step.
-    noise_formula : callable, default=lambda x: x / 2
+    n_steps
+        Number of steps in the traversal. Must be even (half negative, half positive) (defaults to 20).
+    n_samples
+        Number of samples to generate for each step (defaults to 100).
+    noise_formula
         Function to compute noise standard deviation from dimension std values.
-        Should take a numpy array and return a numpy array.
-    max_noise_std : float, default=0.2
-        Maximum allowed noise standard deviation.
-    copy_adata_var_info : bool, default=True
-        Whether to copy variable information from the original model's AnnData.
+        Should take a numpy array and return a numpy array (defaults to lambda x: x / 2).
+    max_noise_std
+        Maximum allowed noise standard deviation (defaults to 0.2).
+    copy_adata_var_info
+        Whether to copy variable information from the original model's AnnData (defaults to True).
     **kwargs
         Additional keyword arguments passed to `model.decode_latent_samples`.
 
@@ -198,18 +198,6 @@ def make_traverse_adata(
 
     The noise is generated based on the standard deviation of each latent dimension,
     scaled by the `noise_formula` function and clipped to `max_noise_std`.
-
-    Examples
-    --------
-    >>> # Basic traversal
-    >>> traverse_data = make_traverse_adata(model, embed)
-    >>> print(f"Traversal shape: {traverse_data.X.shape}")
-    >>> # Custom noise and steps
-    >>> def custom_noise(x):
-    ...     return x * 0.1
-    >>> traverse_data = make_traverse_adata(
-    ...     model, embed, n_steps=30, n_samples=50, noise_formula=custom_noise, max_noise_std=0.1
-    ... )
     """
     # Generate random delta vectors for each dimension
     span_adata = iterate_dimensions(
@@ -286,7 +274,7 @@ def get_dimensions_of_traverse_data(traverse_adata: AnnData) -> tuple[int, int, 
 
     Parameters
     ----------
-    traverse_adata : AnnData
+    traverse_adata
         AnnData object created by traversal functions.
 
     Returns
@@ -343,17 +331,17 @@ def traverse_latent(
 
     Parameters
     ----------
-    model : DRVI
+    model
         Trained DRVI model for decoding latent representations.
-    embed : AnnData
+    embed
         AnnData object containing latent dimension statistics in `.var`.
         Must have columns: `original_dim_id`, `min`, `max`, `std`, `title`, `vanished`, `order`.
-    n_steps : int, default=20
-        Number of steps in the traversal. Must be even.
-    n_samples : int, default=100
-        Number of samples to generate for each step.
-    copy_adata_var_info : bool, default=True
-        Whether to copy variable information from the original model's AnnData.
+    n_steps
+        Number of steps in the traversal. Must be even (defaults to 20).
+    n_samples
+        Number of samples to generate for each step (defaults to 100).
+    copy_adata_var_info
+        Whether to copy variable information from the original model's AnnData (defaults to True).
     **kwargs
         Additional keyword arguments passed to `make_traverse_adata`.
 

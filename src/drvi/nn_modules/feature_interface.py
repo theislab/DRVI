@@ -18,13 +18,13 @@ class FeatureInfoList:
 
     Parameters
     ----------
-    feature_info_str_list : list[str]
+    feature_info_str_list
         List of feature information strings in the format "name[@dim][!keyword1!keyword2...]".
-    axis : {"var", "obs"}, default="var"
-        Whether features are stored in AnnData.var or AnnData.obs.
-    total_dim : int, optional
+    axis
+        Whether features are stored in AnnData.var or AnnData.obs (defaults to "var").
+    total_dim
         Total dimensionality to distribute among features with unspecified dimensions.
-    default_dim : int, optional
+    default_dim
         Default dimension to assign to features with unspecified dimensions.
 
     Notes
@@ -72,7 +72,7 @@ class FeatureInfoList:
 
         Parameters
         ----------
-        feature_info_list : list[str]
+        feature_info_list
             List of feature information strings to parse.
 
         Yields
@@ -101,7 +101,7 @@ class FeatureInfoList:
 
         Parameters
         ----------
-        default_dim : int
+        default_dim
             Default dimension to assign to features with unspecified dimensions.
         """
         for i in range(len(self.feature_info_list)):
@@ -113,7 +113,7 @@ class FeatureInfoList:
 
         Parameters
         ----------
-        total_dim : int
+        total_dim
             Total dimensionality to distribute.
 
         Notes
@@ -168,7 +168,7 @@ class FeatureInfoList:
 
         Parameters
         ----------
-        data : dict[str, AnnData] or AnnData
+        data
             Dictionary of AnnData objects or single AnnData object.
 
         Returns

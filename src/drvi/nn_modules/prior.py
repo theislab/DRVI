@@ -26,7 +26,7 @@ class Prior(nn.Module):
 
         Parameters
         ----------
-        qz : Distribution
+        qz
             The posterior distribution (usually Normal).
 
         Returns
@@ -69,7 +69,7 @@ class StandardPrior(Prior):
 
         Parameters
         ----------
-        qz : Normal
+        qz
             The posterior distribution (must be Normal).
 
         Returns
@@ -99,19 +99,19 @@ class VampPrior(Prior):
 
     Parameters
     ----------
-    n_components : int
+    n_components
         Number of mixture components.
-    encoder : nn.Module
+    encoder
         Encoder network to compute posterior parameters for pseudo-inputs.
-    model_input : dict
+    model_input
         Dictionary containing input data for pseudo-inputs.
-    trainable_keys : tuple, default=("x",)
-        Keys in model_input that should be trainable parameters.
-    fixed_keys : tuple, default=()
-        Keys in model_input that should be fixed parameters.
-    input_type : {"scvi", "scfemb"}, default="scvi"
-        Type of input format expected by the encoder.
-    preparation_function : callable, optional
+    trainable_keys
+        Keys in model_input that should be trainable parameters (defaults to ("x",)).
+    fixed_keys
+        Keys in model_input that should be fixed parameters (defaults to ()).
+    input_type
+        Type of input format expected by the encoder (defaults to "scvi").
+    preparation_function
         Function to prepare inputs for the encoder.
 
     Notes
@@ -211,7 +211,7 @@ class VampPrior(Prior):
 
         Parameters
         ----------
-        z : torch.Tensor
+        z
             Latent variables with shape (N, L).
 
         Returns
@@ -247,7 +247,7 @@ class VampPrior(Prior):
 
         Parameters
         ----------
-        qz : Normal
+        qz
             The posterior distribution.
 
         Returns
@@ -283,7 +283,7 @@ class VampPrior(Prior):
 
         Parameters
         ----------
-        state : dict
+        state
             Extra state information.
         """
         self.pi_aux_data = state["pi_aux_data"]
@@ -299,14 +299,14 @@ class GaussianMixtureModelPrior(Prior):
 
     Parameters
     ----------
-    n_components : int
+    n_components
         Number of mixture components.
-    n_latent : int
+    n_latent
         Dimensionality of the latent space.
-    data : tuple, optional
+    data
         Initial means and variances as (means, variances).
-    trainable_priors : bool, default=True
-        Whether the prior parameters should be trainable.
+    trainable_priors
+        Whether the prior parameters should be trainable (defaults to True).
 
     Notes
     -----
@@ -359,7 +359,7 @@ class GaussianMixtureModelPrior(Prior):
 
         Parameters
         ----------
-        z : torch.Tensor
+        z
             Latent variables with shape (N, L).
 
         Returns
@@ -393,7 +393,7 @@ class GaussianMixtureModelPrior(Prior):
 
         Parameters
         ----------
-        qz : Normal
+        qz
             The posterior distribution.
 
         Returns

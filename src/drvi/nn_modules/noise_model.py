@@ -65,10 +65,10 @@ class NoiseModel:
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input data tensor.
-        x_mask : torch.Tensor, default=1.0
-            Mask for the input data.
+        x_mask
+            Mask for the input data (defaults to 1.0).
 
         Returns
         -------
@@ -85,11 +85,11 @@ class NoiseModel:
 
         Parameters
         ----------
-        aux_info : dict
+        aux_info
             Additional information from initial_transformation.
-        parameters : dict
+        parameters
             Parameters from the decoder network.
-        lib_y : torch.Tensor
+        lib_y
             Library size tensor.
 
         Returns
@@ -111,10 +111,10 @@ def calculate_library_size(x, x_mask=1.0):
 
     Parameters
     ----------
-    x : torch.Tensor
+    x
         Input data tensor.
-    x_mask : torch.Tensor, default=1.0
-        Mask for the input data.
+    x_mask
+        Mask for the input data (defaults to 1.0).
 
     Returns
     -------
@@ -136,11 +136,11 @@ def library_size_normalization(
 
     Parameters
     ----------
-    x : torch.Tensor
+    x
         Input data tensor.
-    lib_size : torch.Tensor
+    lib_size
         Library size tensor.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+    library_normalization
         Normalization method to apply.
 
     Returns
@@ -225,14 +225,14 @@ class NormalNoiseModel(NoiseModel):
 
     Parameters
     ----------
-    model_var : {"fixed", "dynamic", "feature"} or str, default="fixed"
-        Variance modeling strategy:
+    model_var
+        Variance modeling strategy (defaults to "fixed"):
         - "fixed": Use fixed variance of 1e-2
         - "fixed=value": Use fixed variance of specified value
         - "dynamic": Learn variance per sample
         - "feature": Learn variance per feature
-    eps : float, default=1e-8
-        Small constant added to variance for numerical stability.
+    eps
+        Small constant added to variance for numerical stability (defaults to 1e-8).
     """
 
     def __init__(self, model_var="fixed", eps=1e-8):
@@ -269,10 +269,10 @@ class NormalNoiseModel(NoiseModel):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input data tensor.
-        x_mask : torch.Tensor, default=1.0
-            Mask for the input data.
+        x_mask
+            Mask for the input data (defaults to 1.0).
 
         Returns
         -------
@@ -288,11 +288,11 @@ class NormalNoiseModel(NoiseModel):
 
         Parameters
         ----------
-        aux_info : dict
+        aux_info
             Additional information (unused for normal model).
-        parameters : dict
+        parameters
             Dictionary containing 'mean' and 'var' parameters.
-        lib_y : torch.Tensor
+        lib_y
             Library size tensor (unused for normal model).
 
         Returns
@@ -314,12 +314,12 @@ class PoissonNoiseModel(NoiseModel):
 
     Parameters
     ----------
-    mean_transformation : {"exp", "softmax"}, default="exp"
-        Transformation to apply to the mean parameter:
+    mean_transformation
+        Transformation to apply to the mean parameter (defaults to "exp"):
         - "exp": Exponential transformation
         - "softmax": Softmax transformation
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}, default="x_lib"
-        Library size normalization method.
+    library_normalization
+        Library size normalization method (defaults to "x_lib").
 
     Examples
     --------

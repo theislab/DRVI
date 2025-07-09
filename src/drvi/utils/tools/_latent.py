@@ -18,16 +18,16 @@ def set_latent_dimension_stats(
 
     Parameters
     ----------
-    model : DRVI
+    model
         DRVI model object that has been trained and can compute reconstruction effects.
-    embed : AnnData
+    embed
         AnnData object containing the latent representation (embedding) of the model.
         The latent dimensions should be in the `.X` attribute.
-    inplace : bool, default=True
-        Whether to modify the input AnnData object in-place or return a new copy.
-    vanished_threshold : float, default=0.1
+    inplace
+        Whether to modify the input AnnData object in-place or return a new copy (defaults to True).
+    vanished_threshold
         Threshold for determining if a latent dimension has "vanished" (become inactive).
-        Dimensions with max absolute values below this threshold are marked as vanished.
+        Dimensions with max absolute values below this threshold are marked as vanished (defaults to 0.1).
 
     Returns
     -------

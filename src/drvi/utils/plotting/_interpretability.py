@@ -21,7 +21,7 @@ def make_heatmap_groups(ordered_list: list) -> tuple[list[tuple[int, int]], list
 
     Parameters
     ----------
-    ordered_list : list
+    ordered_list
         List of elements where consecutive identical elements form groups.
 
     Returns
@@ -72,30 +72,30 @@ def differential_vars_heatmap(
 
     Parameters
     ----------
-    traverse_adata : AnnData
+    traverse_adata
         AnnData object containing traverse data from `traverse_latent` or
         `make_traverse_adata`. Must contain differential effect data for the specified key.
-    key : str
+    key
         Key prefix for the differential variables in `traverse_adata.varm`.
         Should correspond to a key used in `find_differential_effects` or
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
-    title_col : str, default="title"
+    title_col
         Column name in `traverse_adata.obs` to use as dimension labels.
-        These titles will be used for axis labels and grouping.
-    score_threshold : float, default=0.0
+        These titles will be used for axis labels and grouping (defaults to "title").
+    score_threshold
         Threshold value for filtering genes based on their maximum effect score.
-        Only genes with maximum effects above this threshold will be included.
-    remove_vanished : bool, default=True
+        Only genes with maximum effects above this threshold will be included (defaults to 0.0).
+    remove_vanished
         Whether to remove latent dimensions that have vanished (have no effect).
-        This helps focus the visualization on meaningful dimensions.
-    remove_unaffected : bool, default=False
+        This helps focus the visualization on meaningful dimensions (defaults to True).
+    remove_unaffected
         Whether to remove genes that have no significant effect (below score_threshold).
-        When True, only genes with effects above the threshold are shown.
-    figsize : tuple[int, int], optional
+        When True, only genes with effects above the threshold are shown (defaults to False).
+    figsize
         Size of the figure (width, height) in inches. If None, automatically
-        calculated based on the number of dimensions.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the plot object.
+        calculated based on the number of dimensions (defaults to None).
+    show
+        Whether to display the plot. If False, returns the plot object (defaults to True).
     **kwargs
         Additional keyword arguments passed to `sc.pl.heatmap`.
 
@@ -265,18 +265,18 @@ def _bar_plot_top_differential_vars(
 
     Parameters
     ----------
-    plot_info : Sequence[tuple[str, pd.Series]]
+    plot_info
         Information about the top differential variables. Each tuple contains
         a dimension title and a pandas Series of gene scores.
-    dim_subset : Sequence[str], optional
+    dim_subset
         List of dimensions to plot in the bar plot. If None, all dimensions
-        from plot_info are plotted.
-    n_top_genes : int, default=10
-        Number of top genes to plot for each dimension.
-    ncols : int, default=5
-        Number of columns in the plot grid.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the figure object.
+        from plot_info are plotted (defaults to None).
+    n_top_genes
+        Number of top genes to plot for each dimension (defaults to 10).
+    ncols
+        Number of columns in the plot grid (defaults to 5).
+    show
+        Whether to display the plot. If False, returns the figure object (defaults to True).
 
     Returns
     -------
@@ -354,36 +354,36 @@ def show_top_differential_vars(
 
     Parameters
     ----------
-    traverse_adata : AnnData
+    traverse_adata
         AnnData object containing the differential analysis results from
         `calculate_differential_vars`. Must contain differential effect data
         for the specified key.
-    key : str
+    key
         Key prefix for the differential variables in `traverse_adata.varm`.
         Should correspond to a key used in `find_differential_effects` or
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
-    title_col : str, default="title"
+    title_col
         Column name in `traverse_adata.obs` that contains the titles for each dimension.
-        These titles will be used as subplot titles.
-    order_col : str, default="order"
+        These titles will be used as subplot titles (defaults to "title").
+    order_col
         Column name in `traverse_adata.obs` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided.
-    dim_subset : Sequence[str], optional
+        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+    dim_subset
         List of dimensions to plot in the bar plot. If None, all dimensions
-        with significant effects are plotted.
-    gene_symbols : str, optional
+        with significant effects are plotted (defaults to None).
+    gene_symbols
         Column name in `traverse_adata.var` that contains gene symbols.
         If provided, gene symbols will be used in the plot instead of gene indices.
-        Useful for converting between gene IDs and readable gene names.
-    score_threshold : float, default=0.0
+        Useful for converting between gene IDs and readable gene names (defaults to None).
+    score_threshold
         Threshold value for gene scores. Only genes with scores above this
-        threshold will be plotted.
-    n_top_genes : int, default=10
-        Number of top genes to plot for each dimension.
-    ncols : int, default=5
-        Number of columns in the plot grid.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the figure object.
+        threshold will be plotted (defaults to 0.0).
+    n_top_genes
+        Number of top genes to plot for each dimension (defaults to 10).
+    ncols
+        Number of columns in the plot grid (defaults to 5).
+    show
+        Whether to display the plot. If False, returns the figure object (defaults to True).
 
     Returns
     -------
@@ -464,38 +464,38 @@ def show_differential_vars_scatter_plot(
 
     Parameters
     ----------
-    traverse_adata : AnnData
+    traverse_adata
         AnnData object containing the differential analysis results from
         `calculate_differential_vars`. Must contain differential effect data
         for all specified keys.
-    key_x : str
+    key_x
         Key for the x-axis variable in `traverse_adata.varm`.
         Typically "max_possible" or "min_possible".
-    key_y : str
+    key_y
         Key for the y-axis variable in `traverse_adata.varm`.
         Typically "min_possible" or "max_possible".
-    key_combined : str
+    key_combined
         Key for the color-coded variable in `traverse_adata.varm`.
         Typically "combined_score" for the final combined effect.
-    title_col : str, default="title"
+    title_col
         Column name in `traverse_adata.obs` that contains the titles for each dimension.
-        These titles will be used as subplot titles.
-    order_col : str, default="order"
+        These titles will be used as subplot titles (defaults to "title").
+    order_col
         Column name in `traverse_adata.obs` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided.
-    gene_symbols : str, optional
+        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+    gene_symbols
         Column name in `traverse_adata.var` that contains gene symbols.
-        If provided, gene symbols will be used for point labels instead of gene indices.
-    score_threshold : float, default=0.0
+        If provided, gene symbols will be used for point labels instead of gene indices (defaults to None).
+    score_threshold
         Threshold value for gene scores. Only genes with combined scores above
-        this threshold will be plotted.
-    dim_subset : Sequence[str], optional
+        this threshold will be plotted (defaults to 0.0).
+    dim_subset
         Subset of dimensions to plot. If None, all dimensions with significant
-        effects are plotted.
-    ncols : int, default=3
-        Number of columns in the plot grid.
-    show : bool, default=True
-        Whether to display the plot. If False, returns the figure object.
+        effects are plotted (defaults to None).
+    ncols
+        Number of columns in the plot grid (defaults to 3).
+    show
+        Whether to display the plot. If False, returns the figure object (defaults to True).
     **kwargs
         Additional keyword arguments passed to the scatter plot (e.g., alpha, s for point size).
 
@@ -526,33 +526,6 @@ def show_differential_vars_scatter_plot(
     - **Color**: Combined score from `key_combined`
     - **Point position**: Relationship between the two measures
     - **Labeled points**: Genes with highest combined scores
-
-    **Common Use Cases:**
-
-    - Compare max_possible vs min_possible effects
-    - Identify genes with consistent effects across methods
-    - Validate the combined scoring approach
-    - Understand the relationship between different effect measures
-
-    Examples
-    --------
-    >>> # Compare max_possible vs min_possible with combined score
-    >>> show_differential_vars_scatter_plot(traverse_adata, "max_possible", "min_possible", "combined_score")
-    >>> # Custom parameters with gene symbols
-    >>> show_differential_vars_scatter_plot(
-    ...     traverse_adata,
-    ...     "max_possible",
-    ...     "min_possible",
-    ...     "combined_score",
-    ...     gene_symbols="gene_symbol",
-    ...     score_threshold=1.0,
-    ...     alpha=0.7,
-    ...     s=20,
-    ... )
-    >>> # Subset of dimensions
-    >>> show_differential_vars_scatter_plot(
-    ...     traverse_adata, "max_possible", "min_possible", "combined_score", dim_subset=["DR 5+", "DR 12+", "DR 14+"]
-    ... )
     """
     plot_info = {}
     for key in [key_x, key_y, key_combined]:
@@ -629,30 +602,30 @@ def _umap_of_relevant_genes(
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         AnnData object containing single-cell data with UMAP coordinates.
         Must have UMAP coordinates in `embed.obsm["X_umap"]`.
-    embed : AnnData
+    embed
         AnnData object containing latent representations and dimension metadata.
         Must have columns in `.var` corresponding to `title_col`.
-    plot_info : Sequence[tuple[str, pd.Series]]
+    plot_info
         Information about the top differential variables. Each tuple contains
         a dimension title and a pandas Series of gene scores.
-    layer : str, optional
+    layer
         Layer name in `adata` to use for gene expression visualization.
-        If None, uses `.X`.
-    title_col : str, default="title"
-        Column name in `embed.var` that contains dimension titles.
-    gene_symbols : str, optional
+        If None, uses `.X` (defaults to None).
+    title_col
+        Column name in `embed.var` that contains dimension titles (defaults to "title").
+    gene_symbols
         Column name in `adata.var` that contains gene symbols.
-        If provided, gene symbols will be used instead of gene indices.
-    dim_subset : Sequence[str], optional
-        List of dimensions to plot. If None, all dimensions from plot_info are plotted.
-    n_top_genes : int, default=10
-        Number of top genes to visualize for each dimension.
-    max_cells_to_plot : int, optional
+        If provided, gene symbols will be used instead of gene indices (defaults to None).
+    dim_subset
+        List of dimensions to plot. If None, all dimensions from plot_info are plotted (defaults to None).
+    n_top_genes
+        Number of top genes to visualize for each dimension (defaults to 10).
+    max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
-        Useful for large datasets to improve performance.
+        Useful for large datasets to improve performance (defaults to None).
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 
@@ -766,44 +739,44 @@ def plot_relevant_genes_on_umap(
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         AnnData object containing single-cell data with gene expression.
         This is the original data used for training the model.
-    embed : AnnData
+    embed
         AnnData object containing latent representations and dimension metadata.
         Must have UMAP coordinates in `embed.obsm["X_umap"]` and dimension
         information in `.var` columns.
-    traverse_adata : AnnData
+    traverse_adata
         AnnData object containing differential analysis results from
         `calculate_differential_vars`. Must contain differential effect data
         for the specified key.
-    traverse_adata_key : str
+    traverse_adata_key
         Key prefix for the differential variables in `traverse_adata.varm`.
         Should correspond to a key used in `find_differential_effects` or
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
-    layer : str, optional
+    layer
         Layer name in `adata` to use for gene expression visualization.
-        If None, uses `.X`. Common options include "counts", "logcounts", etc.
-    title_col : str, default="title"
+        If None, uses `.X`. Common options include "counts", "logcounts", etc. (defaults to None).
+    title_col
         Column name in `embed.var` that contains dimension titles.
-        These titles will be used to match dimensions between objects.
-    order_col : str, default="order"
+        These titles will be used to match dimensions between objects (defaults to "title").
+    order_col
         Column name in `embed.var` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided.
-    gene_symbols : str, optional
+        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+    gene_symbols
         Column name in `adata.var` that contains gene symbols.
-        If provided, gene symbols will be used instead of gene indices.
-    score_threshold : float, default=0.0
+        If provided, gene symbols will be used instead of gene indices (defaults to None).
+    score_threshold
         Threshold value for gene scores. Only genes with scores above this
-        threshold will be visualized.
-    dim_subset : Sequence[str], optional
+        threshold will be visualized (defaults to 0.0).
+    dim_subset
         List of dimensions to plot. If None, all dimensions with significant
-        effects are plotted.
-    n_top_genes : int, default=10
-        Number of top genes to visualize for each dimension.
-    max_cells_to_plot : int, optional
+        effects are plotted (defaults to None).
+    n_top_genes
+        Number of top genes to visualize for each dimension (defaults to 10).
+    max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
-        Useful for large datasets to improve performance and reduce memory usage.
+        Useful for large datasets to improve performance and reduce memory usage (defaults to None).
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 
