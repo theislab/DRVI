@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from anndata import AnnData
@@ -71,7 +71,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         prior_init_obs: np.ndarray | None = None,
         categorical_covariates: list[str] = (),
         **model_kwargs,
-    ):
+    ) -> None:
         super().__init__(adata)
 
         # TODO: Remove later. Currently used to detect autoreload problems sooner.
@@ -182,7 +182,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         categorical_covariate_keys: list[str] | None = None,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
-    ):
+    ) -> None:
         """Setup MerlinData for use with DRVI.
 
         Parameters
@@ -222,13 +222,13 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
     def _make_data_loader(
         self,
-        adata,
+        adata: AnnData | MerlinData,
         indices: Sequence[int] | None = None,
         batch_size: int | None = None,
         shuffle: bool = False,
-        data_loader_class=None,
+        data_loader_class: type | None = None,
         **data_loader_kwargs,
-    ):
+    ) -> Any:
         """Create a AnnDataLoader object for data iteration.
 
         Parameters
@@ -245,6 +245,11 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             Class to use for data loader.
         data_loader_kwargs
             Kwargs to the class-specific data loader class.
+
+        Returns
+        -------
+        Any
+            Data loader object for iteration.
         """
         if isinstance(adata, AnnData):
             return super()._make_data_loader(

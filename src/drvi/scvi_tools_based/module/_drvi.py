@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable, Sequence
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import torch
@@ -157,11 +157,11 @@ class DRVIModule(BaseModuleClass):
         prior_init_dataloader: DataLoader | None = None,
         var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
         mean_activation: Callable | str = "identity",
-        encoder_layer_factory: LayerFactory = None,
-        decoder_layer_factory: LayerFactory = None,
-        extra_encoder_kwargs: dict | None = None,
-        extra_decoder_kwargs: dict | None = None,
-    ):
+        encoder_layer_factory: LayerFactory | None = None,
+        decoder_layer_factory: LayerFactory | None = None,
+        extra_encoder_kwargs: dict[str, Any] | None = None,
+        extra_decoder_kwargs: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__()
         self.n_latent = n_latent
         if n_split_latent == -1:
@@ -243,7 +243,7 @@ class DRVIModule(BaseModuleClass):
         self.prior = self._construct_prior(prior, prior_init_dataloader)
         self.fully_deterministic = False
 
-    def _construct_gene_likelihood_module(self, gene_likelihood):
+    def _construct_gene_likelihood_module(self, gene_likelihood: str) -> Any:
         """Construct the gene likelihood module based on the specified type.
 
         Parameters
@@ -306,7 +306,7 @@ class DRVIModule(BaseModuleClass):
         else:
             raise NotImplementedError()
 
-    def _construct_prior(self, prior, prior_init_dataloader=None):
+    def _construct_prior(self, prior: str, prior_init_dataloader: DataLoader | None = None) -> Any:
         """Construct the prior model based on the specified type.
 
         Parameters
@@ -342,7 +342,7 @@ class DRVIModule(BaseModuleClass):
             n_components = int(prior.split("_")[1])
             if prior_init_dataloader is not None:
 
-                def preparation_function(prepared_input):
+                def preparation_function(prepared_input: dict[str, Any]) -> tuple[torch.Tensor, list, dict[str, Any]]:
                     x = prepared_input["encoder_input"]
                     args = []
                     kwargs = {"cat_full_tensor": prepared_input["cat_full_tensor"]}
@@ -363,7 +363,7 @@ class DRVIModule(BaseModuleClass):
         else:
             raise NotImplementedError()
 
-    def _get_inference_input(self, tensors):
+    def _get_inference_input(self, tensors: TensorDict) -> dict[str, torch.Tensor | None]:
         """Parse the dictionary to get appropriate args.
 
         Parameters
@@ -384,7 +384,9 @@ class DRVIModule(BaseModuleClass):
         input_dict = {"x": x, "cont_covs": cont_covs, "cat_covs": cat_covs}
         return input_dict
 
-    def _input_pre_processing(self, x, cont_covs=None, cat_covs=None):
+    def _input_pre_processing(
+        self, x: torch.Tensor, cont_covs: torch.Tensor | None = None, cat_covs: torch.Tensor | None = None
+    ) -> dict[str, Any]:
         """Pre-process input data for the model.
 
         Parameters
@@ -418,7 +420,9 @@ class DRVIModule(BaseModuleClass):
         }
 
     @auto_move_data
-    def inference(self, x, cont_covs=None, cat_covs=None):
+    def inference(
+        self, x: torch.Tensor, cont_covs: torch.Tensor | None = None, cat_covs: torch.Tensor | None = None
+    ) -> dict[str, Any]:
         """High level inference method.
 
         Runs the inference (encoder) model.
@@ -473,7 +477,7 @@ class DRVIModule(BaseModuleClass):
         }
         return outputs
 
-    def _get_generative_input(self, tensors, inference_outputs):
+    def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
         """Prepare input for the generative model.
 
         Parameters
@@ -507,7 +511,14 @@ class DRVIModule(BaseModuleClass):
         return input_dict
 
     @auto_move_data
-    def generative(self, z, library, gene_likelihood_additional_info, cont_covs=None, cat_covs=None):
+    def generative(
+        self,
+        z: torch.Tensor,
+        library: torch.Tensor,
+        gene_likelihood_additional_info: Any,
+        cont_covs: torch.Tensor | None = None,
+        cat_covs: torch.Tensor | None = None,
+    ) -> dict[str, Any]:
         """Runs the generative model.
 
         Parameters
@@ -547,11 +558,11 @@ class DRVIModule(BaseModuleClass):
 
     def loss(
         self,
-        tensors,
-        inference_outputs,
-        generative_outputs,
+        tensors: TensorDict,
+        inference_outputs: dict[str, Any],
+        generative_outputs: dict[str, Any],
         kl_weight: float = 1.0,
-    ):
+    ) -> LossOutput:
         """Loss function.
 
         Parameters
@@ -605,9 +616,9 @@ class DRVIModule(BaseModuleClass):
     @torch.no_grad()
     def sample(
         self,
-        tensors,
-        n_samples=1,
-        library_size=1,
+        tensors: TensorDict,
+        n_samples: int = 1,
+        library_size: int = 1,
     ) -> torch.Tensor:
         # Note: Not tested
         r"""
@@ -650,7 +661,7 @@ class DRVIModule(BaseModuleClass):
 
     @torch.no_grad()
     @auto_move_data
-    def marginal_ll(self, tensors: TensorDict, n_mc_samples: int):
+    def marginal_ll(self, tensors: TensorDict, n_mc_samples: int) -> float:
         """Compute marginal log-likelihood.
 
         Parameters

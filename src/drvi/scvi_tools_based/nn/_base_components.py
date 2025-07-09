@@ -1,7 +1,7 @@
 import collections
 import math
 from collections.abc import Callable, Iterable, Sequence
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 from scvi.nn._utils import one_hot
@@ -16,7 +16,7 @@ from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.noise_model import NoiseModel
 
 
-def _identity(x):
+def _identity(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
@@ -65,7 +65,7 @@ class FCLayers(nn.Module):
     def __init__(
         self,
         layers_dim: Sequence[int],
-        n_cat_list: Iterable[int] = None,
+        n_cat_list: Iterable[int] | None = None,
         dropout_rate: float = 0.1,
         split_size: int = -1,
         reuse_weights: bool = True,
@@ -75,8 +75,8 @@ class FCLayers(nn.Module):
         use_activation: bool = True,
         bias: bool = True,
         inject_covariates: bool = True,
-        activation_fn: nn.Module = nn.ELU,
-        layer_factory: LayerFactory = None,
+        activation_fn: type[nn.Module] = nn.ELU,
+        layer_factory: LayerFactory | None = None,
         layers_location: Literal["intermediate", "first", "last"] = "intermediate",
         covariate_modeling_strategy: Literal[
             "one_hot",
@@ -87,7 +87,7 @@ class FCLayers(nn.Module):
             "emb_shared_linear",
         ] = "one_hot",
         covariate_embs_dim: Iterable[int] = (),
-    ):
+    ) -> None:
         super().__init__()
         self.inject_covariates = inject_covariates
         if covariate_modeling_strategy.endswith("_linear"):
@@ -98,16 +98,17 @@ class FCLayers(nn.Module):
             self.covariate_vector_modeling = covariate_modeling_strategy
         layer_factory = layer_factory or FCLayerFactory()
 
-        self.n_cat_list = n_cat_list if n_cat_list is not None else []
+        self.n_cat_list = list(n_cat_list) if n_cat_list is not None else []
         if self.covariate_vector_modeling == "one_hot":
             covariate_embs_dim = self.n_cat_list
         else:
+            covariate_embs_dim = list(covariate_embs_dim)
             assert len(covariate_embs_dim) == len(self.n_cat_list)
 
         self.injectable_layers = []
         self.linear_batch_projections = []
 
-        def is_intermediate(i):
+        def is_intermediate(i: int) -> bool:
             assert layers_location in ["intermediate", "first", "last"]
             if layers_location == "first" and i == 0:
                 return False
@@ -115,11 +116,11 @@ class FCLayers(nn.Module):
                 return False
             return True
 
-        def inject_into_layer(layer_num):
+        def inject_into_layer(layer_num: int) -> bool:
             user_cond = layer_num == 0 or (layer_num > 0 and self.inject_covariates)
             return user_cond
 
-        def get_projection_layer(n_in, n_out, i):
+        def get_projection_layer(n_in: int, n_out: int, i: int) -> list[nn.Module]:
             output = []
             layer_needs_injection = False
             if not reuse_weights:
@@ -164,7 +165,7 @@ class FCLayers(nn.Module):
             output.append(layer)
             return output
 
-        def get_normalization_layers(n_out):
+        def get_normalization_layers(n_out: int) -> list[nn.Module]:
             output = []
             if split_size == -1:
                 if use_batch_norm:
@@ -207,7 +208,7 @@ class FCLayers(nn.Module):
             )
         )
 
-    def set_online_update_hooks(self, previous_n_cats_per_cov: Sequence[int], n_cats_per_cov: Sequence[int]):
+    def set_online_update_hooks(self, previous_n_cats_per_cov: Sequence[int], n_cats_per_cov: Sequence[int]) -> None:
         """Set online update hooks for handling new categories.
 
         Parameters
@@ -221,7 +222,7 @@ class FCLayers(nn.Module):
             print("Nothing to make hook for!")
             return
 
-        def make_hook_function(weight):
+        def make_hook_function(weight: torch.Tensor) -> Callable[[torch.Tensor], torch.Tensor]:
             w_size = weight.size()
             if weight.dim() == 2:
                 # 2D tensors
@@ -260,7 +261,7 @@ class FCLayers(nn.Module):
             else:
                 raise NotImplementedError()
 
-            def _hook_fn_injectable(grad):
+            def _hook_fn_injectable(grad: torch.Tensor) -> torch.Tensor:
                 return grad * transfer_mask
 
             return _hook_fn_injectable
@@ -291,7 +292,7 @@ class FCLayers(nn.Module):
                 else:
                     raise NotImplementedError()
 
-    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor):
+    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor | None) -> torch.Tensor:
         """Forward computation on ``x``.
 
         Parameters
@@ -324,7 +325,7 @@ class FCLayers(nn.Module):
         else:
             concat_list = []
 
-        def dimension_transformation(t):
+        def dimension_transformation(t: torch.Tensor) -> torch.Tensor:
             if x.dim() == t.dim():
                 return t
             if x.dim() == 3 and t.dim() == 2:
@@ -398,23 +399,21 @@ class Encoder(nn.Module):
     distribution
         Distribution of z.
     var_eps
-        Minimum value for the variance;
-        used for numerical stability.
+        Minimum value for the variance; used for numerical stability.
     var_activation
-        The activation function to ensure positivity of the variance.
+        Callable used to ensure positivity of the variance.
     mean_activation
-        The activation function at the end of mean encoder.
-        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_value}".
+        Callable used to apply activation to the mean.
     layer_factory
-        A layer Factory instance for building layers.
+        A layer Factory instance to build projection layers based on.
     covariate_modeling_strategy
-        The strategy model takes to model covariates.
+        The strategy model to consider covariates.
     categorical_covariate_dims
-        Dimensions for categorical covariate embeddings.
+        Dimensions for covariate embeddings when using embedding strategies.
     return_dist
-        Return directly the distribution of z instead of its parameters.
+        Whether to return the distribution or just the parameters.
     **kwargs
-        Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
+        Additional keyword arguments.
     """
 
     def __init__(
@@ -422,7 +421,7 @@ class Encoder(nn.Module):
         n_input: int,
         n_output: int,
         layers_dim: Sequence[int] = (128,),
-        n_cat_list: Iterable[int] = None,
+        n_cat_list: Iterable[int] | None = None,
         n_continuous_cov: int = 0,
         inject_covariates: bool = True,
         use_batch_norm: bool = True,
@@ -434,7 +433,7 @@ class Encoder(nn.Module):
         var_eps: float = 1e-4,
         var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
         mean_activation: Callable | str = "identity",
-        layer_factory: LayerFactory = None,
+        layer_factory: LayerFactory | None = None,
         covariate_modeling_strategy: Literal[
             "one_hot",
             "emb",
@@ -446,9 +445,8 @@ class Encoder(nn.Module):
         categorical_covariate_dims: Sequence[int] = (),
         return_dist: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
-
         self.distribution = distribution
         self.var_eps = var_eps
         self.input_dropout = nn.Dropout(p=input_dropout_rate)
@@ -539,8 +537,13 @@ class Encoder(nn.Module):
             assert callable(mean_activation)
             self.mean_activation = mean_activation
 
-    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor, cont_full_tensor: torch.Tensor = None):
-        r"""The forward computation for a single sample.
+    def forward(
+        self,
+        x: torch.Tensor,
+        cat_full_tensor: torch.Tensor | None,
+        cont_full_tensor: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | tuple[Normal, torch.Tensor]:
+        r"""Forward computation on ``x``.
 
          #. Encodes the data into latent space using the encoder network
          #. Generates a mean \\( q_m \\) and variance \\( q_v \\)
@@ -596,11 +599,14 @@ class DecoderDRVI(nn.Module):
     n_continuous_cov
         The number of continuous covariates.
     n_split
-        The number of splits for latent dim.
+        Number of splits in the latent space.
     split_aggregation
         How to aggregate splits in the last layer of the decoder.
     split_method
-        How to make splits.
+        How to make splits:
+        - "split" : Split the latent space
+        - "power" : Transform the latent space to n_split vectors of size n_latent
+        - "split_map" : Split the latent space then map each to latent space using unique transformations
     reuse_weights
         Where to reuse the weights of the decoder layers when using splitting.
     layers_dim
@@ -622,7 +628,7 @@ class DecoderDRVI(nn.Module):
     categorical_covariate_dims
         Dimensions for categorical covariate embeddings.
     **kwargs
-        Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
+        Additional keyword arguments.
     """
 
     def __init__(
@@ -630,7 +636,7 @@ class DecoderDRVI(nn.Module):
         n_input: int,
         n_output: int,
         gene_likelihood_module: NoiseModel,
-        n_cat_list: Iterable[int] = None,
+        n_cat_list: Iterable[int] | None = None,
         n_continuous_cov: int = 0,
         n_split: int = 1,
         split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
@@ -642,7 +648,7 @@ class DecoderDRVI(nn.Module):
         use_batch_norm: bool = False,
         affine_batch_norm: bool = True,
         use_layer_norm: bool = False,
-        layer_factory: LayerFactory = None,
+        layer_factory: LayerFactory | None = None,
         covariate_modeling_strategy: Literal[
             "one_hot",
             "emb",
@@ -653,7 +659,7 @@ class DecoderDRVI(nn.Module):
         ] = "one_hot",
         categorical_covariate_dims: Sequence[int] = (),
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         self.n_output = n_output
         self.gene_likelihood_module = gene_likelihood_module
@@ -741,29 +747,25 @@ class DecoderDRVI(nn.Module):
     def forward(
         self,
         z: torch.Tensor,
-        cat_full_tensor: torch.Tensor,
-        cont_full_tensor: torch.Tensor,
+        cat_full_tensor: torch.Tensor | None,
+        cont_full_tensor: torch.Tensor | None,
         library: torch.Tensor,
-        gene_likelihood_additional_info: dict,
-    ):
-        """The forward computation for a single sample.
-
-         #. Decodes the data from the latent space using the decoder network
-         #. Returns distribution of expression
-         #. If ``dispersion != 'gene-cell'`` then value for that param will be ``None``
+        gene_likelihood_additional_info: dict[str, Any],
+    ) -> tuple[Any, dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+        """Forward computation on ``z``.
 
         Parameters
         ----------
         z
-            Tensor with shape ``(batch_size, n_input,)``.
+            Tensor of latent values with shape ``(batch_size, n_input)``.
         cat_full_tensor
             Tensor containing encoding of categorical variables of size n_batch x n_total_cat.
         cont_full_tensor
-            Tensor containing continuous covariates.
+            Tensor of continuous covariate(s) for this sample.
         library
-            Library size tensor.
+            Library size information.
         gene_likelihood_additional_info
-            Additional info returned by gene likelihood module.
+            Additional information for gene likelihood computation.
 
         Returns
         -------

@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable, Sequence
+from typing import Any
 
 import numpy as np
 import scvi
@@ -41,7 +42,7 @@ class GenerativeMixin:
         lib: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
-        batch_size=scvi.settings.batch_size,
+        batch_size: int = scvi.settings.batch_size,
         map_cat_values: bool = False,
     ) -> np.ndarray:
         """Iterate over decoder outputs and aggregate the results.
@@ -103,7 +104,7 @@ class GenerativeMixin:
         ... )
         >>> print(result.shape)  # (50, n_genes)
         """
-        store = []
+        store: list[Any] = []
         self.module.eval()
 
         if cat_values is not None and map_cat_values:
@@ -154,7 +155,7 @@ class GenerativeMixin:
         lib: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
-        batch_size=scvi.settings.batch_size,
+        batch_size: int = scvi.settings.batch_size,
         map_cat_values: bool = False,
     ) -> np.ndarray:
         r"""Return the distribution produced by the decoder for the given latent samples.
@@ -206,8 +207,12 @@ class GenerativeMixin:
         >>> cat_covs = np.array([0, 1, 0, 1] * 25)  # batch labels
         >>> reconstructed = model.decode_latent_samples(z, cat_values=cat_covs)
         """
-        step_func = lambda gen_output, store: store.append(gen_output["params"]["mean"].detach().cpu())
-        aggregation_func = lambda store: torch.cat(store, dim=0).numpy(force=True)
+
+        def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
+            store.append(gen_output["params"]["mean"].detach().cpu())
+
+        def aggregation_func(store: list[Any]) -> np.ndarray:
+            return torch.cat(store, dim=0).numpy(force=True)
 
         return self.iterate_on_decoded_latent_samples(
             z=z,
@@ -290,7 +295,7 @@ class GenerativeMixin:
         adata = self._validate_anndata(adata)
         data_loader = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
 
-        store = []
+        store: list[Any] = []
         try:
             if deterministic:
                 self.module.fully_deterministic = True
@@ -313,7 +318,7 @@ class GenerativeMixin:
         add_to_counts: float = 1.0,
         aggregate_over_cells: bool = True,
         deterministic: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Return the effect of each split on the reconstructed expression per sample.
 
@@ -366,7 +371,9 @@ class GenerativeMixin:
         >>> print(cell_effects.shape)  # (n_cells, n_splits)
         """
 
-        def calculate_effect(inference_outputs, generative_outputs, losses, store):
+        def calculate_effect(
+            inference_outputs: dict[str, Any], generative_outputs: dict[str, Any], losses: Any, store: list[Any]
+        ) -> None:
             if self.module.split_aggregation == "logsumexp":
                 log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
@@ -381,9 +388,9 @@ class GenerativeMixin:
                 )  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            return store.append(effect_share.detach().cpu())
+            store.append(effect_share.detach().cpu())
 
-        def aggregate_effects(store):
+        def aggregate_effects(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)
 
         output = self.iterate_on_ae_output(
@@ -404,7 +411,7 @@ class GenerativeMixin:
         adata: AnnData | None = None,
         add_to_counts: float = 1.0,
         deterministic: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Return the maximum effect of each split on the reconstructed expression params for all genes.
 
@@ -463,7 +470,9 @@ class GenerativeMixin:
         >>> utils.plotting._interpretability._umap_of_relevant_genes(adata, embed, plot_info, dim_subset=["DR 1"])
         """
 
-        def calculate_effect(inference_outputs, generative_outputs, losses, store):
+        def calculate_effect(
+            inference_outputs: dict[str, Any], generative_outputs: dict[str, Any], losses: Any, store: list[Any]
+        ) -> None:
             if self.module.split_aggregation == "logsumexp":
                 log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
@@ -480,7 +489,7 @@ class GenerativeMixin:
             else:
                 store[0] = np.maximum(store[0], effect_share)
 
-        def aggregate_effects(store):
+        def aggregate_effects(store: list[Any]) -> np.ndarray:
             return store[0]
 
         output = self.iterate_on_ae_output(
