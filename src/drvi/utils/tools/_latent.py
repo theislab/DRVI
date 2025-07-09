@@ -24,10 +24,10 @@ def set_latent_dimension_stats(
         AnnData object containing the latent representation (embedding) of the model.
         The latent dimensions should be in the `.X` attribute.
     inplace
-        Whether to modify the input AnnData object in-place or return a new copy (defaults to True).
+        Whether to modify the input AnnData object in-place or return a new copy.
     vanished_threshold
         Threshold for determining if a latent dimension has "vanished" (become inactive).
-        Dimensions with max absolute values below this threshold are marked as vanished (defaults to 0.1).
+        Dimensions with max absolute values below this threshold are marked as vanished.
 
     Returns
     -------

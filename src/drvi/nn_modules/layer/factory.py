@@ -14,12 +14,12 @@ class LayerFactory:
     Parameters
     ----------
     intermediate_arch
-        Architecture type for intermediate layers (defaults to "SAME"):
+        Architecture type for intermediate layers:
         - "SAME": Use the same architecture as defined in subclasses
         - "FC": Use fully connected layers
     residual_preferred
         Whether to wrap layers in residual connections when input and output
-        dimensions match (defaults to False).
+        dimensions match.
 
     Notes
     -----
@@ -47,7 +47,7 @@ class LayerFactory:
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         **kwargs
             Additional keyword arguments.
 
@@ -75,7 +75,7 @@ class LayerFactory:
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         **kwargs
             Additional keyword arguments.
 
@@ -101,7 +101,7 @@ class LayerFactory:
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         intermediate_layer
             Whether this is an intermediate layer. If None, defaults to True.
         **kwargs
@@ -158,7 +158,7 @@ class LayerFactory:
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         intermediate_layer
             Whether this is an intermediate layer. If None, defaults to True.
         **kwargs
@@ -216,12 +216,12 @@ class FCLayerFactory(LayerFactory):
     Parameters
     ----------
     intermediate_arch
-        Architecture type for intermediate layers (defaults to "SAME"):
+        Architecture type for intermediate layers:
         - "SAME": Use fully connected layers (same as "FC")
         - "FC": Use fully connected layers
     residual_preferred
         Whether to wrap layers in residual connections when input and output
-        dimensions match (defaults to False).
+        dimensions match.
 
     Notes
     -----
@@ -257,7 +257,7 @@ class FCLayerFactory(LayerFactory):
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         **kwargs
             Additional keyword arguments (ignored for linear layers).
 
@@ -287,7 +287,7 @@ class FCLayerFactory(LayerFactory):
         d_out
             Output dimension.
         bias
-            Whether to include bias term (defaults to True).
+            Whether to include bias term.
         **kwargs
             Additional keyword arguments (ignored for stacked linear layers).
 

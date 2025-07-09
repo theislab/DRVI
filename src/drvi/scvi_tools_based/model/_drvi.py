@@ -36,19 +36,19 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
     adata
         AnnData object or MerlinData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
     n_latent
-        Dimensionality of the latent space (defaults to 32).
+        Dimensionality of the latent space.
     encoder_dims
-        Number of nodes in hidden layers of the encoder (defaults to (128, 128)).
+        Number of nodes in hidden layers of the encoder.
     decoder_dims
-        Number of nodes in hidden layers of the decoder (defaults to (128, 128)).
+        Number of nodes in hidden layers of the decoder.
     prior
-        Prior model type (defaults to "normal").
+        Prior model type.
     prior_init_obs
         When using "gmm_x" or "vamp_x" priors, these observations are used to initialize the prior parameters.
-        Number of observations must match the x value in the prior name (defaults to None).
+        Number of observations must match the x value in the prior name.
     categorical_covariates
         List of categorical covariates to condition on. Each covariate can specify its embedding dimension
-        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10 (defaults to empty list).
+        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10.
     **model_kwargs
         Additional keyword arguments passed to :class:`~drvi.model.DRVIModule`.
 
@@ -190,15 +190,15 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         merlin_data
             MerlinData object to register.
         labels_key
-            Key in `merlin_data` for labels (defaults to None).
+            Key in `merlin_data` for labels.
         layer
-            key in `merlin_data` to use as input (defaults to "X").
+            key in `merlin_data` to use as input.
         is_count_data
-            Whether the data is count data (defaults to True).
+            Whether the data is count data.
         categorical_covariate_keys
-            List of categorical covariate keys in `merlin_data` (defaults to None).
+            List of categorical covariate keys in `merlin_data`.
         continuous_covariate_keys
-            List of continuous covariate keys in `merlin_data` (defaults to None).
+            List of continuous covariate keys in `merlin_data`.
         **kwargs
             Additional keyword arguments passed to the MerlinDataManager registration.
 
@@ -236,13 +236,13 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         adata
             AnnData or MerlinData object with equivalent structure to initial AnnData.
         indices
-            Indices of cells in adata to use. If `None`, all cells are used (defaults to None).
+            Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
-            Minibatch size for data loading into model (defaults to `scvi.settings.batch_size`).
+            Minibatch size for data loading into model.
         shuffle
-            Whether observations are shuffled each iteration though (defaults to False).
+            Whether observations are shuffled each iteration though.
         data_loader_class
-            Class to use for data loader (defaults to None).
+            Class to use for data loader.
         data_loader_kwargs
             Kwargs to the class-specific data loader class.
         """

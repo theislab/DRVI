@@ -21,9 +21,9 @@ class FreezableEmbedding(nn.Embedding):
     embedding_dim
         Dimension of each embedding vector.
     n_freeze_x
-        Number of embedding indices to freeze (from the beginning) (defaults to 0).
+        Number of embedding indices to freeze (from the beginning).
     n_freeze_y
-        Number of embedding dimensions to freeze (from the beginning) (defaults to 0).
+        Number of embedding dimensions to freeze (from the beginning).
     **kwargs
         Additional arguments passed to nn.Embedding.
 
@@ -61,9 +61,9 @@ class FreezableEmbedding(nn.Embedding):
         Parameters
         ----------
         n_freeze_x
-            Number of embedding indices to freeze (from the beginning) (defaults to 0).
+            Number of embedding indices to freeze (from the beginning).
         n_freeze_y
-            Number of embedding dimensions to freeze (from the beginning) (defaults to 0).
+            Number of embedding dimensions to freeze (from the beginning).
 
         Notes
         -----
@@ -133,9 +133,9 @@ class MultiEmbedding(nn.Module):
     embedding_dim_list
         List of embedding dimensions for each embedding table.
     init_method
-        Initialization method for embedding weights (defaults to "xavier_uniform").
+        Initialization method for embedding weights.
     normalization
-        Normalization method to apply to concatenated embeddings (defaults to None).
+        Normalization method to apply to concatenated embeddings.
     **kwargs
         Additional arguments passed to FreezableEmbedding.
 
@@ -272,7 +272,7 @@ class MultiEmbedding(nn.Module):
         other
             Source MultiEmbedding module to load weights from.
         freeze_old
-            Whether to freeze the loaded weights (defaults to False).
+            Whether to freeze the loaded weights.
 
         Notes
         -----
@@ -621,7 +621,7 @@ class FeatureEmbedding(nn.Module):
         other
             Source FeatureEmbedding module to load weights from.
         freeze_old
-            Whether to freeze the loaded weights (defaults to False).
+            Whether to freeze the loaded weights.
 
         Notes
         -----

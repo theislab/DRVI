@@ -32,7 +32,7 @@ def find_differential_effects(
         AnnData object created by `traverse_latent` or `make_traverse_adata`.
         Must contain `.layers['control']` and `.layers['effect']`.
     method
-        Method for calculating differential effects (defaults to "max_possible"):
+        Method for calculating differential effects:
         - "max_possible": Simple log-fold-change between effect and control conditions.
           This is the direct difference in log-space and represents the maximum
           possible effect a latent dimension can have on gene expression.
@@ -42,13 +42,13 @@ def find_differential_effects(
           one dimension may constrain the possible change in other dimensions.
     key_added
         Prefix for the keys added to `traverse_adata.uns` and `traverse_adata.varm`.
-        Results will be stored with keys like `{key_added}_traverse_effect_stepwise` (defaults to "effect").
+        Results will be stored with keys like `{key_added}_traverse_effect_stepwise`.
     add_to_counts
         Small value added to counts to avoid log(0) issues in log-space calculations.
-        This pseudo-count ensures numerical stability when computing log-fold-changes (defaults to 0.1).
+        This pseudo-count ensures numerical stability when computing log-fold-changes.
     relax_max_by
         Relaxation factor for the maximum possible effect calculation
-        (only used with "min_possible" method) (defaults to 0.0).
+        (only used with "min_possible" method).
 
     Returns
     -------
@@ -421,18 +421,18 @@ def get_split_effects(
         AnnData object containing latent dimension statistics in `.var`.
         Must have columns: `original_dim_id`, `min`, `max`, `std`, `title`, `vanished`, `order`.
     n_steps
-        Number of steps in the traversal. Must be even (half negative, half positive) (defaults to 20).
+        Number of steps in the traversal. Must be even (half negative, half positive).
     n_samples
-        Number of samples to generate for each step (defaults to 100).
+        Number of samples to generate for each step.
     traverse_kwargs
         Additional arguments passed to `traverse_latent`. Common options include:
         - `copy_adata_var_info`: Whether to copy variable information
         - `noise_formula`: Custom noise generation function
-        - `max_noise_std`: Maximum noise standard deviation (defaults to None).
+        - `max_noise_std`: Maximum noise standard deviation.
     de_kwargs
         Additional arguments passed to `calculate_differential_vars`. Common options include:
         - `add_to_counts`: Pseudo-count for log calculations
-        - `relax_max_by`: Relaxation factor for min_possible method (defaults to None).
+        - `relax_max_by`: Relaxation factor for min_possible method.
 
     Returns
     -------
@@ -530,16 +530,16 @@ def iterate_on_top_differential_vars(
         Common value: "combined_score".
     title_col
         Column name in `traverse_adata.obs` containing dimension titles.
-        These titles will be used in the output dimension names (defaults to "title").
+        These titles will be used in the output dimension names.
     order_col
-        Column name in `traverse_adata.obs` containing dimension ordering (defaults to "order").
+        Column name in `traverse_adata.obs` containing dimension ordering.
     gene_symbols
         Column name in `traverse_adata.var` containing gene symbols.
         If None, uses the index of `traverse_adata.var` (usually gene IDs).
-        Useful for converting between gene IDs and readable gene names (defaults to None).
+        Useful for converting between gene IDs and readable gene names.
     score_threshold
         Minimum score threshold to include genes in the results.
-        Only genes with scores above this threshold will be included (defaults to 0.0).
+        Only genes with scores above this threshold will be included.
 
     Returns
     -------

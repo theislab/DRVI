@@ -15,9 +15,9 @@ def _check_discrete_metric_input(gt_cat_series=None, gt_one_hot=None):
     Parameters
     ----------
     gt_cat_series
-        Categorical series with ground truth labels (defaults to None).
+        Categorical series with ground truth labels.
     gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories) (defaults to None).
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Raises
     ------
@@ -129,9 +129,9 @@ def nn_alignment_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_on
         Matrix of continuous variables with shape (n_samples, n_variables).
         Each column represents a different continuous variable.
     gt_cat_series
-        Categorical series with ground truth labels (defaults to None).
+        Categorical series with ground truth labels.
     gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories) (defaults to None).
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Returns
     -------
@@ -213,9 +213,9 @@ def local_mutual_info_score(all_vars_continues: np.ndarray, gt_cat_series=None, 
         Matrix of continuous variables with shape (n_samples, n_variables).
         Each column represents a different continuous variable.
     gt_cat_series
-        Categorical series with ground truth labels (defaults to None).
+        Categorical series with ground truth labels.
     gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories) (defaults to None).
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Returns
     -------
@@ -268,12 +268,12 @@ def discrete_mutual_info_score(
         Matrix of continuous variables with shape (n_samples, n_variables).
         Each column represents a different continuous variable.
     gt_cat_series
-        Categorical series with ground truth labels (defaults to None).
+        Categorical series with ground truth labels.
     gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories) (defaults to None).
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
     n_bins
         Number of bins to use for discretizing continuous variables.
-        More bins capture finer details but may be more sensitive to noise (defaults to 10).
+        More bins capture finer details but may be more sensitive to noise.
 
     Returns
     -------
@@ -335,9 +335,9 @@ def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=No
         Matrix of continuous variables with shape (n_samples, n_variables).
         Each column represents a different continuous variable.
     gt_cat_series
-        Categorical series with ground truth labels (defaults to None).
+        Categorical series with ground truth labels.
     gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories) (defaults to None).
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Returns
     -------

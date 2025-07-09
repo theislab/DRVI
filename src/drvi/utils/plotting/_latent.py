@@ -24,7 +24,7 @@ def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> An
         Column name in `adata.obs` containing categorical labels for balancing.
     min_count
         Minimum number of samples per category. If a category has fewer samples
-        than this, sampling will be done with replacement (defaults to 10).
+        than this, sampling will be done with replacement.
 
     Returns
     -------
@@ -68,21 +68,21 @@ def plot_latent_dimension_stats(
         Annotated data object containing the latent dimensions and their statistics
         in the `.var` attribute.
     figsize
-        The size of each subplot (width, height) in inches (defaults to (5, 3)).
+        The size of each subplot (width, height) in inches.
     log_scale
         Whether to use a log scale for the y-axis. If "try", log scale is used
-        only if the minimum value is greater than 0 (defaults to "try").
+        only if the minimum value is greater than 0.
     ncols
-        The maximum number of columns in the subplot grid (defaults to 5).
+        The maximum number of columns in the subplot grid.
     columns
         The columns from `embed.var` to plot. These should be numeric columns
-        containing dimension statistics (defaults to ("reconstruction_effect", "max_value", "mean", "std")).
+        containing dimension statistics.
     titles
-        Custom titles for each column in the plot. If None, default titles are used (defaults to None).
+        Custom titles for each column in the plot. If None, default titles are used.
     remove_vanished
-        Whether to exclude vanished dimensions from the plot (defaults to False).
+        Whether to exclude vanished dimensions from the plot.
     show
-        Whether to display the plot. If False, returns the figure object (defaults to True).
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
@@ -219,28 +219,28 @@ def plot_latent_dims_in_umap(
         and latent dimensions in `.X`.
     title_col
         Name of the column in `embed.var` to use as titles for each dimension.
-        If None, default titles will be used (defaults to "title").
+        If None, default titles will be used.
     additional_columns
-        Additional columns from `embed.obs` to plot alongside the latent dimensions (defaults to empty tuple).
+        Additional columns from `embed.obs` to plot alongside the latent dimensions.
     max_cells_to_plot
         Maximum number of cells to plot. If the number of cells in `embed`
-        is greater than this value, a subsample will be taken (defaults to None).
+        is greater than this value, a subsample will be taken.
     order_col
         The column in `embed.var` to use for ordering the dimensions.
-        Ignored if `dim_subset` is provided (defaults to "order").
+        Ignored if `dim_subset` is provided.
     dim_subset
-        The subset of dimensions to plot. If provided, overrides `order_col` (defaults to None).
+        The subset of dimensions to plot. If provided, overrides `order_col`.
     directional
         Whether to consider positive and negative directions as separate dimensions.
-        If True, creates separate plots for + and - directions (defaults to False).
+        If True, creates separate plots for + and - directions.
     remove_vanished
-        Whether to remove vanished dimensions from the plot (defaults to True).
+        Whether to remove vanished dimensions from the plot.
     rearrange_titles
-        Whether to rearrange titles to the bottom right of each plot (defaults to True).
+        Whether to rearrange titles to the bottom right of each plot.
     color_bar_rescale_ratio
-        Ratio to rescale the height of colorbars (defaults to 1.0).
+        Ratio to rescale the height of colorbars.
     show
-        Whether to display the plot. If False, returns the figure object (defaults to True).
+        Whether to display the plot. If False, returns the figure object.
     **kwargs
         Additional keyword arguments passed to `sc.pl.umap`.
 
@@ -257,8 +257,8 @@ def plot_latent_dims_in_umap(
     Notes
     -----
     The function expects the following columns in `embed.var`:
-    - `order_col`: For ordering dimensions (default: "order")
-    - `title_col`: For dimension titles (default: "title")
+    - `order_col`: For ordering dimensions
+    - `title_col`: For dimension titles
     - `vanished`: Boolean indicating vanished dimensions (if `remove_vanished=True`)
     - `min`, `max`: For setting color scale limits
 
@@ -382,23 +382,23 @@ def plot_latent_dims_in_heatmap(
         for grouping cells.
     title_col
         The column in `embed.var` to use as titles for each dimension.
-        If None, uses the dimension indices (defaults to "title").
+        If None, uses the dimension indices.
     sort_by_categorical
         Whether to sort dimensions based on their maximum absolute values
-        within each category. If True, `order_col` is ignored (defaults to False).
+        within each category. If True, `order_col` is ignored.
     make_balanced
         Whether to create a balanced subsample of the data based on the
-        categorical variable using `make_balanced_subsample` (defaults to True).
+        categorical variable using `make_balanced_subsample`.
     order_col
         The column in `embed.var` to use for ordering the dimensions.
-        Ignored if `sort_by_categorical=True` (defaults to "order").
+        Ignored if `sort_by_categorical=True`.
     remove_vanished
-        Whether to remove vanished dimensions from the plot (defaults to True).
+        Whether to remove vanished dimensions from the plot.
     figsize
         The size of the figure (width, height) in inches.
-        If None, automatically calculated based on number of categories (defaults to None).
+        If None, automatically calculated based on number of categories.
     show
-        Whether to display the plot. If False, returns the plot object (defaults to True).
+        Whether to display the plot. If False, returns the plot object.
     **kwargs
         Additional keyword arguments passed to `sc.pl.heatmap`.
 

@@ -70,7 +70,7 @@ def freezable(base_norm_class):
             Parameters
             ----------
             freeze_status
-                Whether to freeze the normalization layer (defaults to True).
+                Whether to freeze the normalization layer.
 
             Notes
             -----

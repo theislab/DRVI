@@ -21,7 +21,7 @@ class FeatureInfoList:
     feature_info_str_list
         List of feature information strings in the format "name[@dim][!keyword1!keyword2...]".
     axis
-        Whether features are stored in AnnData.var or AnnData.obs (defaults to "var").
+        Whether features are stored in AnnData.var or AnnData.obs.
     total_dim
         Total dimensionality to distribute among features with unspecified dimensions.
     default_dim

@@ -81,21 +81,21 @@ def differential_vars_heatmap(
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
     title_col
         Column name in `traverse_adata.obs` to use as dimension labels.
-        These titles will be used for axis labels and grouping (defaults to "title").
+        These titles will be used for axis labels and grouping.
     score_threshold
         Threshold value for filtering genes based on their maximum effect score.
-        Only genes with maximum effects above this threshold will be included (defaults to 0.0).
+        Only genes with maximum effects above this threshold will be included.
     remove_vanished
         Whether to remove latent dimensions that have vanished (have no effect).
-        This helps focus the visualization on meaningful dimensions (defaults to True).
+        This helps focus the visualization on meaningful dimensions.
     remove_unaffected
         Whether to remove genes that have no significant effect (below score_threshold).
-        When True, only genes with effects above the threshold are shown (defaults to False).
+        When True, only genes with effects above the threshold are shown.
     figsize
         Size of the figure (width, height) in inches. If None, automatically
-        calculated based on the number of dimensions (defaults to None).
+        calculated based on the number of dimensions.
     show
-        Whether to display the plot. If False, returns the plot object (defaults to True).
+        Whether to display the plot. If False, returns the plot object.
     **kwargs
         Additional keyword arguments passed to `sc.pl.heatmap`.
 
@@ -270,13 +270,13 @@ def _bar_plot_top_differential_vars(
         a dimension title and a pandas Series of gene scores.
     dim_subset
         List of dimensions to plot in the bar plot. If None, all dimensions
-        from plot_info are plotted (defaults to None).
+        from plot_info are plotted.
     n_top_genes
-        Number of top genes to plot for each dimension (defaults to 10).
+        Number of top genes to plot for each dimension.
     ncols
-        Number of columns in the plot grid (defaults to 5).
+        Number of columns in the plot grid.
     show
-        Whether to display the plot. If False, returns the figure object (defaults to True).
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
@@ -364,26 +364,26 @@ def show_top_differential_vars(
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
     title_col
         Column name in `traverse_adata.obs` that contains the titles for each dimension.
-        These titles will be used as subplot titles (defaults to "title").
+        These titles will be used as subplot titles.
     order_col
         Column name in `traverse_adata.obs` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
     dim_subset
         List of dimensions to plot in the bar plot. If None, all dimensions
-        with significant effects are plotted (defaults to None).
+        with significant effects are plotted.
     gene_symbols
         Column name in `traverse_adata.var` that contains gene symbols.
         If provided, gene symbols will be used in the plot instead of gene indices.
-        Useful for converting between gene IDs and readable gene names (defaults to None).
+        Useful for converting between gene IDs and readable gene names.
     score_threshold
         Threshold value for gene scores. Only genes with scores above this
-        threshold will be plotted (defaults to 0.0).
+        threshold will be plotted.
     n_top_genes
-        Number of top genes to plot for each dimension (defaults to 10).
+        Number of top genes to plot for each dimension.
     ncols
-        Number of columns in the plot grid (defaults to 5).
+        Number of columns in the plot grid.
     show
-        Whether to display the plot. If False, returns the figure object (defaults to True).
+        Whether to display the plot. If False, returns the figure object.
 
     Returns
     -------
@@ -479,23 +479,23 @@ def show_differential_vars_scatter_plot(
         Typically "combined_score" for the final combined effect.
     title_col
         Column name in `traverse_adata.obs` that contains the titles for each dimension.
-        These titles will be used as subplot titles (defaults to "title").
+        These titles will be used as subplot titles.
     order_col
         Column name in `traverse_adata.obs` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
     gene_symbols
         Column name in `traverse_adata.var` that contains gene symbols.
-        If provided, gene symbols will be used for point labels instead of gene indices (defaults to None).
+        If provided, gene symbols will be used for point labels instead of gene indices.
     score_threshold
         Threshold value for gene scores. Only genes with combined scores above
-        this threshold will be plotted (defaults to 0.0).
+        this threshold will be plotted.
     dim_subset
         Subset of dimensions to plot. If None, all dimensions with significant
-        effects are plotted (defaults to None).
+        effects are plotted.
     ncols
-        Number of columns in the plot grid (defaults to 3).
+        Number of columns in the plot grid.
     show
-        Whether to display the plot. If False, returns the figure object (defaults to True).
+        Whether to display the plot. If False, returns the figure object.
     **kwargs
         Additional keyword arguments passed to the scatter plot (e.g., alpha, s for point size).
 
@@ -613,19 +613,19 @@ def _umap_of_relevant_genes(
         a dimension title and a pandas Series of gene scores.
     layer
         Layer name in `adata` to use for gene expression visualization.
-        If None, uses `.X` (defaults to None).
+        If None, uses `.X`.
     title_col
-        Column name in `embed.var` that contains dimension titles (defaults to "title").
+        Column name in `embed.var` that contains dimension titles.
     gene_symbols
         Column name in `adata.var` that contains gene symbols.
-        If provided, gene symbols will be used instead of gene indices (defaults to None).
+        If provided, gene symbols will be used instead of gene indices.
     dim_subset
-        List of dimensions to plot. If None, all dimensions from plot_info are plotted (defaults to None).
+        List of dimensions to plot. If None, all dimensions from plot_info are plotted.
     n_top_genes
-        Number of top genes to visualize for each dimension (defaults to 10).
+        Number of top genes to visualize for each dimension.
     max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
-        Useful for large datasets to improve performance (defaults to None).
+        Useful for large datasets to improve performance.
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 
@@ -754,27 +754,27 @@ def plot_relevant_genes_on_umap(
         `calculate_differential_vars` (e.g., "max_possible", "min_possible", "combined_score").
     layer
         Layer name in `adata` to use for gene expression visualization.
-        If None, uses `.X`. Common options include "counts", "logcounts", etc. (defaults to None).
+        If None, uses `.X`. Common options include "counts", "logcounts", etc..
     title_col
         Column name in `embed.var` that contains dimension titles.
-        These titles will be used to match dimensions between objects (defaults to "title").
+        These titles will be used to match dimensions between objects.
     order_col
         Column name in `embed.var` that specifies the order of dimensions.
-        Results will be sorted by this column. Ignored if `dim_subset` is provided (defaults to "order").
+        Results will be sorted by this column. Ignored if `dim_subset` is provided.
     gene_symbols
         Column name in `adata.var` that contains gene symbols.
-        If provided, gene symbols will be used instead of gene indices (defaults to None).
+        If provided, gene symbols will be used instead of gene indices.
     score_threshold
         Threshold value for gene scores. Only genes with scores above this
-        threshold will be visualized (defaults to 0.0).
+        threshold will be visualized.
     dim_subset
         List of dimensions to plot. If None, all dimensions with significant
-        effects are plotted (defaults to None).
+        effects are plotted.
     n_top_genes
-        Number of top genes to visualize for each dimension (defaults to 10).
+        Number of top genes to visualize for each dimension.
     max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
-        Useful for large datasets to improve performance and reduce memory usage (defaults to None).
+        Useful for large datasets to improve performance and reduce memory usage.
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 

@@ -68,7 +68,7 @@ class NoiseModel:
         x
             Input data tensor.
         x_mask
-            Mask for the input data (defaults to 1.0).
+            Mask for the input data.
 
         Returns
         -------
@@ -114,7 +114,7 @@ def calculate_library_size(x, x_mask=1.0):
     x
         Input data tensor.
     x_mask
-        Mask for the input data (defaults to 1.0).
+        Mask for the input data.
 
     Returns
     -------
@@ -226,13 +226,13 @@ class NormalNoiseModel(NoiseModel):
     Parameters
     ----------
     model_var
-        Variance modeling strategy (defaults to "fixed"):
+        Variance modeling strategy:
         - "fixed": Use fixed variance of 1e-2
         - "fixed=value": Use fixed variance of specified value
         - "dynamic": Learn variance per sample
         - "feature": Learn variance per feature
     eps
-        Small constant added to variance for numerical stability (defaults to 1e-8).
+        Small constant added to variance for numerical stability.
     """
 
     def __init__(self, model_var="fixed", eps=1e-8):
@@ -272,7 +272,7 @@ class NormalNoiseModel(NoiseModel):
         x
             Input data tensor.
         x_mask
-            Mask for the input data (defaults to 1.0).
+            Mask for the input data.
 
         Returns
         -------
@@ -315,11 +315,11 @@ class PoissonNoiseModel(NoiseModel):
     Parameters
     ----------
     mean_transformation
-        Transformation to apply to the mean parameter (defaults to "exp"):
+        Transformation to apply to the mean parameter:
         - "exp": Exponential transformation
         - "softmax": Softmax transformation
     library_normalization
-        Library size normalization method (defaults to "x_lib").
+        Library size normalization method.
 
     Examples
     --------

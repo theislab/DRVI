@@ -20,7 +20,7 @@ class StackedLinearLayer(nn.Module):
     out_features
         Number of output features per channel.
     bias
-        Whether to include bias terms for each channel (defaults to True).
+        Whether to include bias terms for each channel.
     device
         Device to place the layer on.
     dtype

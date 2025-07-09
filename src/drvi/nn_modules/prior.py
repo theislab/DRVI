@@ -106,11 +106,11 @@ class VampPrior(Prior):
     model_input
         Dictionary containing input data for pseudo-inputs.
     trainable_keys
-        Keys in model_input that should be trainable parameters (defaults to ("x",)).
+        Keys in model_input that should be trainable parameters.
     fixed_keys
-        Keys in model_input that should be fixed parameters (defaults to ()).
+        Keys in model_input that should be fixed parameters.
     input_type
-        Type of input format expected by the encoder (defaults to "scvi").
+        Type of input format expected by the encoder.
     preparation_function
         Function to prepare inputs for the encoder.
 
@@ -306,7 +306,7 @@ class GaussianMixtureModelPrior(Prior):
     data
         Initial means and variances as (means, variances).
     trainable_priors
-        Whether the prior parameters should be trainable (defaults to True).
+        Whether the prior parameters should be trainable.
 
     Notes
     -----

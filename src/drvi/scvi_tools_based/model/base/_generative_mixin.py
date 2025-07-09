@@ -61,17 +61,17 @@ class GenerativeMixin:
             Should accept the store list and return the final result.
         lib
             Library size array with shape (n_samples,).
-            If None, defaults to 1e4 for all samples (defaults to None).
+            If None, defaults to 1e4 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
-            Required if model has categorical covariates (defaults to None).
+            Required if model has categorical covariates.
         cont_values
-            Continuous covariates with shape (n_samples, n_cont_covs) (defaults to None).
+            Continuous covariates with shape (n_samples, n_cont_covs).
         batch_size
-            Minibatch size for data loading into model (defaults to scvi.settings.batch_size).
+            Minibatch size for data loading into model.
         map_cat_values
             Whether to map categorical covariates to integers based on
-            the AnnData manager pipeline (defaults to False).
+            the AnnData manager pipeline.
 
         Returns
         -------
@@ -169,17 +169,17 @@ class GenerativeMixin:
             Latent samples with shape (n_samples, n_latent).
         lib
             Library size array with shape (n_samples,).
-            If None, defaults to 1e4 for all samples (defaults to None).
+            If None, defaults to 1e4 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
-            Required if model has categorical covariates (defaults to None).
+            Required if model has categorical covariates.
         cont_values
-            Continuous covariates with shape (n_samples, n_cont_covs) (defaults to None).
+            Continuous covariates with shape (n_samples, n_cont_covs).
         batch_size
-            Minibatch size for data loading into model (defaults to scvi.settings.batch_size).
+            Minibatch size for data loading into model.
         map_cat_values
             Whether to map categorical covariates to integers based on
-            the AnnData manager pipeline (defaults to False).
+            the AnnData manager pipeline.
 
         Returns
         -------
@@ -248,12 +248,12 @@ class GenerativeMixin:
             Function to aggregate the step results from the store.
             Should accept the store list and return the final result.
         indices
-            Indices of cells in adata to use. If None, all cells are used (defaults to None).
+            Indices of cells in adata to use. If None, all cells are used.
         batch_size
             Minibatch size for data loading into model.
-            Defaults to scvi.settings.batch_size (defaults to None).
+            Defaults to scvi.settings.batch_size.
         deterministic
-            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to False).
+            Makes model fully deterministic (e.g., no sampling in the bottleneck).
 
         Returns
         -------
@@ -324,15 +324,15 @@ class GenerativeMixin:
         ----------
         adata
             AnnData object with equivalent structure to initial AnnData.
-            If None, defaults to the AnnData object used to initialize the model (defaults to None).
+            If None, defaults to the AnnData object used to initialize the model.
         add_to_counts
             Value to add to the counts before computing the logarithm.
-            Used for numerical stability in log-space calculations (defaults to 1.0).
+            Used for numerical stability in log-space calculations.
         aggregate_over_cells
             Whether to aggregate the effect over cells and return a value per dimension.
-            If False, returns per-cell effects (defaults to True).
+            If False, returns per-cell effects.
         deterministic
-            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to True).
+            Makes model fully deterministic (e.g., no sampling in the bottleneck).
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 
@@ -415,12 +415,12 @@ class GenerativeMixin:
         ----------
         adata
             AnnData object with equivalent structure to initial AnnData.
-            If None, defaults to the AnnData object used to initialize the model (defaults to None).
+            If None, defaults to the AnnData object used to initialize the model.
         add_to_counts
             Value to add to the counts before computing the logarithm.
-            Used for numerical stability in log-space calculations (defaults to 1.0).
+            Used for numerical stability in log-space calculations.
         deterministic
-            Makes model fully deterministic (e.g., no sampling in the bottleneck) (defaults to True).
+            Makes model fully deterministic (e.g., no sampling in the bottleneck).
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 

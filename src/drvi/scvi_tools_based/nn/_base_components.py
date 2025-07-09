@@ -32,34 +32,34 @@ class FCLayers(nn.Module):
         the number of categories. Each category will be
         included using a one-hot encoding.
     dropout_rate
-        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+        Dropout rate to apply to each of the hidden layers.
     split_size
         The size of split if input is a 3d tensor otherwise -1.
-        This parameter is required to handle batch normalization (defaults to -1).
+        This parameter is required to handle batch normalization.
     reuse_weights
-        Whether to reuse weights when having multiple splits (defaults to True).
+        Whether to reuse weights when having multiple splits.
     use_batch_norm
-        Whether to have `BatchNorm` layers or not (defaults to True).
+        Whether to have `BatchNorm` layers or not.
     affine_batch_norm
-        Whether to have affine transformation in `BatchNorm` layers (defaults to True).
+        Whether to have affine transformation in `BatchNorm` layers.
     use_layer_norm
-        Whether to have `LayerNorm` layers or not (defaults to False).
+        Whether to have `LayerNorm` layers or not.
     use_activation
-        Whether to have layer activation or not (defaults to True).
+        Whether to have layer activation or not.
     bias
-        Whether to learn bias in linear layers or not (defaults to True).
+        Whether to learn bias in linear layers or not.
     inject_covariates
-        Whether to inject covariates in each layer, or just the first (defaults to True).
+        Whether to inject covariates in each layer, or just the first.
     activation_fn
-        Which activation function to use (defaults to nn.ELU).
+        Which activation function to use.
     layer_factory
         A layer Factory instance to build projection layers based on.
     layers_location
-        An indicator to tell the class where in the architecture these layers reside (defaults to "intermediate").
+        An indicator to tell the class where in the architecture these layers reside.
     covariate_modeling_strategy
-        The strategy model to consider covariates (defaults to "one_hot").
+        The strategy model to consider covariates.
     covariate_embs_dim
-        Dimensions for covariate embeddings when using embedding strategies (defaults to empty tuple).
+        Dimensions for covariate embeddings when using embedding strategies.
     """
 
     def __init__(
@@ -376,43 +376,43 @@ class Encoder(nn.Module):
     n_output
         The dimensionality of the output (latent space).
     layers_dim
-        The number of nodes per hidden layer as a sequence (defaults to (128,)).
+        The number of nodes per hidden layer as a sequence.
     n_cat_list
         A list containing the number of categories
         for each category of interest. Each category will be
         included using a one-hot encoding.
     n_continuous_cov
-        The number of continuous covariates (defaults to 0).
+        The number of continuous covariates.
     inject_covariates
-        Whether to inject covariates in each layer, or just the first (defaults to True).
+        Whether to inject covariates in each layer, or just the first.
     use_batch_norm
-        Whether to use batch norm in layers (defaults to True).
+        Whether to use batch norm in layers.
     affine_batch_norm
-        Whether to use affine in batch norms (defaults to True).
+        Whether to use affine in batch norms.
     use_layer_norm
-        Whether to use layer norm in layers (defaults to False).
+        Whether to use layer norm in layers.
     input_dropout_rate
-        Dropout rate to apply to the input (defaults to 0.0).
+        Dropout rate to apply to the input.
     dropout_rate
-        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+        Dropout rate to apply to each of the hidden layers.
     distribution
-        Distribution of z (defaults to "normal").
+        Distribution of z.
     var_eps
         Minimum value for the variance;
-        used for numerical stability (defaults to 1e-4).
+        used for numerical stability.
     var_activation
-        The activation function to ensure positivity of the variance (defaults to "exp").
+        The activation function to ensure positivity of the variance.
     mean_activation
         The activation function at the end of mean encoder.
-        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_value}" (defaults to "identity").
+        Possible values are "identity", "relu", "leaky_relu", "leaky_relu_{slope}", "elu", "elu_{min_value}".
     layer_factory
         A layer Factory instance for building layers.
     covariate_modeling_strategy
-        The strategy model takes to model covariates (defaults to "one_hot").
+        The strategy model takes to model covariates.
     categorical_covariate_dims
-        Dimensions for categorical covariate embeddings (defaults to empty tuple).
+        Dimensions for categorical covariate embeddings.
     return_dist
-        Return directly the distribution of z instead of its parameters (defaults to False).
+        Return directly the distribution of z instead of its parameters.
     **kwargs
         Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
     """
@@ -594,33 +594,33 @@ class DecoderDRVI(nn.Module):
         for each category of interest. Each category will be
         included using a one-hot encoding.
     n_continuous_cov
-        The number of continuous covariates (defaults to 0).
+        The number of continuous covariates.
     n_split
-        The number of splits for latent dim (defaults to 1).
+        The number of splits for latent dim.
     split_aggregation
-        How to aggregate splits in the last layer of the decoder (defaults to "logsumexp").
+        How to aggregate splits in the last layer of the decoder.
     split_method
-        How to make splits (defaults to "split").
+        How to make splits.
     reuse_weights
-        Where to reuse the weights of the decoder layers when using splitting (defaults to "everywhere").
+        Where to reuse the weights of the decoder layers when using splitting.
     layers_dim
-        The number of nodes per hidden layer as a sequence (defaults to (128,)).
+        The number of nodes per hidden layer as a sequence.
     dropout_rate
-        Dropout rate to apply to each of the hidden layers (defaults to 0.1).
+        Dropout rate to apply to each of the hidden layers.
     inject_covariates
-        Whether to inject covariates in each layer, or just the first (defaults to True).
+        Whether to inject covariates in each layer, or just the first.
     use_batch_norm
-        Whether to use batch norm in layers (defaults to False).
+        Whether to use batch norm in layers.
     affine_batch_norm
-        Whether to use affine in batch norms (defaults to True).
+        Whether to use affine in batch norms.
     use_layer_norm
-        Whether to use layer norm in layers (defaults to False).
+        Whether to use layer norm in layers.
     layer_factory
         A layer Factory instance for building layers.
     covariate_modeling_strategy
-        The strategy model takes to model covariates (defaults to "one_hot").
+        The strategy model takes to model covariates.
     categorical_covariate_dims
-        Dimensions for categorical covariate embeddings (defaults to empty tuple).
+        Dimensions for categorical covariate embeddings.
     **kwargs
         Keyword args for :class:`~drvi.scvi_tools_based.nn.FCLayers`.
     """

@@ -44,26 +44,26 @@ class DiscreteDisentanglementBenchmark:
         Latent representations to evaluate. Shape should be (n_samples, n_dimensions).
     discrete_target
         Discrete categorical target variable. Should contain categorical labels
-        for each sample. Mutually exclusive with `one_hot_target` (defaults to None).
+        for each sample. Mutually exclusive with `one_hot_target`.
     one_hot_target
         One-hot encoded target variable. Shape should be of shape (n_samples, n_categories).
-        Mutually exclusive with `discrete_target` (defaults to None).
+        Mutually exclusive with `discrete_target`.
     dim_titles
-        Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc. (defaults to None).
+        Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc..
     metrics
         Metrics to compute for evaluation. Available options:
         - "SMI-disc": Discrete mutual information score
         - "SPN": Nearest neighbor alignment score
         - "ASC": Spearman correlation score
-        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772) (defaults to ("SMI-disc", "SPN", "ASC")).
+        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772).
     aggregation_methods
         Methods to aggregate metric scores across dimensions. Available options:
         - "LMS": Latent matching score
         - "MSAS": Most similar averaging score
-        - "MSGS": Most similar gap score (defaults to ("LMS", "MSAS", "MSGS")).
+        - "MSGS": Most similar gap score.
     additional_metric_params
         Additional parameters to pass to specific metrics. Keys should be metric
-        names, values should be parameter dictionaries (defaults to None).
+        names, values should be parameter dictionaries.
 
     Attributes
     ----------
@@ -206,7 +206,7 @@ class DiscreteDisentanglementBenchmark:
         one_hot_target
             One-hot encoded target variable.
         dim_titles
-            Titles for each latent dimension (defaults to None).
+            Titles for each latent dimension.
         metrics
             Metrics to compute.
 
@@ -415,13 +415,13 @@ class DiscreteDisentanglementBenchmark:
         embed
             Latent representations (must match the original data).
         discrete_target
-            Discrete categorical target variable (defaults to None).
+            Discrete categorical target variable.
         one_hot_target
-            One-hot encoded target variable (defaults to None).
+            One-hot encoded target variable.
         metrics
-            Override the metrics from the saved data (defaults to None).
+            Override the metrics from the saved data.
         aggregation_methods
-            Override the aggregation methods from the saved data (defaults to None).
+            Override the aggregation methods from the saved data.
 
         Returns
         -------

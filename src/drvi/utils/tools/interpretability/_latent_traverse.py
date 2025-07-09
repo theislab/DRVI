@@ -31,9 +31,9 @@ def iterate_dimensions(
         Maximum values for each latent dimension (typically positive).
         Must have same length as `latent_dims`.
     n_steps
-        Number of steps in the traversal. Must be even (half negative, half positive) (defaults to 20).
+        Number of steps in the traversal. Must be even (half negative, half positive).
     n_samples
-        Number of samples to generate for each step (defaults to 100).
+        Number of samples to generate for each step.
 
     Returns
     -------
@@ -146,16 +146,16 @@ def make_traverse_adata(
         AnnData object containing latent dimension statistics in `.var`.
         Must have columns: `original_dim_id`, `min`, `max`, `std`.
     n_steps
-        Number of steps in the traversal. Must be even (half negative, half positive) (defaults to 20).
+        Number of steps in the traversal. Must be even (half negative, half positive).
     n_samples
-        Number of samples to generate for each step (defaults to 100).
+        Number of samples to generate for each step.
     noise_formula
         Function to compute noise standard deviation from dimension std values.
-        Should take a numpy array and return a numpy array (defaults to lambda x: x / 2).
+        Should take a numpy array and return a numpy array.
     max_noise_std
-        Maximum allowed noise standard deviation (defaults to 0.2).
+        Maximum allowed noise standard deviation.
     copy_adata_var_info
-        Whether to copy variable information from the original model's AnnData (defaults to True).
+        Whether to copy variable information from the original model's AnnData.
     **kwargs
         Additional keyword arguments passed to `model.decode_latent_samples`.
 
@@ -337,11 +337,11 @@ def traverse_latent(
         AnnData object containing latent dimension statistics in `.var`.
         Must have columns: `original_dim_id`, `min`, `max`, `std`, `title`, `vanished`, `order`.
     n_steps
-        Number of steps in the traversal. Must be even (defaults to 20).
+        Number of steps in the traversal. Must be even.
     n_samples
-        Number of samples to generate for each step (defaults to 100).
+        Number of samples to generate for each step.
     copy_adata_var_info
-        Whether to copy variable information from the original model's AnnData (defaults to True).
+        Whether to copy variable information from the original model's AnnData.
     **kwargs
         Additional keyword arguments passed to `make_traverse_adata`.
 
