@@ -83,9 +83,6 @@ class DiscreteDisentanglementBenchmark:
         Raw metric results for each dimension and category.
     aggregated_results
         Aggregated scores across dimensions.
-    version
-        Version identifier for serialization compatibility.
-        :no-index:
 
     Raises
     ------

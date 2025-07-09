@@ -794,9 +794,7 @@ def plot_relevant_genes_on_umap(
     -----
     The function performs the following steps:
     1. Extracts top differential variables using `iterate_on_top_differential_vars`
-    2. For each dimension, creates two visualizations:
-       - UMAP of Latent dimension values across cells
-       - UMAPs of Expression patterns of top genes for that dimension
+    2. For each dimension, creates two visualizations (I) UMAP of Latent dimension values across cells (II) UMAPs of Expression patterns of top genes for that dimension
 
     **Interpretation:**
 
