@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 
 import scvi
 import torch
@@ -235,18 +236,18 @@ class DRVIArchesMixin(ArchesMixin):
 
 
 def _set_params_online_update(
-    module,
-    reloaded_tensor_keys,
-    unfrozen,
-    previous_n_cats_per_cov,
-    n_cats_per_cov,
-    freeze_dropout,
-    freeze_shared_emb,
-    freeze_encoder,
-    freeze_decoder,
-    freeze_batchnorm_encoder,
-    freeze_batchnorm_decoder,
-):
+    module: nn.Module,
+    reloaded_tensor_keys: list[str],
+    unfrozen: bool,
+    previous_n_cats_per_cov: Sequence[int] | None,
+    n_cats_per_cov: Sequence[int] | None,
+    freeze_dropout: bool,
+    freeze_shared_emb: bool,
+    freeze_encoder: bool,
+    freeze_decoder: bool,
+    freeze_batchnorm_encoder: bool,
+    freeze_batchnorm_decoder: bool,
+) -> None:
     """Freeze parts of network for scArches."""
     # do nothing if unfrozen
     if unfrozen:
@@ -258,7 +259,7 @@ def _set_params_online_update(
             assert tuple(module.shared_covariate_emb.num_embeddings) == tuple(n_cats_per_cov)
             module.shared_covariate_emb.freeze_top_embs(previous_n_cats_per_cov)
 
-    def requires_grad(key):
+    def requires_grad(key: str) -> bool:
         if not freeze_decoder and "decoder" in key:
             return True
         if not freeze_encoder and "z_encoder" in key:
@@ -297,4 +298,4 @@ def _set_params_online_update(
             if freeze_batchnorm:
                 print(f"Freezing normalization layer {key}")
                 mod.freeze(freeze_batchnorm)
-                mod.momentum = 0
+                mod.momentum = 0.0

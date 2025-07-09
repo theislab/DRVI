@@ -21,7 +21,7 @@ pip install -e ".[dev,test,doc]"
 
 This package uses [pre-commit][] to enforce consistent code-styles.
 On every commit, pre-commit checks will either automatically fix issues with the code, or raise an error message.
-See [pre-commit checks](template_usage.md#pre-commit-checks) for a full list of checks enabled for this repository.
+See the [pre-commit documentation][pre-commit] for a full list of checks enabled for this repository.
 
 To enable pre-commit locally, simply run
 

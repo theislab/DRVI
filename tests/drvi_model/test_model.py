@@ -78,6 +78,7 @@ class TestDRVIModel:
         model.train(accelerator="cpu", max_epochs=10)
         latent = model.get_latent_representation(adata)
         assert latent.shape[0] == adata.n_obs
+        return {"model": model}
 
     def test_dimension_reduction_with_no_batch(self):
         adata = self.make_test_adata()
@@ -313,3 +314,24 @@ class TestDRVIModel:
                 print(inference_inputs)
                 transfer_model.module.inference(**inference_inputs)
                 break
+
+    def test_reconstruction_of_a_latent_without_covariate(self):
+        adata = self.make_test_adata()
+        model = self._general_integration_test(
+            adata,
+            categorical_covariates=[],
+            data_kwargs=dict(categorical_covariate_keys=[]),  # noqa: C408
+        )["model"]
+
+        latent = model.get_latent_representation(adata)
+        reconstruction = model.decode_latent_samples(latent)
+        assert reconstruction.shape == adata.X.shape
+
+    def test_reconstruction_of_a_latent(self):
+        adata = self.make_test_adata()
+        model = self._general_integration_test(adata)["model"]
+        cat_values = adata.obs[["batch"]].values
+
+        latent = model.get_latent_representation(adata)
+        reconstruction = model.decode_latent_samples(latent, cat_values=cat_values, map_cat_values=True)
+        assert reconstruction.shape == adata.X.shape

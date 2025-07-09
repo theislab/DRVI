@@ -37,7 +37,7 @@ Please refer to the [documentation][link-docs]. In particular, the
 We recommend running DRVI on a recent Linux distribution.
 DRVI is actively tested on the latest LTS version of Ubuntu (currently 24.04 LTS).
 
-[//]: # "TODO: remove ubuntu version later"
+<!-- TODO: remove ubuntu version later -->
 
 For optimal performance, we highly recommend using a GPU with CUDA capabilities.
 While CPU-based systems are supported, GPU-powered systems are strongly recommended for optimal performance.
@@ -49,7 +49,7 @@ Python installed, we recommend installing [Mambaforge](https://github.com/conda-
 
 There are several options to install drvi:
 
-[//]: # "TODO: remove install time!"
+<!-- TODO: remove install time! -->
 
 1. Install the latest release of `drvi-py` from [PyPI][link-pypi], which should take around two minutes:
 
@@ -74,8 +74,8 @@ See the [changelog][changelog].
 
 ## Contact
 
-[//]: # "TODO: make clear where to ask questions:"
-[//]: # "For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]."
+<!-- TODO: make clear where to ask questions: -->
+<!-- For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]. -->
 
 If you found a bug, please use the [issue tracker][issue-tracker].
 
@@ -96,5 +96,5 @@ Code, notebooks, and instructions to reproduce the results from the paper are av
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
 [link-docs]: https://drvi.readthedocs.io
 [link-api]: https://drvi.readthedocs.io
-[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials.html
+[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
 [link-pypi]: https://pypi.org/project/drvi-py

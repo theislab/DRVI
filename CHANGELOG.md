@@ -2,7 +2,25 @@
 
 ## [Unreleased]
 
--
+## [0.1.9] - 2025-07-01
+
+- Add DRVI-APnoEXP baseline
+- Imorove documnetation for all classes and functions in repository
+
+## [0.1.8] - 2025-06-22
+
+- Discretize latent dimension values in MI for benchmarking due to [this bug](https://github.com/scikit-learn/scikit-learn/issues/30772).
+- Fix a minor issue with `drvi.utils.tl.traverse_latent`
+
+## [0.1.7] - 2025-05-30
+
+- Fix categorical lookup for reconstruction
+
+## [0.1.6] - 2025-05-22
+
+- Allow kwargs to pass through in plot_relevant_genes_on_umap
+- Update project CI structure
+- Extract tutorial notebooks to another repo to keep this repo clean
 
 ## [0.1.5] - 2025-05-09
 
