@@ -95,7 +95,7 @@ class GenerativeMixin:
         >>> import numpy as np
         >>> # Define custom step function to extract means
         >>> def extract_means(gen_output, store):
-        ...     store.append(gen_output["params"]["mean"].detach().cpu())
+        ...     store.append(gen_output[MODULE_KEYS.PX_PARAMS_KEY]["mean"].detach().cpu())
         >>> # Define aggregation function to concatenate results
         >>> def concatenate_results(store):
         ...     return torch.cat(store, dim=0).numpy()
@@ -211,7 +211,7 @@ class GenerativeMixin:
         """
 
         def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
-            store.append(gen_output["params"]["mean"].detach().cpu())
+            store.append(gen_output[MODULE_KEYS.PX_PARAMS_KEY]["mean"].detach().cpu())
 
         def aggregation_func(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)
