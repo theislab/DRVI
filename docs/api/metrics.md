@@ -4,6 +4,7 @@ We have implemented a user-friendly class for evaluation of disentanglement with
 
 ```{eval-rst}
 .. module:: drvi.utils.metrics
+    :no-index:
 .. currentmodule:: drvi.utils
 
 .. autosummary::
@@ -17,6 +18,7 @@ The following functions represent the similarity functions used in benchmarking:
 
 ```{eval-rst}
 .. module:: drvi.utils.metrics
+    :no-index:
 .. currentmodule:: drvi.utils
 
 .. autosummary::
@@ -32,6 +34,7 @@ The following functions represent the aggregation functions used in benchmarking
 
 ```{eval-rst}
 .. module:: drvi.utils.metrics
+    :no-index:
 .. currentmodule:: drvi.utils
 
 .. autosummary::

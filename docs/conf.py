@@ -49,11 +49,11 @@ html_context = {
 extensions = [
     "myst_nb",
     "sphinx_copybutton",
-    "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
@@ -101,7 +101,7 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     # Deep learning
-    "torch": ("https://docs.pytorch.org/docs/main", None),
+    "torch": ("https://docs.pytorch.org/docs/stable", None),
     "lightning": ("https://lightning.ai/docs/pytorch/stable/", None),
     # Special
     "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
@@ -140,4 +140,29 @@ nitpick_ignore = [
     # If building the documentation fails because of a missing link that is outside your control,
     # you can add an exception to this list.
     #     ("py:class", "igraph.Graph"),
+    # PyTorch references that are not properly resolved
+    ("py:class", "Module"),
+    ("py:class", "torch.nn.modules.Module"),
+    ("py:class", "torch.nn.Parameter"),
+    ("py:class", "Tensor"),
+    ("py:class", "optional"),
+    ("py:class", "torch.utils.hooks.RemovableHandle"),
+    ("py:class", "Dropout"),
+    ("py:class", "BatchNorm"),
+    ("py:class", "Parameter"),
+    ("py:attr", "state_dict"),
+    ("py:attr", "strict"),
+    ("py:attr", "assign"),
+    ("py:attr", "persistent"),
+    ("py:attr", "grad_input"),
+    ("py:attr", "grad_output"),
+    ("py:attr", "requires_grad"),
+    ("py:func", "add_module"),
+    ("py:func", "register_module_forward_hook"),
+    ("py:func", "register_module_forward_pre_hook"),
+    ("py:func", "register_module_full_backward_hook"),
+    ("py:func", "register_module_full_backward_pre_hook"),
+    # DRVI internal references
+    ("py:class", "drvi.scvi_tools_based.merlin_data._data.MerlinData"),
+    ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

@@ -210,7 +210,7 @@ class FCLayerFactory(LayerFactory):
     """Factory for creating fully connected neural network layers.
 
     This factory creates standard fully connected (linear) layers and stacked
-    linear layers. It inherits from `LayerFactory` and implements the abstract
+    linear layers. It inherits from LayerFactory and implements the abstract
     methods to provide concrete layer creation functionality.
 
     Parameters

@@ -731,11 +731,9 @@ def plot_relevant_genes_on_umap(
     """Plot relevant genes on UMAP embedding.
 
     This function creates UMAP visualizations showing how genes associated
-    with specific latent dimensions are expressed across cells. It creates
-    UMAP visualizations showing how genes associated with specific latent
-    dimensions are expressed across cells. The latent dimension values are
-    color-coded by the latent dimension values. The top genes are color-coded
-    by the gene expression.
+    with specific latent dimensions are expressed across cells. The latent
+    dimension values are color-coded by the latent dimension values. The
+    top genes are color-coded by the gene expression.
 
     Parameters
     ----------

@@ -25,19 +25,19 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 Please refer to the [documentation][link-docs]. In particular, the
 
-- [Tutorials][link-tutorials], specially
-    - [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
-- [API documentation][link-api], specially
-    - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
-    - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
-    - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+-   [Tutorials][link-tutorials], specially
+    -   [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
+-   [API documentation][link-api], specially
+    -   [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
+    -   [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
+    -   [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
 
 ## System requirements
 
 We recommend running DRVI on a recent Linux distribution.
 DRVI is actively tested on the latest LTS version of Ubuntu (currently 24.04 LTS).
 
-[//]: # "TODO: remove ubuntu version later"
+<!-- TODO: remove ubuntu version later -->
 
 For optimal performance, we highly recommend using a GPU with CUDA capabilities.
 While CPU-based systems are supported, GPU-powered systems are strongly recommended for optimal performance.
@@ -49,7 +49,7 @@ Python installed, we recommend installing [Mambaforge](https://github.com/conda-
 
 There are several options to install drvi:
 
-[//]: # "TODO: remove install time!"
+<!-- TODO: remove install time! -->
 
 1. Install the latest release of `drvi-py` from [PyPI][link-pypi], which should take around two minutes:
 
@@ -74,8 +74,8 @@ See the [changelog][changelog].
 
 ## Contact
 
-[//]: # "TODO: make clear where to ask questions:"
-[//]: # "For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]."
+<!-- TODO: make clear where to ask questions: -->
+<!-- For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]. -->
 
 If you found a bug, please use the [issue tracker][issue-tracker].
 
