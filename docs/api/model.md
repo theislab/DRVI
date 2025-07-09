@@ -1,13 +1,13 @@
 # Model
 
-The DRVI (Disentangled Representation Variational Inference) model is a model designed for single-cell multi-omics data analysis. It provides disentangled latent representations that separate individual biological processes, enabling better interpretation and downstream analysis.
+The DRVI (Disentangled Representation Variational Inference) model is a model designed for single-cell omics data analysis. It provides disentangled latent representations that separate individual biological processes, enabling better interpretation and downstream analysis.
 
 ## Overview
 
 DRVI extends the standard variational autoencoder architecture with specialized decoder architecture. The model learns disentangled representations and separates different sources of variation in the data, such as:
 
-- **Biological factors**: Cell types, developmental processes, perturbation responses, signaling pathways
-- **Technical factors**: Background expressions, technical stress responses
+-   **Biological factors**: Cell types, developmental processes, perturbation responses, signaling pathways
+-   **Technical factors**: Background expressions, technical stress responses
 
 ## Core Components
 
