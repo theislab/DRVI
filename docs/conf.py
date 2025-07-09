@@ -49,11 +49,11 @@ html_context = {
 extensions = [
     "myst_nb",
     "sphinx_copybutton",
+    "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
