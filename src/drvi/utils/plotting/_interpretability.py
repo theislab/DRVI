@@ -1,5 +1,6 @@
 import itertools
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from drvi.utils.tools import iterate_on_top_differential_vars
 from drvi.utils.tools.interpretability._latent_traverse import get_dimensions_of_traverse_data
 
 
-def make_heatmap_groups(ordered_list: list) -> tuple[list[tuple[int, int]], list]:
+def make_heatmap_groups(ordered_list: list) -> tuple[list[tuple[int, int]], list[Any]]:
     """Create group positions and labels for scanpy heatmap visualization of marker genes.
 
     This helper function processes an ordered list to identify groups of
@@ -266,15 +267,13 @@ def _bar_plot_top_differential_vars(
     Parameters
     ----------
     plot_info
-        Information about the top differential variables. Each tuple contains
-        a dimension title and a pandas Series of gene scores.
+        Sequence of tuples containing dimension titles and corresponding gene data.
     dim_subset
-        List of dimensions to plot in the bar plot. If None, all dimensions
-        from plot_info are plotted.
+        Subset of dimensions to plot. If None, all dimensions are plotted.
     n_top_genes
-        Number of top genes to plot for each dimension.
+        Number of top genes to show in each plot.
     ncols
-        Number of columns in the plot grid.
+        Number of columns in the subplot grid.
     show
         Whether to display the plot. If False, returns the figure object.
 
@@ -723,7 +722,7 @@ def plot_relevant_genes_on_umap(
     order_col: str = "order",
     gene_symbols: str | None = None,
     score_threshold: float = 0.0,
-    dim_subset: Sequence[str] = None,
+    dim_subset: Sequence[str] | None = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
     **kwargs,
