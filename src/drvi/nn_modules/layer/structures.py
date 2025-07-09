@@ -37,7 +37,7 @@ class SimpleResidual(nn.Module):
 
         Parameters
         ----------
-        layer : nn.Module
+        layer
             The layer to be wrapped with a residual connection.
 
         Notes
@@ -53,7 +53,7 @@ class SimpleResidual(nn.Module):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input tensor. The shape should be compatible with the wrapped layer.
 
         Returns

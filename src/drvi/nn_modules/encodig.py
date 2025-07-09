@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -42,7 +43,7 @@ class MultiOneHotEncoding(nn.Module):
     >>> print(output[0])  # [1,0,0, 0,1, 0,0,1,0] for indices [0,1,2]
     """
 
-    def __init__(self, n_embedding_list: list[int], **kwargs):
+    def __init__(self, n_embedding_list: list[int], **kwargs: Any) -> None:
         super().__init__()
         self.n_embedding_list = n_embedding_list
         self.device_container = nn.Parameter(torch.tensor([]))
@@ -76,7 +77,7 @@ class MultiOneHotEncoding(nn.Module):
         )
         return result.to(self.device_container.device)
 
-    def get_extra_state(self):
+    def get_extra_state(self) -> dict[str, Any]:
         """Get extra state for serialization.
 
         Returns
@@ -86,7 +87,7 @@ class MultiOneHotEncoding(nn.Module):
         """
         return {"n_embedding_list": self.n_embedding_list}
 
-    def set_extra_state(self, state):
+    def set_extra_state(self, state: dict[str, Any]) -> None:
         """Set extra state from serialization.
 
         Parameters
@@ -97,7 +98,7 @@ class MultiOneHotEncoding(nn.Module):
         self.n_embedding_list = state["n_embedding_list"]
 
     @property
-    def embedding_dim(self):
+    def embedding_dim(self) -> int:
         """Get total embedding dimension.
 
         Returns
@@ -148,12 +149,12 @@ class FeatureOneHotEncoding(FeatureEmbedding):
     >>> print(output[0])  # One-hot encoding for ["A", "X", "1"]
     """
 
-    def __init__(self, vocab_list: list[list[str]], **kwargs):
+    def __init__(self, vocab_list: list[list[str]], **kwargs: Any) -> None:
         n_vocab_list = [len(vocab) for vocab in vocab_list]
         super().__init__(vocab_list, n_vocab_list, **kwargs)
 
     @staticmethod
-    def define_embeddings(n_embedding_list, embedding_dims, **kwargs):
+    def define_embeddings(n_embedding_list: list[int], embedding_dims: list[int], **kwargs: Any) -> MultiOneHotEncoding:
         """Define the underlying one-hot encoding layers.
 
         Parameters
@@ -181,7 +182,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
         return MultiOneHotEncoding(n_embedding_list, **kwargs)
 
     @classmethod
-    def from_numpy_array(cls, sentences_array: np.ndarray, **kwargs):
+    def from_numpy_array(cls, sentences_array: np.ndarray, **kwargs: Any) -> "FeatureOneHotEncoding":
         """Create FeatureOneHotEncoding from a numpy array.
 
         Parameters
@@ -207,7 +208,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
         return cls(vocab_list, **kwargs)
 
     @classmethod
-    def from_pandas_dataframe(cls, sentences_df: pd.DataFrame, **kwargs):
+    def from_pandas_dataframe(cls, sentences_df: pd.DataFrame, **kwargs: Any) -> "FeatureOneHotEncoding":
         """Create FeatureOneHotEncoding from a pandas DataFrame.
 
         Parameters
@@ -222,4 +223,4 @@ class FeatureOneHotEncoding(FeatureEmbedding):
         FeatureOneHotEncoding
             New FeatureOneHotEncoding instance.
         """
-        return cls.from_numpy_array(sentences_df.values)
+        return cls.from_numpy_array(sentences_df.values, **kwargs)

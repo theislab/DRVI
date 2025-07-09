@@ -1,5 +1,7 @@
 import logging
 from collections import OrderedDict
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -48,14 +50,16 @@ class FreezableEmbedding(nn.Embedding):
     >>> print(emb.weight.grad[10, 20])  # Non-frozen region
     """
 
-    def __init__(self, num_embeddings, embedding_dim, n_freeze_x=0, n_freeze_y=0, **kwargs):
+    def __init__(
+        self, num_embeddings: int, embedding_dim: int, n_freeze_x: int = 0, n_freeze_y: int = 0, **kwargs: Any
+    ) -> None:
         self._freeze_hook = None
         self.n_freeze_x = None
         self.n_freeze_y = None
         super().__init__(num_embeddings, embedding_dim, **kwargs)
         self.freeze(n_freeze_x, n_freeze_y)
 
-    def freeze(self, n_freeze_x=0, n_freeze_y=0):
+    def freeze(self, n_freeze_x: int = 0, n_freeze_y: int = 0) -> None:
         """Set the freezing configuration for the embedding.
 
         Parameters
@@ -80,7 +84,7 @@ class FreezableEmbedding(nn.Embedding):
         if self.n_freeze_x > 0 and self.n_freeze_y > 0:
             self._freeze_hook = self.weight.register_hook(self.partial_freeze_backward_hook)
 
-    def partial_freeze_backward_hook(self, grad):
+    def partial_freeze_backward_hook(self, grad: torch.Tensor) -> torch.Tensor:
         """Backward hook to mask gradients for frozen regions.
 
         Parameters
@@ -99,6 +103,7 @@ class FreezableEmbedding(nn.Embedding):
         regions while preserving gradients for the non-frozen regions.
         """
         with torch.no_grad():
+            assert self.n_freeze_x is not None and self.n_freeze_y is not None
             mask = F.pad(
                 torch.zeros(self.n_freeze_x, self.n_freeze_y, device=grad.device),
                 (0, self.embedding_dim - self.n_freeze_y, 0, self.num_embeddings - self.n_freeze_x),
@@ -106,7 +111,7 @@ class FreezableEmbedding(nn.Embedding):
             )
             return grad * mask
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of the embedding layer.
 
         Returns
@@ -159,10 +164,10 @@ class MultiEmbedding(nn.Module):
         self,
         n_embedding_list: list[int],
         embedding_dim_list: list[int],
-        init_method="xavier_uniform",
-        normalization=None,
-        **kwargs,
-    ):
+        init_method: str | Callable = "xavier_uniform",
+        normalization: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
         assert len(n_embedding_list) == len(embedding_dim_list)
 
@@ -176,7 +181,7 @@ class MultiEmbedding(nn.Module):
         self.normalization = normalization
         self.reset_parameters(init_method)
 
-    def reset_parameters(self, init_method):
+    def reset_parameters(self, init_method: str | Callable) -> None:
         """Reset parameters of all embedding layers.
 
         Parameters
@@ -242,9 +247,11 @@ class MultiEmbedding(nn.Module):
             return emb
         elif self.normalization == "l2":
             return F.normalize(emb, p=2, dim=1)
+        else:
+            raise NotImplementedError()
 
     @classmethod
-    def from_pretrained(cls, feature_embedding_instance):
+    def from_pretrained(cls, feature_embedding_instance: Any) -> "MultiEmbedding":
         """Create MultiEmbedding from a pretrained feature embedding.
 
         Parameters
@@ -264,7 +271,7 @@ class MultiEmbedding(nn.Module):
         """
         raise NotImplementedError()
 
-    def load_weights_from_trained_module(self, other, freeze_old=False):
+    def load_weights_from_trained_module(self, other: "MultiEmbedding", freeze_old: bool = False) -> None:
         """Load weights from another MultiEmbedding module.
 
         Parameters
@@ -305,7 +312,7 @@ class MultiEmbedding(nn.Module):
             if freeze_old:
                 self_emb.freeze(other_emb.num_embeddings, other_emb.embedding_dim)
 
-    def freeze_top_embs(self, n_freeze_list):
+    def freeze_top_embs(self, n_freeze_list: list[int]) -> None:
         """Freeze the top embeddings of each embedding table.
 
         Parameters
@@ -322,7 +329,7 @@ class MultiEmbedding(nn.Module):
             emb.freeze(n_freeze, emb.embedding_dim)
 
     @property
-    def num_embeddings(self):
+    def num_embeddings(self) -> list[int]:
         """Get list of vocabulary sizes.
 
         Returns
@@ -333,7 +340,7 @@ class MultiEmbedding(nn.Module):
         return [emb.num_embeddings for emb in self.emb_list]
 
     @property
-    def embedding_dim(self):
+    def embedding_dim(self) -> int:
         """Get total embedding dimension.
 
         Returns
@@ -343,7 +350,7 @@ class MultiEmbedding(nn.Module):
         """
         return sum(emb.embedding_dim for emb in self.emb_list)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of the multi-embedding layer.
 
         Returns
@@ -392,7 +399,7 @@ class FeatureEmbedding(nn.Module):
     >>> print(output.shape)  # torch.Size([2, 56])  # 16+8+32=56
     """
 
-    def __init__(self, vocab_list: list[list[str]], embedding_dims: list[int], **kwargs):
+    def __init__(self, vocab_list: list[list[str]], embedding_dims: list[int], **kwargs: Any) -> None:
         super().__init__()
         assert len(vocab_list) == len(embedding_dims)
         self.device_container = nn.Parameter(torch.tensor([]))
@@ -401,10 +408,10 @@ class FeatureEmbedding(nn.Module):
         n_vocab_list = [len(vocab) for vocab in self.vocab_list]
         self.multi_emb = self.define_embeddings(n_vocab_list, embedding_dims, **kwargs)
 
-        self.__index_cache = {}
-        self.__vocab_map_list_cache = None
+        self.__index_cache: dict[str, torch.Tensor] = {}
+        self.__vocab_map_list_cache: list[dict[str, int]] | None = None
 
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         """Reset the internal caches.
 
         Notes
@@ -416,7 +423,7 @@ class FeatureEmbedding(nn.Module):
         self.__vocab_map_list_cache = None
 
     @property
-    def vocab_map_list(self):
+    def vocab_map_list(self) -> list[dict[str, int]]:
         """Get list of vocabulary mappings.
 
         Returns
@@ -438,14 +445,14 @@ class FeatureEmbedding(nn.Module):
         return self.__vocab_map_list_cache
 
     @staticmethod
-    def define_embeddings(n_embedding_list, embedding_dims, **kwargs):
+    def define_embeddings(n_embedding_list: list[int], embedding_dims: list[int], **kwargs: Any) -> MultiEmbedding:
         """Define the underlying embedding layers.
 
         Parameters
         ----------
-        n_embedding_list : list[int]
+        n_embedding_list
             List of vocabulary sizes.
-        embedding_dims : list[int]
+        embedding_dims
             List of embedding dimensions.
         **kwargs
             Additional arguments for MultiEmbedding.
@@ -457,7 +464,7 @@ class FeatureEmbedding(nn.Module):
         """
         return MultiEmbedding(n_embedding_list, embedding_dims, **kwargs)
 
-    def reset_parameters(self, init_method):
+    def reset_parameters(self, init_method: str | Callable) -> None:
         """Reset parameters of the embedding layers.
 
         Parameters
@@ -467,7 +474,7 @@ class FeatureEmbedding(nn.Module):
         """
         self.multi_emb.reset_parameters(init_method)
 
-    def _get_index_from_sentences(self, index_sentences: np.ndarray):
+    def _get_index_from_sentences(self, index_sentences: np.ndarray) -> torch.Tensor:
         """Convert categorical sentences to embedding indices.
 
         Parameters
@@ -493,7 +500,7 @@ class FeatureEmbedding(nn.Module):
         )
         return indices.to(self.device_container.device)
 
-    def forward(self, index_sentences: np.ndarray, index_cache_key=None):
+    def forward(self, index_sentences: np.ndarray, index_cache_key: str | None = None) -> torch.Tensor:
         """Forward pass through the feature embedding layer.
 
         Parameters
@@ -520,7 +527,7 @@ class FeatureEmbedding(nn.Module):
             self.__index_cache[index_cache_key] = indices
         return self.multi_emb(indices)
 
-    def get_extra_state(self):
+    def get_extra_state(self) -> dict[str, Any]:
         """Get extra state for serialization.
 
         Returns
@@ -530,7 +537,7 @@ class FeatureEmbedding(nn.Module):
         """
         return {"vocab_list": self.vocab_list}
 
-    def set_extra_state(self, state):
+    def set_extra_state(self, state: dict[str, Any]) -> None:
         """Set extra state from serialization.
 
         Parameters
@@ -542,7 +549,9 @@ class FeatureEmbedding(nn.Module):
         self.__vocab_map_list_cache = None
 
     @classmethod
-    def from_numpy_array(cls, sentences_array: np.ndarray, embedding_dims: np.ndarray | list, **kwargs):
+    def from_numpy_array(
+        cls, sentences_array: np.ndarray, embedding_dims: list[int], **kwargs: Any
+    ) -> "FeatureEmbedding":
         """Create FeatureEmbedding from a numpy array.
 
         Parameters
@@ -569,7 +578,9 @@ class FeatureEmbedding(nn.Module):
         return cls(vocab_list, embedding_dims, **kwargs)
 
     @classmethod
-    def from_pandas_dataframe(cls, sentences_df: pd.DataFrame, embedding_dims: pd.DataFrame | list, **kwargs):
+    def from_pandas_dataframe(
+        cls, sentences_df: pd.DataFrame, embedding_dims: list[int], **kwargs: Any
+    ) -> "FeatureEmbedding":
         """Create FeatureEmbedding from a pandas DataFrame.
 
         Parameters
@@ -593,7 +604,7 @@ class FeatureEmbedding(nn.Module):
         return cls.from_numpy_array(sentences_df.values, embedding_dims, **kwargs)
 
     @classmethod
-    def from_pretrained(cls, feature_embedding_instance):
+    def from_pretrained(cls, feature_embedding_instance: "FeatureEmbedding") -> "FeatureEmbedding":
         """Create FeatureEmbedding from a pretrained instance.
 
         Parameters
@@ -613,7 +624,7 @@ class FeatureEmbedding(nn.Module):
         """
         raise NotImplementedError()
 
-    def load_weights_from_trained_module(self, other, freeze_old=False):
+    def load_weights_from_trained_module(self, other: "FeatureEmbedding", freeze_old: bool = False) -> None:
         """Load weights from another FeatureEmbedding module.
 
         Parameters
@@ -639,7 +650,7 @@ class FeatureEmbedding(nn.Module):
         self.multi_emb.load_weights_from_trained_module(other.multi_emb, freeze_old=freeze_old)
 
     @property
-    def embedding_dim(self):
+    def embedding_dim(self) -> int:
         """Get total embedding dimension.
 
         Returns
@@ -649,7 +660,7 @@ class FeatureEmbedding(nn.Module):
         """
         return self.multi_emb.embedding_dim
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of the feature embedding layer.
 
         Returns

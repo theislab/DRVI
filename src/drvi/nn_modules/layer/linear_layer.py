@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import torch
 from torch import nn
@@ -58,9 +59,16 @@ class StackedLinearLayer(nn.Module):
     in_features: int
     out_features: int
     weight: torch.Tensor
+    bias: torch.Tensor | None
 
     def __init__(
-        self, n_channels: int, in_features: int, out_features: int, bias: bool = True, device=None, dtype=None
+        self,
+        n_channels: int,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        device: Any = None,
+        dtype: Any = None,
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
@@ -90,8 +98,7 @@ class StackedLinearLayer(nn.Module):
         across the layer.
         """
         self._init_weight()
-        if self.bias is not None:
-            self._init_bias()
+        self._init_bias()
 
     def _init_weight(self) -> None:
         """Initialize the weight parameters.
@@ -120,9 +127,10 @@ class StackedLinearLayer(nn.Module):
         The bias initialization is independent of the weight initialization
         and helps ensure that the layer can learn appropriate offsets.
         """
-        fan_in = self.in_features
-        bound = 1 / math.sqrt(fan_in)
-        nn.init.uniform_(self.bias, -bound, bound)
+        if self.bias is not None:
+            fan_in = self.in_features
+            bound = 1 / math.sqrt(fan_in)
+            nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         r"""Forward pass through the stacked linear layer.

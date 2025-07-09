@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 from scvi.distributions import NegativeBinomial
@@ -26,11 +26,11 @@ class NoiseModel:
     3. Creating the appropriate distribution for the data
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @property
-    def parameters(self):
+    def parameters(self) -> dict[str, str]:
         """Get the parameter specification for this noise model.
 
         Returns
@@ -50,7 +50,7 @@ class NoiseModel:
         raise NotImplementedError()
 
     @property
-    def main_param(self):
+    def main_param(self) -> str:
         """Get the main parameter name for this noise model.
 
         Returns
@@ -60,7 +60,9 @@ class NoiseModel:
         """
         return "mean"
 
-    def initial_transformation(self, x, x_mask=1.0):
+    def initial_transformation(
+        self, x: torch.Tensor, x_mask: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, dict[str, Any]]:
         """Apply initial transformation to input data.
 
         Parameters
@@ -80,7 +82,7 @@ class NoiseModel:
         aux_info = {}
         return x, aux_info
 
-    def dist(self, aux_info, parameters, lib_y):
+    def dist(self, aux_info: dict[str, Any], parameters: dict[str, torch.Tensor], lib_y: torch.Tensor) -> Distribution:
         """Create the output distribution.
 
         Parameters
@@ -106,7 +108,7 @@ class NoiseModel:
         raise NotImplementedError()
 
 
-def calculate_library_size(x, x_mask=1.0):
+def calculate_library_size(x: torch.Tensor, x_mask: torch.Tensor | None = None) -> torch.Tensor:
     """Calculate the library size for each sample.
 
     Parameters
@@ -130,8 +132,10 @@ def calculate_library_size(x, x_mask=1.0):
 
 
 def library_size_normalization(
-    x, lib_size, library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"]
-):
+    x: torch.Tensor,
+    lib_size: torch.Tensor,
+    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+) -> torch.Tensor:
     """Normalize data by library size.
 
     Parameters
@@ -170,11 +174,11 @@ def library_size_normalization(
 
 
 def library_size_correction(
-    x,
-    lib_size,
+    x: torch.Tensor,
+    lib_size: torch.Tensor,
     library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
-    log_space=False,
-):
+    log_space: bool = False,
+) -> torch.Tensor:
     """Apply library size correction to data.
 
     Parameters

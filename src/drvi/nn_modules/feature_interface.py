@@ -1,5 +1,7 @@
 import re
 from collections import namedtuple
+from collections.abc import Generator
+from typing import Any
 
 import anndata as ad
 import numpy as np
@@ -53,7 +55,13 @@ class FeatureInfoList:
     >>> print(feature_list.dims)  # [1000, 50, 50]
     """
 
-    def __init__(self, feature_info_str_list: list[str], axis="var", total_dim=None, default_dim=None):
+    def __init__(
+        self,
+        feature_info_str_list: list[str],
+        axis: str = "var",
+        total_dim: int | None = None,
+        default_dim: int | None = None,
+    ) -> None:
         assert axis in ["var", "obs"]
         assert total_dim is None or default_dim is None
         self.feature_info_list = list(self.parse(feature_info_str_list))
@@ -67,7 +75,7 @@ class FeatureInfoList:
                 self._fill_with_default_dim(default_dim)
 
     @staticmethod
-    def parse(feature_info_list):
+    def parse(feature_info_list: list[str]) -> Generator[FeatureInfo, int | None, list[tuple[str, ...]] | None]:
         """Parse feature information strings into FeatureInfo objects.
 
         Parameters
@@ -91,12 +99,14 @@ class FeatureInfoList:
 
         for feature_info in feature_info_list:
             match = pattern.match(feature_info)
+            if match is None:
+                raise ValueError(f"Invalid feature info format: {feature_info}")
             name, dim, kw = match.group("name"), match.group("dim"), match.group("kw")
             dim = None if dim is None else int(dim)
             kw = () if kw is None else tuple(kw[1:].split("!"))
             yield FeatureInfo(name, dim, kw)
 
-    def _fill_with_default_dim(self, default_dim):
+    def _fill_with_default_dim(self, default_dim: int) -> None:
         """Fill unspecified dimensions with a default value.
 
         Parameters
@@ -108,7 +118,7 @@ class FeatureInfoList:
             if self.feature_info_list[i].dim is None:
                 self.feature_info_list[i] = self.feature_info_list[i]._replace(dim=default_dim)
 
-    def _fill_with_total_dim(self, total_dim):
+    def _fill_with_total_dim(self, total_dim: int) -> None:
         """Distribute total dimension among features with unspecified dimensions.
 
         Parameters
@@ -131,7 +141,7 @@ class FeatureInfoList:
         assert sum([fi.dim for fi in self.feature_info_list]) == total_dim
 
     @property
-    def names(self):
+    def names(self) -> list[str]:
         """Get list of feature names.
 
         Returns
@@ -142,7 +152,7 @@ class FeatureInfoList:
         return [fi.name for fi in self.feature_info_list]
 
     @property
-    def dims(self):
+    def dims(self) -> list[int]:
         """Get list of feature dimensions.
 
         Returns
@@ -153,7 +163,7 @@ class FeatureInfoList:
         return [fi.dim for fi in self.feature_info_list]
 
     @property
-    def keywords_list(self):
+    def keywords_list(self) -> list[tuple[str, ...]]:
         """Get list of feature keywords.
 
         Returns
@@ -163,7 +173,7 @@ class FeatureInfoList:
         """
         return [fi.keywords for fi in self.feature_info_list]
 
-    def get_possible_values_array(self, data: dict[str, ad.AnnData]):
+    def get_possible_values_array(self, data: dict[str, ad.AnnData] | ad.AnnData) -> np.ndarray:
         """Get unique combinations of feature values across datasets.
 
         Parameters
@@ -199,7 +209,7 @@ class FeatureInfoList:
             possible_vals.append(df[list(keys)].drop_duplicates(subset=keys))
         return pd.concat(possible_vals).drop_duplicates(subset=keys).to_numpy()
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get the number of features.
 
         Returns
@@ -209,7 +219,7 @@ class FeatureInfoList:
         """
         return len(self.feature_info_list)
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         """Iterate over feature information objects.
 
         Yields
@@ -219,7 +229,7 @@ class FeatureInfoList:
         """
         return self.feature_info_list.__iter__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of the feature info list.
 
         Returns

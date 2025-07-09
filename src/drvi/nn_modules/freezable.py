@@ -1,3 +1,5 @@
+from typing import Any
+
 from torch import nn
 
 
@@ -60,11 +62,11 @@ def freezable(base_norm_class):
             Keyword arguments passed to the base normalization class.
         """
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             self._freeze = False
             super().__init__(*args, **kwargs)
 
-        def freeze(self, freeze_status=True):
+        def freeze(self, freeze_status: bool = True) -> None:
             """Set the freeze status of the normalization layer.
 
             Parameters
@@ -81,7 +83,7 @@ def freezable(base_norm_class):
             """
             self._freeze = freeze_status
 
-        def forward(self, *args, **kwargs):
+        def forward(self, *args: Any, **kwargs: Any) -> Any:
             """Forward pass with freeze-aware behavior.
 
             Parameters

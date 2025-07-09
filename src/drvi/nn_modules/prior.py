@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Any
+
 import torch
 from torch import nn
 from torch.distributions import Normal, kl_divergence
@@ -18,10 +21,10 @@ class Prior(nn.Module):
     - `kl`: Method to compute KL divergence with the posterior distribution
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def kl(self, qz):
+    def kl(self, qz: Normal) -> torch.Tensor:
         """Compute KL divergence between posterior and prior.
 
         Parameters
@@ -61,10 +64,10 @@ class StandardPrior(Prior):
     >>> print(kl.shape)  # torch.Size([10, 5])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def kl(self, qz):
+    def kl(self, qz: Normal) -> torch.Tensor:
         """Compute KL divergence with standard normal prior.
 
         Parameters
@@ -146,14 +149,14 @@ class VampPrior(Prior):
     # K - components, I - inputs, L - latent, N - samples
     def __init__(
         self,
-        n_components,
-        encoder,
-        model_input,
-        trainable_keys=("x",),
-        fixed_keys=(),
-        input_type="scvi",
-        preparation_function=None,
-    ):
+        n_components: int,
+        encoder: nn.Module,
+        model_input: dict[str, Any],
+        trainable_keys: tuple[str, ...] = ("x",),
+        fixed_keys: tuple[str, ...] = (),
+        input_type: str = "scvi",
+        preparation_function: Callable | None = None,
+    ) -> None:
         super().__init__()
 
         self.encoder = encoder
@@ -177,7 +180,7 @@ class VampPrior(Prior):
         # mixing weights
         self.w = torch.nn.Parameter(torch.zeros(n_components, 1, 1))  # K x 1 x 1
 
-    def get_params(self):
+    def get_params(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Get the parameters of the mixture components.
 
         Returns
@@ -197,6 +200,8 @@ class VampPrior(Prior):
             z = self.encoder({**self.pi_aux_data, **self.pi_tensor_data})
             output = z["qz_mean"], z["qz_var"]
         elif self.input_type == "scvi":
+            if self.preparation_function is None:
+                raise ValueError("preparation_function must be provided for scvi input type")
             x, args, kwargs = self.preparation_function({**self.pi_aux_data, **self.pi_tensor_data})
             q_m, q_v, latent = self.encoder(x, *args, **kwargs)
             output = q_m, q_v
@@ -206,7 +211,7 @@ class VampPrior(Prior):
         self.encoder.train(original_mode)
         return output  # (K x L), (K x L)
 
-    def log_prob(self, z):
+    def log_prob(self, z: torch.Tensor) -> torch.Tensor:
         """Compute log probability of latent variables under the prior.
 
         Parameters
@@ -242,7 +247,7 @@ class VampPrior(Prior):
 
         return log_prob  # N x L
 
-    def kl(self, qz):
+    def kl(self, qz: Normal) -> torch.Tensor:
         """Compute KL divergence using Monte Carlo estimation.
 
         Parameters
@@ -265,7 +270,7 @@ class VampPrior(Prior):
         z = qz.rsample()
         return qz.log_prob(z) - self.log_prob(z)
 
-    def get_extra_state(self):
+    def get_extra_state(self) -> dict[str, Any]:
         """Get extra state for serialization.
 
         Returns
@@ -278,7 +283,7 @@ class VampPrior(Prior):
             "input_type": self.input_type,
         }
 
-    def set_extra_state(self, state):
+    def set_extra_state(self, state: dict[str, Any]) -> None:
         """Set extra state from serialization.
 
         Parameters
@@ -334,11 +339,11 @@ class GaussianMixtureModelPrior(Prior):
 
     def __init__(
         self,
-        n_components,
-        n_latent,
-        data=None,
-        trainable_priors=True,
-    ):
+        n_components: int,
+        n_latent: int,
+        data: tuple[torch.Tensor, torch.Tensor] | None = None,
+        trainable_priors: bool = True,
+    ) -> None:
         # Do we need python 2 compatibility?
         super().__init__()
 
@@ -354,7 +359,7 @@ class GaussianMixtureModelPrior(Prior):
         # mixing weights
         self.w = torch.nn.Parameter(torch.zeros(self.p_m.shape[0], 1, 1))  # K x 1 x 1
 
-    def log_prob(self, z):
+    def log_prob(self, z: torch.Tensor) -> torch.Tensor:
         """Compute log probability of latent variables under the prior.
 
         Parameters
@@ -388,7 +393,7 @@ class GaussianMixtureModelPrior(Prior):
 
         return log_prob  # N x L
 
-    def kl(self, qz):
+    def kl(self, qz: Normal) -> torch.Tensor:
         """Compute KL divergence using Monte Carlo estimation.
 
         Parameters
