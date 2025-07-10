@@ -4,7 +4,6 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Literal
 
 import torch
-from scvi.nn._utils import one_hot
 from torch import nn
 from torch.distributions import Normal
 from torch.nn import functional as F
@@ -319,7 +318,7 @@ class FCLayers(nn.Module):
             for n_cat, cat in zip(self.n_cat_list, cat_list, strict=False):
                 if n_cat and cat is None:
                     raise ValueError("cat not provided while n_cat != 0 in init. params.")
-                concat_list += [one_hot(cat, n_cat)]
+                concat_list += [F.one_hot(cat.long().squeeze(-1), n_cat).float()]
         elif self.covariate_vector_modeling == "emb_shared":
             concat_list = [cat_full_tensor]
         else:
