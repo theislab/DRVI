@@ -69,6 +69,11 @@ class DRVIModule(BaseModuleClass):
         Whether to use layer norm in layers.
     fill_in_the_blanks_ratio
         Ratio for fill-in-the-blanks training.
+    reconstruction_policy
+        Policy for reconstruction.
+        - "dense" : Reconstruct all features.
+        - "random_batch@M" : Reconstruct M random features for each batch.
+        - "random_cell@M" : Reconstruct M random features for each cell.
     input_dropout_rate
         Dropout rate to apply to the input.
     encoder_dropout_rate
@@ -129,6 +134,7 @@ class DRVIModule(BaseModuleClass):
         affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         fill_in_the_blanks_ratio: float = 0.0,
+        reconstruction_policy: str = "dense",
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
@@ -176,6 +182,7 @@ class DRVIModule(BaseModuleClass):
 
         self.gene_likelihood_module = self._construct_gene_likelihood_module(gene_likelihood)
         self.fill_in_the_blanks_ratio = fill_in_the_blanks_ratio
+        self.reconstruction_policy = reconstruction_policy
 
         use_batch_norm_encoder = use_batch_norm == "encoder" or use_batch_norm == "both"
         use_batch_norm_decoder = use_batch_norm == "decoder" or use_batch_norm == "both"
@@ -477,6 +484,22 @@ class DRVIModule(BaseModuleClass):
         }
         return outputs
 
+    def _get_reconstruction_indices(self, tensors: TensorDict) -> None | torch.Tensor:
+        if self.reconstruction_policy == "dense":
+            return None
+        elif self.reconstruction_policy.startswith("random_batch@"):
+            x = tensors[REGISTRY_KEYS.X_KEY]
+            n_random_features = int(self.reconstruction_policy.split("@")[1])
+            random_indices = torch.randperm(x.shape[1])[:n_random_features]
+            return random_indices
+        elif self.reconstruction_policy.startswith("random_cell@"):
+            x = tensors[REGISTRY_KEYS.X_KEY]
+            n_random_features = int(self.reconstruction_policy.split("@")[1])
+            random_indices = torch.argsort(torch.rand(x.shape[0], x.shape[1]), dim=-1)[:, :n_random_features]
+            return random_indices
+        else:
+            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
+
     def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
         """Prepare input for the generative model.
 
@@ -501,12 +524,15 @@ class DRVIModule(BaseModuleClass):
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
+        reconstruction_indices = self._get_reconstruction_indices(tensors)
+
         input_dict = {
             "z": z,
             "library": library,
             "gene_likelihood_additional_info": gene_likelihood_additional_info,
             "cont_covs": cont_covs,
             "cat_covs": cat_covs,
+            "reconstruction_indices": reconstruction_indices,
         }
         return input_dict
 
@@ -518,6 +544,7 @@ class DRVIModule(BaseModuleClass):
         gene_likelihood_additional_info: Any,
         cont_covs: torch.Tensor | None = None,
         cat_covs: torch.Tensor | None = None,
+        reconstruction_indices: torch.Tensor | None = None,
     ) -> dict[str, Any]:
         """Runs the generative model.
 
@@ -533,6 +560,8 @@ class DRVIModule(BaseModuleClass):
             Continuous covariates.
         cat_covs
             Categorical covariates.
+        reconstruction_indices
+            Indices of features to reconstruct.
 
         Returns
         -------
@@ -548,12 +577,14 @@ class DRVIModule(BaseModuleClass):
             cont_full_tensor=cont_covs,
             library=library,
             gene_likelihood_additional_info=gene_likelihood_additional_info,
+            reconstruction_indices=reconstruction_indices,
         )
 
         return {
             "px": px,
             "params": params,
             "original_params": original_params,
+            "reconstruction_indices": reconstruction_indices,
         }
 
     def loss(
@@ -586,6 +617,16 @@ class DRVIModule(BaseModuleClass):
         qz_m = inference_outputs["qz_m"]
         qz_v = inference_outputs["qz_v"]
         px = generative_outputs["px"]
+        reconstruction_indices = generative_outputs["reconstruction_indices"]
+
+        if self.reconstruction_policy == "dense":
+            pass
+        elif self.reconstruction_policy.startswith("random_batch@"):
+            x = x[:, reconstruction_indices]
+        elif self.reconstruction_policy.startswith("random_cell@"):
+            x = x.gather(dim=1, index=reconstruction_indices)
+        else:
+            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 
         kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
         if self.fill_in_the_blanks_ratio > 0.0 and self.training:

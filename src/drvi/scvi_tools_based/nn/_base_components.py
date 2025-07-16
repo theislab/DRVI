@@ -106,6 +106,7 @@ class FCLayers(nn.Module):
             assert len(covariate_embs_dim) == len(self.n_cat_list)
 
         self.injectable_layers = []
+        self.linear_projections = []
         self.linear_batch_projections = []
 
         def is_intermediate(i: int) -> bool:
@@ -160,6 +161,7 @@ class FCLayers(nn.Module):
                     bias=bias,
                     intermediate_layer=is_intermediate(i),
                 )
+            self.linear_projections.append(layer)
             if layer_needs_injection:
                 self.injectable_layers.append(layer)
             output.append(layer)
@@ -292,7 +294,9 @@ class FCLayers(nn.Module):
                 else:
                     raise NotImplementedError()
 
-    def forward(self, x: torch.Tensor, cat_full_tensor: torch.Tensor | None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, cat_full_tensor: torch.Tensor | None, output_subset_indices: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Forward computation on ``x``.
 
         Parameters
@@ -350,17 +354,21 @@ class FCLayers(nn.Module):
                         assert self.covariate_projection_modeling == "linear"
                         projected_batch_layer = layer(torch.cat(concat_list_layer, dim=-1))
                     else:
+                        if layer == self.linear_projections[-1]:
+                            kwargs = {"output_subset": output_subset_indices}
+                        else:
+                            kwargs = {}
                         if layer in self.injectable_layers:
                             if self.covariate_projection_modeling == "cat":
                                 current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
                                 x = torch.cat((x, current_cat_tensor), dim=-1)
-                                x = layer(x)
+                                x = layer(x, **kwargs)
                             elif self.covariate_projection_modeling in ["linear"]:
-                                x = layer(x) + dimension_transformation(projected_batch_layer)
+                                x = layer(x, **kwargs) + dimension_transformation(projected_batch_layer)
                             else:
                                 raise NotImplementedError()
                         else:
-                            x = layer(x)
+                            x = layer(x, **kwargs)
         return x
 
 
@@ -744,6 +752,88 @@ class DecoderDRVI(nn.Module):
                 raise NotImplementedError()
         self.params_nets = nn.ParameterDict(params_nets)
 
+    def _apply_last_layer(
+        self,
+        last_tensor: torch.Tensor,
+        cat_full_tensor: torch.Tensor | None,
+        cont_full_tensor: torch.Tensor | None,
+        reconstruction_indices: torch.Tensor | None = None,
+    ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+        """Apply the last layer to the latent space.
+
+        Parameters
+        ----------
+        last_tensor
+            The output of the last layer.
+        cat_full_tensor
+            The categorical covariates.
+        cont_full_tensor
+            The continuous covariates.
+        reconstruction_indices
+            The indices of features to reconstruct.
+
+        Returns
+        -------
+        tuple
+            (params, original_params) where:
+            - params: Processed parameters for the distribution
+            - original_params: Raw parameters before processing (for example pooling)
+        """
+        batch_size = last_tensor.shape[0]
+
+        original_params = {}
+        params = {}
+        for param_name, param_info in self.gene_likelihood_module.parameters.items():
+            param_net = self.params_nets[param_name]
+            if param_info.startswith("fixed="):
+                original_params[param_name] = param_net
+                if reconstruction_indices is None:
+                    params[param_name] = param_net.reshape(1, 1).expand(batch_size, self.n_output)
+                elif reconstruction_indices.dim() == 1:
+                    params[param_name] = param_net.reshape(1, 1).expand(batch_size, reconstruction_indices.shape[0])
+                elif reconstruction_indices.dim() == 2:
+                    params[param_name] = param_net.reshape(1, 1).expand(batch_size, reconstruction_indices.shape[1])
+                else:
+                    raise NotImplementedError()
+            elif param_info == "no_transformation":
+                param_value = param_net(last_tensor, cat_full_tensor, output_subset_indices=reconstruction_indices)
+                original_params[param_name] = param_value
+                if self.n_split > 1:
+                    if self.split_aggregation == "sum":
+                        # to get average
+                        params[param_name] = param_value.sum(dim=-2) / self.n_split
+                    elif self.split_aggregation == "sum_plus":
+                        # to get average after softplus
+                        params[param_name] = F.softplus(param_value).sum(dim=-2) / self.n_split
+                    elif self.split_aggregation == "logsumexp":
+                        # to cancel the effect of n_splits
+                        params[param_name] = torch.logsumexp(param_value, dim=-2) - math.log(self.n_split)
+                    elif self.split_aggregation == "max":
+                        params[param_name] = torch.amax(param_value, dim=-2)
+                    else:
+                        raise NotImplementedError()
+                else:
+                    params[param_name] = param_value
+            elif param_info == "per_feature":
+                param_value = param_net
+                if reconstruction_indices is None:
+                    pass
+                elif reconstruction_indices.dim() == 1:
+                    param_value = param_value[reconstruction_indices]
+                elif reconstruction_indices.dim() == 2:
+                    param_value = param_value[reconstruction_indices]
+                else:
+                    raise NotImplementedError()
+
+                original_params[param_name] = param_value
+                if param_value.dim() == 1:
+                    param_value = param_value.unsqueeze(0).expand(batch_size, -1)
+                params[param_name] = param_value
+            else:
+                raise NotImplementedError()
+
+        return params, original_params
+
     def forward(
         self,
         z: torch.Tensor,
@@ -751,6 +841,7 @@ class DecoderDRVI(nn.Module):
         cont_full_tensor: torch.Tensor | None,
         library: torch.Tensor,
         gene_likelihood_additional_info: dict[str, Any],
+        reconstruction_indices: torch.Tensor | None = None,
     ) -> tuple[Any, dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """Forward computation on ``z``.
 
@@ -766,6 +857,8 @@ class DecoderDRVI(nn.Module):
             Library size information.
         gene_likelihood_additional_info
             Additional information for gene likelihood computation.
+        reconstruction_indices
+            Indices of features to reconstruct.
 
         Returns
         -------
@@ -789,37 +882,9 @@ class DecoderDRVI(nn.Module):
             z = torch.cat((z, cont_full_tensor), dim=-1)
 
         last_tensor = self.px_shared_decoder(z, cat_full_tensor) if self.px_shared_decoder is not None else z
-        original_params = {}
-        params = {}
-        for param_name, param_info in self.gene_likelihood_module.parameters.items():
-            param_net = self.params_nets[param_name]
-            if param_info.startswith("fixed="):
-                original_params[param_name] = param_net
-                params[param_name] = param_net.reshape(1, 1).expand(batch_size, self.n_output)
-            elif param_info == "no_transformation":
-                param_value = param_net(last_tensor, cat_full_tensor)
-                original_params[param_name] = param_value
-                if self.n_split > 1:
-                    if self.split_aggregation == "sum":
-                        # to get average
-                        params[param_name] = param_value.sum(dim=-2) / self.n_split
-                    elif self.split_aggregation == "sum_plus":
-                        # to get average after softplus
-                        params[param_name] = F.softplus(param_value).sum(dim=-2) / self.n_split
-                    elif self.split_aggregation == "logsumexp":
-                        # to cancel the effect of n_splits
-                        params[param_name] = torch.logsumexp(param_value, dim=-2) - math.log(self.n_split)
-                    elif self.split_aggregation == "max":
-                        params[param_name] = torch.amax(param_value, dim=-2)
-                    else:
-                        raise NotImplementedError()
-                else:
-                    params[param_name] = param_value
-            elif param_info == "per_feature":
-                original_params[param_name] = param_net
-                params[param_name] = param_net.unsqueeze(0).expand(batch_size, -1)
-            else:
-                raise NotImplementedError()
+        params, original_params = self._apply_last_layer(
+            last_tensor, cat_full_tensor, cont_full_tensor, reconstruction_indices
+        )
 
         # Note this logic:
         px_dist = self.gene_likelihood_module.dist(
