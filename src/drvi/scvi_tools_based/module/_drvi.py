@@ -485,6 +485,9 @@ class DRVIModule(BaseModuleClass):
         return outputs
 
     def _get_reconstruction_indices(self, tensors: TensorDict) -> None | torch.Tensor:
+        # We also reconstruct a fraction in validation set
+        # if not self.training:
+        #     return None
         if self.reconstruction_policy == "dense":
             return None
         elif self.reconstruction_policy.startswith("random_batch@"):
@@ -619,17 +622,23 @@ class DRVIModule(BaseModuleClass):
         px = generative_outputs["px"]
         reconstruction_indices = generative_outputs["reconstruction_indices"]
 
+        fill_in_the_blanks = self.fill_in_the_blanks_ratio > 0.0 and self.training
+
         if self.reconstruction_policy == "dense":
             pass
         elif self.reconstruction_policy.startswith("random_batch@"):
             x = x[:, reconstruction_indices]
+            if fill_in_the_blanks:
+                x_mask = x_mask[:, reconstruction_indices]
         elif self.reconstruction_policy.startswith("random_cell@"):
             x = x.gather(dim=1, index=reconstruction_indices)
+            if fill_in_the_blanks:
+                x_mask = x_mask.gather(dim=1, index=reconstruction_indices)
         else:
             raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 
         kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
-        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
+        if fill_in_the_blanks:
             reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
         else:
             reconst_loss = -px.log_prob(x).sum(dim=-1)
