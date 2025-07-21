@@ -840,7 +840,6 @@ class DecoderDRVI(nn.Module):
         cat_full_tensor: torch.Tensor | None,
         cont_full_tensor: torch.Tensor | None,
         library: torch.Tensor,
-        gene_likelihood_additional_info: dict[str, Any],
         reconstruction_indices: torch.Tensor | None = None,
     ) -> tuple[Any, dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """Forward computation on ``z``.
@@ -855,8 +854,6 @@ class DecoderDRVI(nn.Module):
             Tensor of continuous covariate(s) for this sample.
         library
             Library size information.
-        gene_likelihood_additional_info
-            Additional information for gene likelihood computation.
         reconstruction_indices
             Indices of features to reconstruct.
 
@@ -886,16 +883,6 @@ class DecoderDRVI(nn.Module):
             last_tensor, cat_full_tensor, cont_full_tensor, reconstruction_indices
         )
 
-        if reconstruction_indices is not None:
-            if reconstruction_indices.dim() == 1:
-                library = library[:, reconstruction_indices]
-            elif reconstruction_indices.dim() == 2:
-                library = library.gather(dim=1, index=reconstruction_indices)
-            else:
-                raise NotImplementedError()
-
         # Note this logic:
-        px_dist = self.gene_likelihood_module.dist(
-            aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
-        )
+        px_dist = self.gene_likelihood_module.dist(parameters=params, lib_y=library)
         return px_dist, params, original_params

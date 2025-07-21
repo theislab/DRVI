@@ -140,7 +140,6 @@ class GenerativeMixin:
                     inference_outputs={
                         "z": z_tensor,
                         "library": lib_tensor,
-                        "gene_likelihood_additional_info": {},
                     },
                 )
                 gen_output = self.module.generative(**gen_input)

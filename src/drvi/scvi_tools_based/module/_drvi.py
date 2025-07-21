@@ -411,10 +411,7 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing pre-processed input data.
         """
         # log the input to the variational distribution for numerical stability
-        x_, gene_likelihood_additional_info = self.gene_likelihood_module.initial_transformation(x)
-        # Note: this is different from scvi implementation of library size that is log transformed
-        # All our noise models accept non-normalized library to work
-        library = x.sum(1)
+        x_ = self.gene_likelihood_module.initial_transformation(x)
 
         encoder_input = x_
 
@@ -422,8 +419,6 @@ class DRVIModule(BaseModuleClass):
             "encoder_input": encoder_input,
             "cat_full_tensor": cat_covs if self.encode_covariates else None,
             "cont_full_tensor": cont_covs if self.encode_covariates else None,
-            "library": library,
-            "gene_likelihood_additional_info": gene_likelihood_additional_info,
         }
 
     @auto_move_data
@@ -478,9 +473,7 @@ class DRVIModule(BaseModuleClass):
             "z": z,
             "qz_m": qz_m,
             "qz_v": qz_v,
-            "library": pre_processed_input["library"],
             "x_mask": x_mask,
-            "gene_likelihood_additional_info": pre_processed_input["gene_likelihood_additional_info"],
         }
         return outputs
 
@@ -503,6 +496,21 @@ class DRVIModule(BaseModuleClass):
         else:
             raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 
+    def _get_library_size(
+        self, tensors: TensorDict, reconstruction_indices: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        # Note: this is different from scvi implementation of library size that is log transformed
+        # All our noise models accept non-normalized library to work
+        x = tensors[REGISTRY_KEYS.X_KEY]
+        if reconstruction_indices is None:
+            return x.sum(1)
+        elif reconstruction_indices.dim() == 1:
+            return x[:, reconstruction_indices].sum(1)
+        elif reconstruction_indices.dim() == 2:
+            return x.gather(dim=1, index=reconstruction_indices).sum(1)
+        else:
+            raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
+
     def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
         """Prepare input for the generative model.
 
@@ -521,18 +529,16 @@ class DRVIModule(BaseModuleClass):
         z = inference_outputs["z"]
         if self.fully_deterministic:
             z = inference_outputs["qz_m"]
-        library = inference_outputs["library"]
-        gene_likelihood_additional_info = inference_outputs["gene_likelihood_additional_info"]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
         reconstruction_indices = self._get_reconstruction_indices(tensors)
+        library = self._get_library_size(tensors, reconstruction_indices)
 
         input_dict = {
             "z": z,
             "library": library,
-            "gene_likelihood_additional_info": gene_likelihood_additional_info,
             "cont_covs": cont_covs,
             "cat_covs": cat_covs,
             "reconstruction_indices": reconstruction_indices,
@@ -544,7 +550,6 @@ class DRVIModule(BaseModuleClass):
         self,
         z: torch.Tensor,
         library: torch.Tensor,
-        gene_likelihood_additional_info: Any,
         cont_covs: torch.Tensor | None = None,
         cat_covs: torch.Tensor | None = None,
         reconstruction_indices: torch.Tensor | None = None,
@@ -557,8 +562,6 @@ class DRVIModule(BaseModuleClass):
             Latent variables.
         library
             Library size information.
-        gene_likelihood_additional_info
-            Additional information for gene likelihood computation.
         cont_covs
             Continuous covariates.
         cat_covs
@@ -579,7 +582,6 @@ class DRVIModule(BaseModuleClass):
             cat_full_tensor=cat_covs,
             cont_full_tensor=cont_covs,
             library=library,
-            gene_likelihood_additional_info=gene_likelihood_additional_info,
             reconstruction_indices=reconstruction_indices,
         )
 
