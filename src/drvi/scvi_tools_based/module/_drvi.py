@@ -486,8 +486,8 @@ class DRVIModule(BaseModuleClass):
 
     def _get_reconstruction_indices(self, tensors: TensorDict) -> None | torch.Tensor:
         # We also reconstruct a fraction in validation set
-        # if not self.training:
-        #     return None
+        if not self.training:
+            return None
         if self.reconstruction_policy == "dense":
             return None
         elif self.reconstruction_policy.startswith("random_batch@"):
@@ -624,13 +624,15 @@ class DRVIModule(BaseModuleClass):
 
         fill_in_the_blanks = self.fill_in_the_blanks_ratio > 0.0 and self.training
 
-        if self.reconstruction_policy == "dense":
+        if self.reconstruction_policy == "dense" or reconstruction_indices is None:
             pass
         elif self.reconstruction_policy.startswith("random_batch@"):
+            reconstruction_indices = reconstruction_indices.to(x.device)
             x = x[:, reconstruction_indices]
             if fill_in_the_blanks:
                 x_mask = x_mask[:, reconstruction_indices]
         elif self.reconstruction_policy.startswith("random_cell@"):
+            reconstruction_indices = reconstruction_indices.to(x.device)
             x = x.gather(dim=1, index=reconstruction_indices)
             if fill_in_the_blanks:
                 x_mask = x_mask.gather(dim=1, index=reconstruction_indices)
