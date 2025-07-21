@@ -505,9 +505,9 @@ class DRVIModule(BaseModuleClass):
         if reconstruction_indices is None:
             return x.sum(1)
         elif reconstruction_indices.dim() == 1:
-            return x[:, reconstruction_indices].sum(1)
+            return x[:, reconstruction_indices.to(x.device)].sum(1)
         elif reconstruction_indices.dim() == 2:
-            return x.gather(dim=1, index=reconstruction_indices).sum(1)
+            return x.gather(dim=1, index=reconstruction_indices.to(x.device)).sum(1)
         else:
             raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
 
