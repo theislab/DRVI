@@ -221,6 +221,34 @@ def library_size_correction(
     return x
 
 
+def preprocess_count_data(
+    x: torch.Tensor,
+    x_mask: torch.Tensor | None,
+    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Preprocess count data with library size normalization and log transformation.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        Input count data tensor.
+    x_mask : torch.Tensor | None
+        Mask for the input data.
+    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+        Library size normalization method.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        (transformed_x, library_size) where transformed_x is the preprocessed data
+        and library_size is the calculated library size.
+    """
+    library_size = calculate_library_size(x, x_mask)
+    x = library_size_normalization(x, library_size, library_normalization)
+    x = torch.log1p(x)
+    return x, library_size
+
+
 class NormalNoiseModel(NoiseModel):
     """Normal (Gaussian) noise model for continuous data.
 
@@ -338,7 +366,11 @@ class PoissonNoiseModel(NoiseModel):
     >>> print(transformed_x.shape)  # torch.Size([10, 5])
     """
 
-    def __init__(self, mean_transformation="exp", library_normalization="x_lib"):
+    def __init__(
+        self,
+        mean_transformation="exp",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
@@ -373,9 +405,7 @@ class PoissonNoiseModel(NoiseModel):
         """
         x = x
         aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
+        x, aux_info["x_library_size"] = preprocess_count_data(x, x_mask, self.library_normalization)
         return x, aux_info
 
     def dist(self, aux_info, parameters, lib_y):
@@ -425,7 +455,12 @@ class NegativeBinomialNoiseModel(NoiseModel):
         Library size normalization method.
     """
 
-    def __init__(self, dispersion="feature", mean_transformation="exp", library_normalization="x_lib"):
+    def __init__(
+        self,
+        dispersion="feature",
+        mean_transformation="exp",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         assert mean_transformation in ["exp", "softmax", "softplus", "none"]
         self.dispersion = dispersion
@@ -467,9 +502,7 @@ class NegativeBinomialNoiseModel(NoiseModel):
         """
         x = x
         aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
+        x, aux_info["x_library_size"] = preprocess_count_data(x, x_mask, self.library_normalization)
         return x, aux_info
 
     def dist(self, aux_info, parameters, lib_y):
@@ -656,7 +689,12 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
     with very small or large values.
     """
 
-    def __init__(self, dispersion="feature", mean_transformation="none", library_normalization="x_lib"):
+    def __init__(
+        self,
+        dispersion="feature",
+        mean_transformation="none",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
@@ -697,9 +735,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         """
         x = x
         aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
+        x, aux_info["x_library_size"] = preprocess_count_data(x, x_mask, self.library_normalization)
         return x, aux_info
 
     def dist(self, aux_info, parameters, lib_y):
