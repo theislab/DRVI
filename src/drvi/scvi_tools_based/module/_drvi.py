@@ -534,7 +534,10 @@ class DRVIModule(BaseModuleClass):
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
         reconstruction_indices = self._get_reconstruction_indices(tensors)
-        library = self._get_library_size(tensors, reconstruction_indices)
+        if REGISTRY_KEYS.OBSERVED_LIB_SIZE in tensors and reconstruction_indices is None:
+            library = tensors[REGISTRY_KEYS.OBSERVED_LIB_SIZE]
+        else:
+            library = self._get_library_size(tensors, reconstruction_indices)
 
         input_dict = {
             "z": z,

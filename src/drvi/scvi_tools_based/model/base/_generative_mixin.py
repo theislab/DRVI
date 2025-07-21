@@ -136,10 +136,10 @@ class GenerativeMixin:
                         REGISTRY_KEYS.LABELS_KEY: None,
                         REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
                         REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
+                        REGISTRY_KEYS.OBSERVED_LIB_SIZE: lib_tensor,
                     },
                     inference_outputs={
                         "z": z_tensor,
-                        "library": lib_tensor,
                     },
                 )
                 gen_output = self.module.generative(**gen_input)
