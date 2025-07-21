@@ -203,7 +203,7 @@ def library_size_correction(
         if not log_space:
             x = x * lib_size.unsqueeze(-1).clip(1) / 1e4
         else:
-            x = x + torch.log(lib_size.unsqueeze(-1) / 1e4).clip(0)
+            x = x + torch.log(lib_size.unsqueeze(-1).clip(1) / 1e4).clip(0)
     elif library_normalization in ["x_loglib", "div_lib_x_loglib", "x_loglib_all"]:
         if not log_space:
             x = x * torch.log(lib_size.unsqueeze(-1)) / 1e4
@@ -724,7 +724,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
             trans_mean = library_size_correction(mean, library_size, self.library_normalization, log_space=True)
         elif self.mean_transformation == "softmax":
             trans_mean = mean - torch.logsumexp(mean, dim=-1, keepdim=True)
-            trans_mean = torch.log(library_size).unsqueeze(-1) + trans_mean
+            trans_mean = torch.log(library_size.clip(1)).unsqueeze(-1) + trans_mean
         else:
             raise NotImplementedError()
         trans_r = r
