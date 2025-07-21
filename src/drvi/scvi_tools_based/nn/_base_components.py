@@ -886,6 +886,14 @@ class DecoderDRVI(nn.Module):
             last_tensor, cat_full_tensor, cont_full_tensor, reconstruction_indices
         )
 
+        if reconstruction_indices is not None:
+            if reconstruction_indices.dim() == 1:
+                library = library[:, reconstruction_indices]
+            elif reconstruction_indices.dim() == 2:
+                library = library.gather(dim=1, index=reconstruction_indices)
+            else:
+                raise NotImplementedError()
+
         # Note this logic:
         px_dist = self.gene_likelihood_module.dist(
             aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
