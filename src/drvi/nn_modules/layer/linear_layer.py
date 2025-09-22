@@ -3,6 +3,34 @@ from typing import Any
 
 import torch
 from torch import nn
+from torch.nn import functional as F
+
+
+class LinearLayer(nn.Linear):
+    def forward(self, x: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
+        if output_subset is None:
+            return super().forward(x)
+        elif output_subset.dim() == 1:
+            bias = self.bias[output_subset] if self.bias is not None else None
+            weight = self.weight[output_subset]
+            return F.linear(x, weight, bias)
+        elif output_subset.dim() == 2:
+            bias = self.bias[output_subset] if self.bias is not None else None
+            weight = self.weight[output_subset]
+            # x is of size (b,i) and weight is of size (b,o,i) -> output is of size (b,o)
+            # slower: torch.einsum('bi,boi->bo', x, weight) + bias
+            if x.dim() == 2:
+                output = torch.bmm(x.unsqueeze(1), weight.transpose(1, 2)).squeeze(1)
+            elif x.dim() == 3:
+                output = torch.bmm(x, weight.transpose(1, 2))  # bci x bio -> bco
+                bias = bias.unsqueeze(1) if bias is not None else None  # b1o
+            else:
+                raise NotImplementedError()
+            if bias is not None:
+                output = output + bias
+            return output
+        else:
+            raise NotImplementedError()
 
 
 class StackedLinearLayer(nn.Module):
@@ -132,13 +160,15 @@ class StackedLinearLayer(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    def forward(self, input: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
         r"""Forward pass through the stacked linear layer.
 
         Parameters
         ----------
         input
             Input tensor with shape (batch_size, n_channels, in_features).
+        output_subset
+            Subset of outputs to provide in the output.
 
         Returns
         -------
@@ -173,10 +203,24 @@ class StackedLinearLayer(nn.Module):
         >>> output = layer(x)
         >>> print(output.shape)  # torch.Size([2, 3, 5])
         """
-        mm = torch.einsum("bci,cio->bco", input, self.weight)
-        if self.bias is not None:
-            mm = mm + self.bias  # They will broadcast well
-        return mm
+        if output_subset is None or output_subset.dim() == 1:
+            weight = self.weight if output_subset is None else self.weight[:, :, output_subset]
+            # slower: mm = torch.einsum("bci,cio->bco", input, weight)
+            mm = torch.bmm(input.transpose(0, 1), weight).transpose(0, 1)
+            if self.bias is not None:
+                bias = self.bias if output_subset is None else self.bias[:, output_subset]
+                mm = mm + bias  # They (bco, co) will broadcast well
+            return mm
+        elif output_subset.dim() == 2:
+            weight = self.weight[:, :, output_subset]
+            # slower: mm = torch.einsum("bci,cibo->bco", input, weight)
+            mm = torch.matmul(input.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)
+            if self.bias is not None:
+                bias = self.bias[:, output_subset].transpose(0, 1)  # cbo -> bco
+                mm = mm + bias
+            return mm
+        else:
+            raise NotImplementedError()
 
     def extra_repr(self) -> str:
         """String representation for printing the layer.

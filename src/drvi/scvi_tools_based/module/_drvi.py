@@ -69,6 +69,11 @@ class DRVIModule(BaseModuleClass):
         Whether to use layer norm in layers.
     fill_in_the_blanks_ratio
         Ratio for fill-in-the-blanks training.
+    reconstruction_policy
+        Policy for reconstruction.
+        - "dense" : Reconstruct all features.
+        - "random_batch@M" : Reconstruct M random features for each batch.
+        - "random_cell@M" : Reconstruct M random features for each cell.
     input_dropout_rate
         Dropout rate to apply to the input.
     encoder_dropout_rate
@@ -131,6 +136,7 @@ class DRVIModule(BaseModuleClass):
         affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         fill_in_the_blanks_ratio: float = 0.0,
+        reconstruction_policy: str = "dense",
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
@@ -179,6 +185,7 @@ class DRVIModule(BaseModuleClass):
 
         self.gene_likelihood_module = self._construct_gene_likelihood_module(gene_likelihood)
         self.fill_in_the_blanks_ratio = fill_in_the_blanks_ratio
+        self.reconstruction_policy = reconstruction_policy
 
         use_batch_norm_encoder = use_batch_norm == "encoder" or use_batch_norm == "both"
         use_batch_norm_decoder = use_batch_norm == "decoder" or use_batch_norm == "both"
@@ -409,10 +416,7 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing pre-processed input data.
         """
         # log the input to the variational distribution for numerical stability
-        x_, gene_likelihood_additional_info = self.gene_likelihood_module.initial_transformation(x)
-        # Note: this is different from scvi implementation of library size that is log transformed
-        # All our noise models accept non-normalized library to work
-        library = x.sum(1)
+        x_ = self.gene_likelihood_module.initial_transformation(x)
 
         encoder_input = x_
 
@@ -420,8 +424,6 @@ class DRVIModule(BaseModuleClass):
             "encoder_input": encoder_input,
             "cat_full_tensor": cat_covs if self.encode_covariates else None,
             "cont_full_tensor": cont_covs if self.encode_covariates else None,
-            "library": library,
-            "gene_likelihood_additional_info": gene_likelihood_additional_info,
         }
 
     @auto_move_data
@@ -476,11 +478,43 @@ class DRVIModule(BaseModuleClass):
             "z": z,
             "qz_m": qz_m,
             "qz_v": qz_v,
-            "library": pre_processed_input["library"],
             "x_mask": x_mask,
-            "gene_likelihood_additional_info": pre_processed_input["gene_likelihood_additional_info"],
         }
         return outputs
+
+    def _get_reconstruction_indices(self, tensors: TensorDict) -> None | torch.Tensor:
+        # We also reconstruct a fraction in validation set
+        if not self.training:
+            return None
+        if self.reconstruction_policy == "dense":
+            return None
+        elif self.reconstruction_policy.startswith("random_batch@"):
+            x = tensors[REGISTRY_KEYS.X_KEY]
+            n_random_features = int(self.reconstruction_policy.split("@")[1])
+            random_indices = torch.randperm(x.shape[1])[:n_random_features]
+            return random_indices
+        elif self.reconstruction_policy.startswith("random_cell@"):
+            x = tensors[REGISTRY_KEYS.X_KEY]
+            n_random_features = int(self.reconstruction_policy.split("@")[1])
+            random_indices = torch.argsort(torch.rand(x.shape[0], x.shape[1]), dim=-1)[:, :n_random_features]
+            return random_indices
+        else:
+            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
+
+    def _get_library_size(
+        self, tensors: TensorDict, reconstruction_indices: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        # Note: this is different from scvi implementation of library size that is log transformed
+        # All our noise models accept non-normalized library to work
+        x = tensors[REGISTRY_KEYS.X_KEY]
+        if reconstruction_indices is None:
+            return x.sum(1)
+        elif reconstruction_indices.dim() == 1:
+            return x[:, reconstruction_indices.to(x.device)].sum(1)
+        elif reconstruction_indices.dim() == 2:
+            return x.gather(dim=1, index=reconstruction_indices.to(x.device)).sum(1)
+        else:
+            raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
 
     def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
         """Prepare input for the generative model.
@@ -500,18 +534,22 @@ class DRVIModule(BaseModuleClass):
         z = inference_outputs["z"]
         if self.fully_deterministic:
             z = inference_outputs["qz_m"]
-        library = inference_outputs["library"]
-        gene_likelihood_additional_info = inference_outputs["gene_likelihood_additional_info"]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
+        reconstruction_indices = self._get_reconstruction_indices(tensors)
+        if REGISTRY_KEYS.OBSERVED_LIB_SIZE in tensors and reconstruction_indices is None:
+            library = tensors[REGISTRY_KEYS.OBSERVED_LIB_SIZE]
+        else:
+            library = self._get_library_size(tensors, reconstruction_indices)
+
         input_dict = {
             "z": z,
             "library": library,
-            "gene_likelihood_additional_info": gene_likelihood_additional_info,
             "cont_covs": cont_covs,
             "cat_covs": cat_covs,
+            "reconstruction_indices": reconstruction_indices,
         }
         return input_dict
 
@@ -520,9 +558,9 @@ class DRVIModule(BaseModuleClass):
         self,
         z: torch.Tensor,
         library: torch.Tensor,
-        gene_likelihood_additional_info: Any,
         cont_covs: torch.Tensor | None = None,
         cat_covs: torch.Tensor | None = None,
+        reconstruction_indices: torch.Tensor | None = None,
     ) -> dict[str, Any]:
         """Runs the generative model.
 
@@ -532,12 +570,12 @@ class DRVIModule(BaseModuleClass):
             Latent variables.
         library
             Library size information.
-        gene_likelihood_additional_info
-            Additional information for gene likelihood computation.
         cont_covs
             Continuous covariates.
         cat_covs
             Categorical covariates.
+        reconstruction_indices
+            Indices of features to reconstruct.
 
         Returns
         -------
@@ -552,7 +590,7 @@ class DRVIModule(BaseModuleClass):
             cat_full_tensor=cat_covs,
             cont_full_tensor=cont_covs,
             library=library,
-            gene_likelihood_additional_info=gene_likelihood_additional_info,
+            reconstruction_indices=reconstruction_indices,
             return_original_params=self.inspect_mode,
         )
 
@@ -560,17 +598,45 @@ class DRVIModule(BaseModuleClass):
             "px": px,
             "params": params,
             "original_params": original_params,
+            "reconstruction_indices": reconstruction_indices,
         }
 
     def _get_reconstruction_loss(
-        self, px: torch.distributions.Distribution, x: torch.Tensor, x_mask: torch.Tensor
-    ) -> torch.Tensor:
+        self,
+        px: torch.distributions.Distribution,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        reconstruction_indices: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Get reconstruction loss."""
-        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
+        fill_in_the_blanks = self.fill_in_the_blanks_ratio > 0.0 and self.training
+
+        if self.reconstruction_policy == "dense" or reconstruction_indices is None:
+            pass
+        elif self.reconstruction_policy.startswith("random_batch@"):
+            reconstruction_indices = reconstruction_indices.to(x.device)
+            x = x[:, reconstruction_indices]
+            if fill_in_the_blanks:
+                x_mask = x_mask[:, reconstruction_indices]
+        elif self.reconstruction_policy.startswith("random_cell@"):
+            reconstruction_indices = reconstruction_indices.to(x.device)
+            x = x.gather(dim=1, index=reconstruction_indices)
+            if fill_in_the_blanks:
+                x_mask = x_mask.gather(dim=1, index=reconstruction_indices)
+        else:
+            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
+
+        if fill_in_the_blanks:
             reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
+            mse = torch.nn.functional.mse_loss(x * x_mask, px.mean * x_mask, reduction="none").sum(dim=1)
         else:
             reconst_loss = -px.log_prob(x).sum(dim=-1)
-        return reconst_loss
+            mse = torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0)
+
+        return {
+            "loss": reconst_loss,
+            "mse": mse,
+        }
 
     def _get_kl_divergence_z(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> torch.Tensor:
         """Get KL divergence term for z."""
@@ -606,10 +672,11 @@ class DRVIModule(BaseModuleClass):
         qz_m = inference_outputs["qz_m"]
         qz_v = inference_outputs["qz_v"]
         px = generative_outputs["px"]
+        reconstruction_indices = generative_outputs["reconstruction_indices"]
 
         kl_divergence_z = self._get_kl_divergence_z(qz_m, qz_v)
-        reconst_loss = self._get_reconstruction_loss(px, x, x_mask)
-
+        reconst_losses = self._get_reconstruction_loss(px, x, x_mask, reconstruction_indices)
+        reconst_loss = reconst_losses["loss"]
         assert kl_divergence_z.shape == reconst_loss.shape
 
         kl_local_for_warmup = kl_divergence_z
@@ -626,7 +693,7 @@ class DRVIModule(BaseModuleClass):
             reconstruction_loss=reconstruction_loss,
             kl_local=kl_local,
             extra_metrics={
-                "mse": torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0),
+                "mse": reconst_losses["mse"],
             },
         )
 
