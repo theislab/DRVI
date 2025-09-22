@@ -11,6 +11,7 @@ from torch.nn import functional as F
 
 from drvi.nn_modules.embedding import MultiEmbedding
 from drvi.nn_modules.freezable import FreezableBatchNorm1d, FreezableLayerNorm
+from drvi.nn_modules.gradients import GradientScaler
 from drvi.nn_modules.layer.factory import FCLayerFactory, LayerFactory
 from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.noise_model import NoiseModel
@@ -627,6 +628,8 @@ class DecoderDRVI(nn.Module):
         The strategy model takes to model covariates.
     categorical_covariate_dims
         Dimensions for categorical covariate embeddings.
+    last_layer_gradient_scale
+        Gradient scale for the last layer of the decoder.
     **kwargs
         Additional keyword arguments.
     """
@@ -658,6 +661,7 @@ class DecoderDRVI(nn.Module):
             "emb_shared_linear",
         ] = "one_hot",
         categorical_covariate_dims: Sequence[int] = (),
+        last_layer_gradient_scale: float = 1.0,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -714,6 +718,11 @@ class DecoderDRVI(nn.Module):
             self.register_parameter("px_shared_decoder", None)
             inject_covariates = True
 
+        if last_layer_gradient_scale != 1.0:
+            self.last_layer_gradient_scaler = GradientScaler(last_layer_gradient_scale)
+        else:
+            self.register_parameter("last_layer_gradient_scaler", None)
+
         params_for_likelihood = self.gene_likelihood_module.parameters
         params_nets = {}
         for param_name, param_info in params_for_likelihood.items():
@@ -751,6 +760,7 @@ class DecoderDRVI(nn.Module):
         cont_full_tensor: torch.Tensor | None,
         library: torch.Tensor,
         gene_likelihood_additional_info: dict[str, Any],
+        return_original_params: bool = False,
     ) -> tuple[Any, dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """Forward computation on ``z``.
 
@@ -766,6 +776,8 @@ class DecoderDRVI(nn.Module):
             Library size information.
         gene_likelihood_additional_info
             Additional information for gene likelihood computation.
+        return_original_params
+            Whether to return the original parameters before processing (for example pooling).
 
         Returns
         -------
@@ -789,13 +801,16 @@ class DecoderDRVI(nn.Module):
             z = torch.cat((z, cont_full_tensor), dim=-1)
 
         last_tensor = self.px_shared_decoder(z, cat_full_tensor) if self.px_shared_decoder is not None else z
+        if self.last_layer_gradient_scaler is not None:
+            last_tensor = self.last_layer_gradient_scaler(last_tensor)
+
         original_params = {}
         params = {}
         for param_name, param_info in self.gene_likelihood_module.parameters.items():
             param_net = self.params_nets[param_name]
             if param_info.startswith("fixed="):
-                original_params[param_name] = param_net
                 params[param_name] = param_net.reshape(1, 1).expand(batch_size, self.n_output)
+                original_params[param_name] = params[param_name]
             elif param_info == "no_transformation":
                 param_value = param_net(last_tensor, cat_full_tensor)
                 original_params[param_name] = param_value
@@ -816,8 +831,8 @@ class DecoderDRVI(nn.Module):
                 else:
                     params[param_name] = param_value
             elif param_info == "per_feature":
-                original_params[param_name] = param_net
                 params[param_name] = param_net.unsqueeze(0).expand(batch_size, -1)
+                original_params[param_name] = params[param_name]
             else:
                 raise NotImplementedError()
 
@@ -825,4 +840,6 @@ class DecoderDRVI(nn.Module):
         px_dist = self.gene_likelihood_module.dist(
             aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
         )
+        if not return_original_params:
+            original_params = None
         return px_dist, params, original_params

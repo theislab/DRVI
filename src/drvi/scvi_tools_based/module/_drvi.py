@@ -96,6 +96,8 @@ class DRVIModule(BaseModuleClass):
         A layer Factory instance for building encoder layers.
     decoder_layer_factory
         A layer Factory instance for building decoder layers.
+    last_layer_gradient_scale
+        Gradient scale for the last layer of the decoder.
     extra_encoder_kwargs
         Extra keyword arguments passed into encoder.
     extra_decoder_kwargs
@@ -159,6 +161,7 @@ class DRVIModule(BaseModuleClass):
         mean_activation: Callable | str = "identity",
         encoder_layer_factory: LayerFactory | None = None,
         decoder_layer_factory: LayerFactory | None = None,
+        last_layer_gradient_scale: float = 1.0,
         extra_encoder_kwargs: dict[str, Any] | None = None,
         extra_decoder_kwargs: dict[str, Any] | None = None,
     ) -> None:
@@ -237,10 +240,12 @@ class DRVIModule(BaseModuleClass):
             layer_factory=decoder_layer_factory,
             covariate_modeling_strategy=covariate_modeling_strategy,
             categorical_covariate_dims=categorical_covariate_dims,
+            last_layer_gradient_scale=last_layer_gradient_scale,
             **(extra_decoder_kwargs or {}),
         )
 
         self.prior = self._construct_prior(prior, prior_init_dataloader)
+        self.inspect_mode = False
         self.fully_deterministic = False
 
     def _construct_gene_likelihood_module(self, gene_likelihood: str) -> Any:
@@ -548,6 +553,7 @@ class DRVIModule(BaseModuleClass):
             cont_full_tensor=cont_covs,
             library=library,
             gene_likelihood_additional_info=gene_likelihood_additional_info,
+            return_original_params=self.inspect_mode,
         )
 
         return {
@@ -555,6 +561,20 @@ class DRVIModule(BaseModuleClass):
             "params": params,
             "original_params": original_params,
         }
+
+    def _get_reconstruction_loss(
+        self, px: torch.distributions.Distribution, x: torch.Tensor, x_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """Get reconstruction loss."""
+        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
+            reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
+        else:
+            reconst_loss = -px.log_prob(x).sum(dim=-1)
+        return reconst_loss
+
+    def _get_kl_divergence_z(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> torch.Tensor:
+        """Get KL divergence term for z."""
+        return self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=-1)
 
     def loss(
         self,
@@ -587,13 +607,9 @@ class DRVIModule(BaseModuleClass):
         qz_v = inference_outputs["qz_v"]
         px = generative_outputs["px"]
 
-        kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
-        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
-            reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
-        else:
-            reconst_loss = -px.log_prob(x).sum(dim=-1)
-        # For MSE this should be equivalent (in terms of backward gradients) to:
-        # reconst_loss = torch.nn.GaussianNLLLoss(reduction='none')(x, px.loc, px.scale ** 2).sum(dim=-1)
+        kl_divergence_z = self._get_kl_divergence_z(qz_m, qz_v)
+        reconst_loss = self._get_reconstruction_loss(px, x, x_mask)
+
         assert kl_divergence_z.shape == reconst_loss.shape
 
         kl_local_for_warmup = kl_divergence_z
@@ -603,10 +619,11 @@ class DRVIModule(BaseModuleClass):
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
 
-        kl_local = {"kl_divergence_z": kl_divergence_z.sum()}
+        kl_local = {"kl_divergence_z": kl_divergence_z}
+        reconstruction_loss = {"reconstruction_loss": reconst_loss}
         return LossOutput(
             loss=loss,
-            reconstruction_loss=reconst_loss,
+            reconstruction_loss=reconstruction_loss,
             kl_local=kl_local,
             extra_metrics={
                 "mse": torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0),

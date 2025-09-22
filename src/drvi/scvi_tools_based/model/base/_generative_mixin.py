@@ -106,6 +106,7 @@ class GenerativeMixin:
         """
         store: list[Any] = []
         self.module.eval()
+        self.module.inspect_mode = True
 
         if cat_values is not None and map_cat_values:
             if cat_values.ndim == 1:  # For a user not noticing cat_values should be 2d!
@@ -130,6 +131,15 @@ class GenerativeMixin:
                 cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
                 batch_tensor = None
 
+                if self.module.__class__.__name__ == "DRVIModule":
+                    inference_outputs = {
+                        "z": z_tensor,
+                        "library": lib_tensor,
+                        "gene_likelihood_additional_info": {},
+                    }
+                else:
+                    raise NotImplementedError(f"Module {self.module.__class__.__name__} not supported.")
+
                 gen_input = self.module._get_generative_input(
                     tensors={
                         REGISTRY_KEYS.BATCH_KEY: batch_tensor,
@@ -137,15 +147,12 @@ class GenerativeMixin:
                         REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
                         REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                     },
-                    inference_outputs={
-                        "z": z_tensor,
-                        "library": lib_tensor,
-                        "gene_likelihood_additional_info": {},
-                    },
+                    inference_outputs=inference_outputs,
                 )
                 gen_output = self.module.generative(**gen_input)
                 step_func(gen_output, store)
         result = aggregation_func(store)
+        self.module.inspect_mode = False
         return result
 
     @torch.inference_mode()
@@ -294,6 +301,7 @@ class GenerativeMixin:
         """
         adata = self._validate_anndata(adata)
         data_loader = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
+        self.module.inspect_mode = True
 
         store: list[Any] = []
         try:
@@ -308,7 +316,7 @@ class GenerativeMixin:
             raise e
         finally:
             self.module.fully_deterministic = False
-
+        self.module.inspect_mode = False
         return aggregation_func(store)
 
     @torch.inference_mode()
