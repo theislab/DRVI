@@ -134,6 +134,7 @@ class GenerativeMixin:
                 if self.module.__class__.__name__ == "DRVIModule":
                     inference_outputs = {
                         "z": z_tensor,
+                        "library": lib_tensor,
                     }
                 else:
                     raise NotImplementedError(f"Module {self.module.__class__.__name__} not supported.")
@@ -144,7 +145,6 @@ class GenerativeMixin:
                         REGISTRY_KEYS.LABELS_KEY: None,
                         REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
                         REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
-                        REGISTRY_KEYS.OBSERVED_LIB_SIZE: lib_tensor,
                     },
                     inference_outputs=inference_outputs,
                 )

@@ -450,6 +450,7 @@ class DRVIModule(BaseModuleClass):
         """
         pre_processed_input = self._input_pre_processing(x, cont_covs, cat_covs).copy()
         x_ = pre_processed_input["encoder_input"]
+        library = self._get_library_size(x_original=x, reconstruction_indices=None)
 
         # Mask if needed
         if self.fill_in_the_blanks_ratio > 0.0 and self.training:
@@ -476,6 +477,7 @@ class DRVIModule(BaseModuleClass):
 
         outputs = {
             "z": z,
+            "library": library,
             "qz_m": qz_m,
             "qz_v": qz_v,
             "x_mask": x_mask,
@@ -502,17 +504,16 @@ class DRVIModule(BaseModuleClass):
             raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 
     def _get_library_size(
-        self, tensors: TensorDict, reconstruction_indices: torch.Tensor | None = None
+        self, x_original: TensorDict, reconstruction_indices: torch.Tensor | None = None
     ) -> torch.Tensor:
         # Note: this is different from scvi implementation of library size that is log transformed
         # All our noise models accept non-normalized library to work
-        x = tensors[REGISTRY_KEYS.X_KEY]
         if reconstruction_indices is None:
-            return x.sum(1)
+            return x_original.sum(1)
         elif reconstruction_indices.dim() == 1:
-            return x[:, reconstruction_indices.to(x.device)].sum(1)
+            return x_original[:, reconstruction_indices.to(x_original.device)].sum(1)
         elif reconstruction_indices.dim() == 2:
-            return x.gather(dim=1, index=reconstruction_indices.to(x.device)).sum(1)
+            return x_original.gather(dim=1, index=reconstruction_indices.to(x_original.device)).sum(1)
         else:
             raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
 
@@ -534,15 +535,14 @@ class DRVIModule(BaseModuleClass):
         z = inference_outputs["z"]
         if self.fully_deterministic:
             z = inference_outputs["qz_m"]
+        library = inference_outputs["library"]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
         reconstruction_indices = self._get_reconstruction_indices(tensors)
-        if REGISTRY_KEYS.OBSERVED_LIB_SIZE in tensors and reconstruction_indices is None:
-            library = tensors[REGISTRY_KEYS.OBSERVED_LIB_SIZE]
-        else:
-            library = self._get_library_size(tensors, reconstruction_indices)
+        if reconstruction_indices is not None:  # Override library size as we do not decode everything
+            library = self._get_library_size(tensors[REGISTRY_KEYS.X_KEY], reconstruction_indices)
 
         input_dict = {
             "z": z,
@@ -628,7 +628,7 @@ class DRVIModule(BaseModuleClass):
 
         if fill_in_the_blanks:
             reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
-            mse = torch.nn.functional.mse_loss(x * x_mask, px.mean * x_mask, reduction="none").sum(dim=1)
+            mse = torch.nn.functional.mse_loss(x * x_mask, px.mean * x_mask, reduction="none").sum(dim=1).mean(dim=0)
         else:
             reconst_loss = -px.log_prob(x).sum(dim=-1)
             mse = torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0)
