@@ -477,9 +477,9 @@ class DRVIModule(BaseModuleClass):
 
         outputs = {
             "z": z,
-            "library": library,
             "qz_m": qz_m,
             "qz_v": qz_v,
+            "library": library,
             "x_mask": x_mask,
         }
         return outputs
@@ -517,7 +517,9 @@ class DRVIModule(BaseModuleClass):
         else:
             raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
 
-    def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
+    def _get_generative_input(
+        self, tensors: TensorDict, inference_outputs: dict[str, Any], library_to_inject: torch.Tensor | None = None
+    ) -> dict[str, Any]:
         """Prepare input for the generative model.
 
         Parameters
@@ -526,6 +528,8 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing tensor data.
         inference_outputs
             Outputs from the inference step.
+        library_to_inject
+            Library size to inject (it should not be log transformed. Just x.sum(1)).
 
         Returns
         -------
@@ -535,14 +539,22 @@ class DRVIModule(BaseModuleClass):
         z = inference_outputs["z"]
         if self.fully_deterministic:
             z = inference_outputs["qz_m"]
-        library = inference_outputs["library"]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
         reconstruction_indices = self._get_reconstruction_indices(tensors)
-        if reconstruction_indices is not None:  # Override library size as we do not decode everything
+
+        # Set library size
+        if library_to_inject is not None:
+            library = library_to_inject
+            assert reconstruction_indices is None
+        elif reconstruction_indices is not None:  # Override library size as we do not decode everything
             library = self._get_library_size(tensors[REGISTRY_KEYS.X_KEY], reconstruction_indices)
+        elif "library" in inference_outputs:
+            library = inference_outputs["library"]
+        else:
+            raise ValueError("Library size not found in inference outputs.")
 
         input_dict = {
             "z": z,
