@@ -4,6 +4,7 @@
 [![Tests][badge-tests]][link-tests]
 [![Documentation][badge-docs]][link-docs]
 [![Python Version][badge-pyver]][link-pypi]
+[![PyPI Downloads][badge-pypi-downloads]][link-pepy]
 
 [badge-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml/badge.svg
 [badge-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml/badge.svg
@@ -11,6 +12,8 @@
 [link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml
 [badge-docs]: https://img.shields.io/readthedocs/drvi/latest.svg?label=Read%20the%20Docs
 [badge-pyver]: https://img.shields.io/pypi/pyversions/drvi-py
+[badge-pypi-downloads]: https://static.pepy.tech/personalized-badge/drvi-py?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=%F0%9F%93%A6+downloads
+[link-pepy]: https://pepy.tech/projects/drvi-py
 
 Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
