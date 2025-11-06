@@ -4,7 +4,7 @@
 [![Tests][badge-tests]][link-tests]
 [![Documentation][badge-docs]][link-docs]
 [![Python Version][badge-pyver]][link-pypi]
-[![PyPI Downloads](badge-pypi-downloads)](link-pepy)
+[![PyPI Downloads][badge-pypi-downloads]][link-pepy]
 
 [badge-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml/badge.svg
 [badge-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml/badge.svg
