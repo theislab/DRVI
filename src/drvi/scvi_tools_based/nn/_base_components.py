@@ -100,7 +100,7 @@ class FCLayers(nn.Module):
 
         self.n_cat_list = list(n_cat_list) if n_cat_list is not None else []
         if self.covariate_vector_modeling == "one_hot":
-            covariate_embs_dim = self.n_cat_list
+            covariate_embs_dim = [n_cat if n_cat > 1 else 0 for n_cat in self.n_cat_list]
         else:
             covariate_embs_dim = list(covariate_embs_dim)
             assert len(covariate_embs_dim) == len(self.n_cat_list)
@@ -319,7 +319,8 @@ class FCLayers(nn.Module):
             for n_cat, cat in zip(self.n_cat_list, cat_list, strict=False):
                 if n_cat and cat is None:
                     raise ValueError("cat not provided while n_cat != 0 in init. params.")
-                concat_list += [one_hot(cat, n_cat)]
+                if n_cat > 1:  # n_cat = 1 will be ignored - no additional information
+                    concat_list += [one_hot(cat, n_cat)]
         elif self.covariate_vector_modeling == "emb_shared":
             concat_list = [cat_full_tensor]
         else:
@@ -352,8 +353,9 @@ class FCLayers(nn.Module):
                     else:
                         if layer in self.injectable_layers:
                             if self.covariate_projection_modeling == "cat":
-                                current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
-                                x = torch.cat((x, current_cat_tensor), dim=-1)
+                                if len(concat_list_layer) > 0:
+                                    current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
+                                    x = torch.cat((x, current_cat_tensor), dim=-1)
                                 x = layer(x)
                             elif self.covariate_projection_modeling in ["linear"]:
                                 x = layer(x) + dimension_transformation(projected_batch_layer)
