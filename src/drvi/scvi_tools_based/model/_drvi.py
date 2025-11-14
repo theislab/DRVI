@@ -93,20 +93,27 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
             n_cats_per_cov = n_cats_per_cov + list(cat_cov_stats.n_cats_per_key)
 
-        all_categorical_covariates = [batch_key or "_dummy_batch"] + list(categorical_covariates)
+        if batch_key is not None:
+            all_categorical_covariates = [batch_key] + list(categorical_covariates)
+            has_batch = 1
+        else:
+            all_categorical_covariates = list(categorical_covariates)
+            has_batch = 0
         categorical_covariates_info = FeatureInfoList(all_categorical_covariates, axis="obs", default_dim=10)
 
         # validations
         if n_batch > 1:
             batch_original_key = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY).original_key
             assert categorical_covariates_info.names[0] == batch_original_key
+            categorical_covariates_dims = categorical_covariates_info.dims
         else:
             assert batch_key is None
+            categorical_covariates_dims = [1] + categorical_covariates_info.dims
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
-            assert tuple(categorical_covariates_info.names[1:]) == tuple(cat_cov_stats.field_keys)
+            assert tuple(categorical_covariates_info.names[has_batch:]) == tuple(cat_cov_stats.field_keys)
         else:
-            assert len(categorical_covariates_info) == 1
+            assert len(categorical_covariates_info) == has_batch
 
         n_continuous_cov = self.summary_stats.get("n_extra_continuous_covs", 0)
 
@@ -127,7 +134,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             n_continuous_cov=n_continuous_cov,
             prior=prior,
             prior_init_dataloader=prior_init_dataloader,
-            categorical_covariate_dims=categorical_covariates_info.dims,
+            categorical_covariate_dims=categorical_covariates_dims,
             **model_kwargs,
         )
 
