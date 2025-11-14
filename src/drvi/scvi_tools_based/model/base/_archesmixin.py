@@ -99,14 +99,18 @@ class DRVIArchesMixin(ArchesMixin):
         model = _initialize_model(cls, adata, attr_dict)
         adata_manager = model.get_anndata_manager(adata, required=True)
 
+        previous_n_batch = registry["field_registries"][REGISTRY_KEYS.BATCH_KEY]["summary_stats"]["n_batch"]
+        n_batch = model.summary_stats.n_batch
         if REGISTRY_KEYS.CAT_COVS_KEY in adata_manager.data_registry:
-            previous_n_cats_per_cov = registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"][
-                "n_cats_per_key"
-            ]
-            n_cats_per_cov = model.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
+            previous_n_cats_per_cov = [previous_n_batch] + list(
+                registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"]["n_cats_per_key"]
+            )
+            n_cats_per_cov = [n_batch] + list(
+                model.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
+            )
         else:
-            previous_n_cats_per_cov = None
-            n_cats_per_cov = None
+            previous_n_cats_per_cov = [previous_n_batch]
+            n_cats_per_cov = [n_batch]
 
         model.to_device(device)
 

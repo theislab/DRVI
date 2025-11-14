@@ -40,6 +40,7 @@ class GenerativeMixin:
         step_func: Callable,
         aggregation_func: Callable,
         lib: np.ndarray | None = None,
+        batch_values: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
         batch_size: int = scvi.settings.batch_size,
@@ -63,6 +64,9 @@ class GenerativeMixin:
         lib
             Library size array with shape (n_samples,).
             If None, defaults to 1e4 for all samples.
+        batch_values
+            Batch values with shape (n_samples,).
+            If None, defaults to 0 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
             Required if model has categorical covariates.
@@ -107,16 +111,26 @@ class GenerativeMixin:
         store: list[Any] = []
         self.module.eval()
 
-        if cat_values is not None and map_cat_values:
+        if cat_values is not None:
             if cat_values.ndim == 1:  # For a user not noticing cat_values should be 2d!
                 cat_values = cat_values.reshape(-1, 1)
-            mapped_values = np.zeros_like(cat_values)
-            for i, (_label, map_keys) in enumerate(
-                self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)["mappings"].items()
-            ):
-                cat_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
-                mapped_values[:, i] = np.vectorize(cat_mapping.get)(cat_values[:, i])
-            cat_values = mapped_values.astype(np.int32)
+            if map_cat_values:
+                mapped_values = np.zeros_like(cat_values)
+                for i, (_label, map_keys) in enumerate(
+                    self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)["mappings"].items()
+                ):
+                    cat_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
+                    mapped_values[:, i] = np.vectorize(cat_mapping.get)(cat_values[:, i])
+                cat_values = mapped_values.astype(np.int32)
+
+        if batch_values is not None:
+            batch_values = batch_values.flatten()
+            if map_cat_values:
+                map_keys = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY)["categorical_mapping"]
+                batch_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
+                batch_values = np.vectorize(batch_mapping.get)(batch_values)
+                batch_values = batch_values.astype(np.int32)
+            batch_values = batch_values.reshape(-1, 1)
 
         with torch.no_grad():
             for i in np.arange(0, z.shape[0], batch_size):
@@ -128,7 +142,11 @@ class GenerativeMixin:
                     lib_tensor = torch.tensor(lib[slice])
                 cat_tensor = torch.tensor(cat_values[slice]) if cat_values is not None else None
                 cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
-                batch_tensor = None
+                batch_tensor = (
+                    torch.tensor(batch_values[slice])
+                    if batch_values is not None
+                    else torch.zeros((slice.shape[0], 1), dtype=torch.int32)
+                )
 
                 gen_input = self.module._get_generative_input(
                     tensors={
@@ -153,6 +171,7 @@ class GenerativeMixin:
         self,
         z: np.ndarray,
         lib: np.ndarray | None = None,
+        batch_values: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
         batch_size: int = scvi.settings.batch_size,
@@ -171,6 +190,9 @@ class GenerativeMixin:
         lib
             Library size array with shape (n_samples,).
             If None, defaults to 1e4 for all samples.
+        batch_values
+            Batch values with shape (n_samples,).
+            If None, defaults to 0 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
             Required if model has categorical covariates.
@@ -219,6 +241,7 @@ class GenerativeMixin:
             step_func=step_func,
             aggregation_func=aggregation_func,
             lib=lib,
+            batch_values=batch_values,
             cat_values=cat_values,
             cont_values=cont_values,
             batch_size=batch_size,

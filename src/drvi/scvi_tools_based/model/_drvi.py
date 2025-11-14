@@ -7,7 +7,7 @@ from anndata import AnnData
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
 from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsField
-from scvi.model.base import BaseModelClass, UnsupervisedTrainingMixin, VAEMixin
+from scvi.model.base import BaseModelClass, RNASeqMixin, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
 import drvi
@@ -28,7 +28,7 @@ from drvi.scvi_tools_based.module import DRVIModule
 logger = logging.getLogger(__name__)
 
 
-class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
+class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
     """DRVI model based on scvi-tools framework for disentangled representation learning.
 
     Parameters
@@ -69,6 +69,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         decoder_dims: Sequence[int] = (128, 128),
         prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
         prior_init_obs: np.ndarray | None = None,
+        batch_key: str | None = None,
         categorical_covariates: list[str] = (),
         **model_kwargs,
     ) -> None:
@@ -86,14 +87,27 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
                 "make sure merlin is installed as a dependency."
             )
 
-        categorical_covariates_info = FeatureInfoList(categorical_covariates, axis="obs", default_dim=10)
+        n_batch = self.summary_stats.n_batch
+        n_cats_per_cov = [n_batch]
         if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
-            n_cats_per_cov = cat_cov_stats.n_cats_per_key
-            assert tuple(categorical_covariates_info.names) == tuple(cat_cov_stats.field_keys)
+            n_cats_per_cov = n_cats_per_cov + list(cat_cov_stats.n_cats_per_key)
+
+        all_categorical_covariates = [batch_key or "_dummy_batch"] + list(categorical_covariates)
+        categorical_covariates_info = FeatureInfoList(all_categorical_covariates, axis="obs", default_dim=10)
+
+        # validations
+        if n_batch > 1:
+            batch_original_key = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY).original_key
+            assert categorical_covariates_info.names[0] == batch_original_key
         else:
-            n_cats_per_cov = []
-            assert len(categorical_covariates_info) == 0
+            assert batch_key is None
+        if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
+            cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
+            assert tuple(categorical_covariates_info.names[1:]) == tuple(cat_cov_stats.field_keys)
+        else:
+            assert len(categorical_covariates_info) == 1
+
         n_continuous_cov = self.summary_stats.get("n_extra_continuous_covs", 0)
 
         prior_init_dataloader = None
@@ -140,6 +154,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         labels_key: str | None = None,
         layer: str | None = None,
         is_count_data: bool = True,
+        batch_key: str | None = None,
         categorical_covariate_keys: list[str] | None = None,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
@@ -152,6 +167,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         %(param_adata)s
         %(param_labels_key)s
         %(param_layer)s
+        %(param_batch_key)s
         %(param_cat_cov_keys)s
         %(param_cont_cov_keys)s
 
@@ -164,6 +180,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
+            CategoricalObsField(REGISTRY_KEYS.BATCH_KEY, batch_key),
             CategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
             FixedCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
             NumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
@@ -179,6 +196,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         labels_key: str | None = None,
         layer: str = "X",
         is_count_data: bool = True,
+        batch_key: str | None = None,
         categorical_covariate_keys: list[str] | None = None,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
@@ -195,6 +213,8 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             key in `merlin_data` to use as input.
         is_count_data
             Whether the data is count data.
+        batch_key
+            Key in `merlin_data` for batch information.
         categorical_covariate_keys
             List of categorical covariate keys in `merlin_data`.
         continuous_covariate_keys
@@ -212,6 +232,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
         fields = [
             melin_fields.MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
+            melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.BATCH_KEY, batch_key),
             melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
             melin_fields.MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
             melin_fields.MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
