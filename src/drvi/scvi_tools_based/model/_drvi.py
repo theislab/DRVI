@@ -193,6 +193,32 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             NumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
         ]
         adata_manager = AnnDataManager(fields=anndata_fields, setup_method_args=setup_method_args)
+
+        # We may need to manupulate in case of version updates (only when loading a model).
+        if "source_registry" in kwargs:
+            from packaging.version import Version
+            source_registry = kwargs["source_registry"]
+            source_registry_drvi_version = Version(source_registry["drvi_version"])
+            while source_registry_drvi_version < Version(drvi.__version__):
+                if source_registry_drvi_version < Version("0.1.9"):
+                    # No braking change up to 0.1.9
+                    source_registry_drvi_version = Version("0.1.9")
+                elif source_registry_drvi_version == Version("0.1.9"):
+                    # log the transfer
+                    logger.info("Modifying model args from 0.1.9 to 0.1.10 (no user action required)")
+                    logger.info("Adding empty batch key ...")
+                    source_registry['setup_args']['batch_key'] = None
+                    source_registry['field_registries']['batch'] = {
+                        'data_registry': {'attr_name': 'obs', 'attr_key': '_scvi_batch'}, 
+                        'state_registry': {'categorical_mapping': np.array([0]), 'original_key': '_scvi_batch'}, 
+                        'summary_stats': {'n_batch': 1}
+                    }
+                    source_registry_drvi_version = Version("0.1.10")
+                else:
+                    # No braking change yet!
+                    source_registry_drvi_version = Version(drvi.__version__)
+            kwargs["source_registry"] = source_registry
+        
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
 
