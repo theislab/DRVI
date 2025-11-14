@@ -224,18 +224,19 @@ class FCLayers(nn.Module):
 
         def make_hook_function(weight: torch.Tensor) -> Callable[[torch.Tensor], torch.Tensor]:
             w_size = weight.size()
+            sum_n_cats_per_cov = sum([n_cat if n_cat > 1 else 0 for n_cat in n_cats_per_cov])
             if weight.dim() == 2:
                 # 2D tensors
                 with torch.no_grad():
                     # Freeze gradients for normal nodes
-                    if w_size[1] == sum(n_cats_per_cov):
+                    if w_size[1] == sum_n_cats_per_cov:
                         transfer_mask = []
                     else:
-                        transfer_mask = [
-                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov)], device=weight.device)
-                        ]
+                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum_n_cats_per_cov], device=weight.device)]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
                     for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                        n_cat_new = n_cat_new if n_cat_new > 1 else 0
+                        n_cat_old = n_cat_old if n_cat_old > 1 else 0
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old], device=weight.device))
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old], device=weight.device))
@@ -244,14 +245,16 @@ class FCLayers(nn.Module):
                 # 3D tensors
                 with torch.no_grad():
                     # Freeze gradients for normal nodes
-                    if w_size[1] == sum(n_cats_per_cov):
+                    if w_size[1] == sum_n_cats_per_cov:
                         transfer_mask = []
                     else:
                         transfer_mask = [
-                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov), w_size[2]], device=weight.device)
+                            torch.zeros([w_size[0], w_size[1] - sum_n_cats_per_cov, w_size[2]], device=weight.device)
                         ]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
                     for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                        n_cat_new = n_cat_new if n_cat_new > 1 else 0
+                        n_cat_old = n_cat_old if n_cat_old > 1 else 0
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old, w_size[2]], device=weight.device))
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(
