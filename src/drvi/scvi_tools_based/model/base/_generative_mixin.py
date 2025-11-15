@@ -231,7 +231,7 @@ class GenerativeMixin:
         """
 
         def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
-            store.append(gen_output["params"]["mean"].detach().cpu())
+            store.append(gen_output["px"].mean.detach().cpu())
 
         def aggregation_func(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)
