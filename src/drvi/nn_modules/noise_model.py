@@ -494,22 +494,22 @@ class NegativeBinomialNoiseModel(NoiseModel):
         library_size = lib_y
 
         if self.mean_transformation == "exp":
-            trans_mean = torch.exp(mean)
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = torch.exp(mean)
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         elif self.mean_transformation == "softmax":
-            trans_mean = torch.softmax(mean, dim=-1)
-            trans_mean = library_size.unsqueeze(-1) * trans_mean
+            px_scale = torch.softmax(mean, dim=-1)
+            px_rate = library_size.unsqueeze(-1) * px_scale
         # `softplus` and `none` for ablation. Useless in practice.
         elif self.mean_transformation == "softplus":
-            trans_mean = F.softplus(mean)
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = F.softplus(mean)
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         elif self.mean_transformation == "none":
-            trans_mean = mean
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = mean
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         else:
             raise NotImplementedError()
         trans_r = torch.exp(r)
-        return NegativeBinomial(mu=trans_mean, theta=trans_r, scale=None)
+        return NegativeBinomial(mu=px_rate, theta=trans_r, scale=px_scale)
 
 
 class LogNegativeBinomial(Distribution):
