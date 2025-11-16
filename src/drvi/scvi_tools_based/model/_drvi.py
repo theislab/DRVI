@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from typing import Any, Literal
 
 import numpy as np
-import scvi
 from anndata import AnnData
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
@@ -64,8 +63,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
 
     def __init__(
         self,
-        adata: AnnData | MerlinData | None = None,  # TODO: align with all scvi changes: registry, etc.
-        registry: dict | None = None,  # TODO: align with all scvi changes: registry, etc.
+        adata: AnnData | MerlinData,
         n_latent: int = 32,
         encoder_dims: Sequence[int] = (128, 128),
         decoder_dims: Sequence[int] = (128, 128),
@@ -74,10 +72,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
         categorical_covariates: list[str] = (),
         **model_kwargs,
     ) -> None:
-        if scvi.__version__ >= "1.3.1":
-            super().__init__(adata, registry)
-        else:
-            super().__init__(adata)
+        super().__init__(adata)
 
         # TODO: Remove later. Currently used to detect autoreload problems sooner.
         if isinstance(adata, AnnData):
@@ -92,12 +87,7 @@ class DRVI(VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass,
             )
 
         categorical_covariates_info = FeatureInfoList(categorical_covariates, axis="obs", default_dim=10)
-        if scvi.__version__ >= "1.3.1" and REGISTRY_KEYS.CAT_COVS_KEY in self.registry["field_registries"]:
-            cat_cov_stats = self.registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"]
-            print(cat_cov_stats)
-            n_cats_per_cov = cat_cov_stats.get("n_cats_per_key", [])
-            assert tuple(categorical_covariates_info.names) == tuple(cat_cov_stats.get("field_keys", []))
-        elif scvi.__version__ < "1.3.1" and REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
+        if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
             cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
             n_cats_per_cov = cat_cov_stats.n_cats_per_key
             assert tuple(categorical_covariates_info.names) == tuple(cat_cov_stats.field_keys)

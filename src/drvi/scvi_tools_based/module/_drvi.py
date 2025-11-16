@@ -17,7 +17,6 @@ from drvi.nn_modules.noise_model import (
     PoissonNoiseModel,
 )
 from drvi.nn_modules.prior import GaussianMixtureModelPrior, StandardPrior, VampPrior
-from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
 
 TensorDict = dict[str, torch.Tensor]
@@ -335,7 +334,7 @@ class DRVIModule(BaseModuleClass):
             n_components = int(prior.split("_")[1])
             if prior_init_dataloader is not None:
                 inference_output = self.inference(**self._get_inference_input(next(iter(prior_init_dataloader))))
-                init_data = inference_output[MODULE_KEYS.QZM_KEY], inference_output[MODULE_KEYS.QZV_KEY]
+                init_data = inference_output["qz_m"], inference_output["qz_v"]
             else:
                 init_data = None
             return GaussianMixtureModelPrior(n_components, self.n_latent, data=init_data)
@@ -344,9 +343,9 @@ class DRVIModule(BaseModuleClass):
             if prior_init_dataloader is not None:
 
                 def preparation_function(prepared_input: dict[str, Any]) -> tuple[torch.Tensor, list, dict[str, Any]]:
-                    x = prepared_input[MODULE_KEYS.X_KEY]
+                    x = prepared_input["encoder_input"]
                     args = []
-                    kwargs = {"cat_full_tensor": prepared_input[MODULE_KEYS.CAT_COVS_KEY]}
+                    kwargs = {"cat_full_tensor": prepared_input["cat_full_tensor"]}
                     return x, args, kwargs
 
                 model_input = self._input_pre_processing(**self._get_inference_input(next(iter(prior_init_dataloader))))
@@ -357,8 +356,8 @@ class DRVIModule(BaseModuleClass):
                 self.z_encoder,
                 model_input,
                 input_type="scvi",
-                trainable_keys=(MODULE_KEYS.X_KEY,),
-                fixed_keys=(MODULE_KEYS.CAT_COVS_KEY,),
+                trainable_keys=("encoder_input",),
+                fixed_keys=("cat_full_tensor",),
                 preparation_function=preparation_function,
             )
         else:
@@ -382,7 +381,7 @@ class DRVIModule(BaseModuleClass):
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
-        input_dict = {MODULE_KEYS.X_KEY: x, MODULE_KEYS.CONT_COVS_KEY: cont_covs, MODULE_KEYS.CAT_COVS_KEY: cat_covs}
+        input_dict = {"x": x, "cont_covs": cont_covs, "cat_covs": cat_covs}
         return input_dict
 
     def _input_pre_processing(
@@ -413,11 +412,11 @@ class DRVIModule(BaseModuleClass):
         encoder_input = x_
 
         return {
-            MODULE_KEYS.X_KEY: encoder_input,
-            MODULE_KEYS.CAT_COVS_KEY: cat_covs if self.encode_covariates else None,
-            MODULE_KEYS.CONT_COVS_KEY: cont_covs if self.encode_covariates else None,
-            MODULE_KEYS.LIBRARY_KEY: library,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: gene_likelihood_additional_info,
+            "encoder_input": encoder_input,
+            "cat_full_tensor": cat_covs if self.encode_covariates else None,
+            "cont_full_tensor": cont_covs if self.encode_covariates else None,
+            "library": library,
+            "gene_likelihood_additional_info": gene_likelihood_additional_info,
         }
 
     @auto_move_data
@@ -443,7 +442,7 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing inference outputs including latent variables.
         """
         pre_processed_input = self._input_pre_processing(x, cont_covs, cat_covs).copy()
-        x_ = pre_processed_input[MODULE_KEYS.X_KEY]
+        x_ = pre_processed_input["encoder_input"]
 
         # Mask if needed
         if self.fill_in_the_blanks_ratio > 0.0 and self.training:
@@ -457,26 +456,24 @@ class DRVIModule(BaseModuleClass):
 
         # Prepare shared emb
         if self.shared_covariate_emb is not None and self.encode_covariates:
-            pre_processed_input[MODULE_KEYS.CAT_COVS_KEY] = self.shared_covariate_emb(
-                pre_processed_input[MODULE_KEYS.CAT_COVS_KEY].int()
+            pre_processed_input["cat_full_tensor"] = self.shared_covariate_emb(
+                pre_processed_input["cat_full_tensor"].int()
             )
 
         # get variational parameters via the encoder networks
         qz_m, qz_v, z = self.z_encoder(
             x_,
-            cat_full_tensor=pre_processed_input[MODULE_KEYS.CAT_COVS_KEY],
-            cont_full_tensor=pre_processed_input[MODULE_KEYS.CONT_COVS_KEY],
+            cat_full_tensor=pre_processed_input["cat_full_tensor"],
+            cont_full_tensor=pre_processed_input["cont_full_tensor"],
         )
 
         outputs = {
-            MODULE_KEYS.Z_KEY: z,
-            MODULE_KEYS.QZM_KEY: qz_m,
-            MODULE_KEYS.QZV_KEY: qz_v,
-            MODULE_KEYS.LIBRARY_KEY: pre_processed_input[MODULE_KEYS.LIBRARY_KEY],
-            MODULE_KEYS.X_MASK_KEY: x_mask,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: pre_processed_input[
-                MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY
-            ],
+            "z": z,
+            "qz_m": qz_m,
+            "qz_v": qz_v,
+            "library": pre_processed_input["library"],
+            "x_mask": x_mask,
+            "gene_likelihood_additional_info": pre_processed_input["gene_likelihood_additional_info"],
         }
         return outputs
 
@@ -495,21 +492,21 @@ class DRVIModule(BaseModuleClass):
         dict
             Dictionary containing input for generative model.
         """
-        z = inference_outputs[MODULE_KEYS.Z_KEY]
+        z = inference_outputs["z"]
         if self.fully_deterministic:
-            z = inference_outputs[MODULE_KEYS.QZM_KEY]
-        library = inference_outputs[MODULE_KEYS.LIBRARY_KEY]
-        gene_likelihood_additional_info = inference_outputs[MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY]
+            z = inference_outputs["qz_m"]
+        library = inference_outputs["library"]
+        gene_likelihood_additional_info = inference_outputs["gene_likelihood_additional_info"]
 
         cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
 
         input_dict = {
-            MODULE_KEYS.Z_KEY: z,
-            MODULE_KEYS.LIBRARY_KEY: library,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: gene_likelihood_additional_info,
-            MODULE_KEYS.CONT_COVS_KEY: cont_covs,
-            MODULE_KEYS.CAT_COVS_KEY: cat_covs,
+            "z": z,
+            "library": library,
+            "gene_likelihood_additional_info": gene_likelihood_additional_info,
+            "cont_covs": cont_covs,
+            "cat_covs": cat_covs,
         }
         return input_dict
 
@@ -554,9 +551,9 @@ class DRVIModule(BaseModuleClass):
         )
 
         return {
-            MODULE_KEYS.PX_KEY: px,
-            MODULE_KEYS.PX_PARAMS_KEY: params,
-            MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY: original_params,
+            "px": px,
+            "params": params,
+            "original_params": original_params,
         }
 
     def loss(
@@ -585,10 +582,10 @@ class DRVIModule(BaseModuleClass):
             Loss output object containing various loss components.
         """
         x = tensors[REGISTRY_KEYS.X_KEY]
-        x_mask = inference_outputs[MODULE_KEYS.X_MASK_KEY]
-        qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
-        qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
-        px = generative_outputs[MODULE_KEYS.PX_KEY]
+        x_mask = inference_outputs["x_mask"]
+        qz_m = inference_outputs["qz_m"]
+        qz_v = inference_outputs["qz_v"]
+        px = generative_outputs["px"]
 
         kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
         if self.fill_in_the_blanks_ratio > 0.0 and self.training:
@@ -606,15 +603,13 @@ class DRVIModule(BaseModuleClass):
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
 
-        kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z.sum()}
+        kl_local = {"kl_divergence_z": kl_divergence_z.sum()}
         return LossOutput(
             loss=loss,
             reconstruction_loss=reconst_loss,
             kl_local=kl_local,
             extra_metrics={
-                MODULE_KEYS.MSE_LOSS_KEY: torch.nn.functional.mse_loss(x, px.mean, reduction="none")
-                .sum(dim=1)
-                .mean(dim=0),
+                "mse": torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0),
             },
         )
 
@@ -655,7 +650,7 @@ class DRVIModule(BaseModuleClass):
             compute_loss=False,
         )
 
-        dist = generative_outputs[MODULE_KEYS.PX_KEY]
+        dist = generative_outputs["px"]
 
         if n_samples > 1:
             exprs = dist.sample().permute([1, 2, 0])  # Shape : (n_cells_batch, n_genes, n_samples)
@@ -688,9 +683,9 @@ class DRVIModule(BaseModuleClass):
         for i in range(n_mc_samples):
             # Distribution parameters and sampled variables
             inference_outputs, _, losses = self.forward(tensors)
-            qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
-            qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
-            z = inference_outputs[MODULE_KEYS.Z_KEY]
+            qz_m = inference_outputs["qz_m"]
+            qz_v = inference_outputs["qz_v"]
+            z = inference_outputs["z"]
 
             # Reconstruction Loss
             reconst_loss = losses.dict_sum(losses.reconstruction_loss)
