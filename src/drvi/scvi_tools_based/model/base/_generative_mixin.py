@@ -176,12 +176,16 @@ class GenerativeMixin:
         cont_values: np.ndarray | None = None,
         batch_size: int = scvi.settings.batch_size,
         map_cat_values: bool = False,
+        return_in_log_space: bool = True,
     ) -> np.ndarray:
         r"""Return the distribution produced by the decoder for the given latent samples.
 
         This method computes :math:`p(x \mid z)`, the reconstruction distribution
         for given latent samples. It returns the mean of the reconstruction
         distribution for each sample.
+
+        A user may use `model.get_normalized_expression` to get the normalized expression
+        within distribution in count space in a more probabilistic way.
 
         Parameters
         ----------
@@ -203,6 +207,8 @@ class GenerativeMixin:
         map_cat_values
             Whether to map categorical covariates to integers based on
             the AnnData manager pipeline.
+        return_in_log_space
+            Whether to return the means in log space.
 
         Returns
         -------
@@ -231,7 +237,10 @@ class GenerativeMixin:
         """
 
         def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
-            store.append(gen_output["px"].mean.detach().cpu())
+            if return_in_log_space:
+                store.append(torch.log(gen_output["px"].mean).detach().cpu())
+            else:
+                store.append(gen_output["px"].mean.detach().cpu())
 
         def aggregation_func(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)
