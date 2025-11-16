@@ -8,6 +8,7 @@
 -   Fix bug in decode space handling where library size was not considered (issue #46)
 -   Update decode_latent_samples logic (decode in log space by default)
 -   Code improvements and bug fixes
+-   Add dependabot for dependency update notification (not used now, for next releases)
 
 ## [0.1.9] - 2025-07-01
 
