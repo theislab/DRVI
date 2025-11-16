@@ -230,7 +230,7 @@ def make_traverse_adata(
 
     # Control and effect latent data
     control_data = noise_vector
-    effect_data = noise_vector + span_adata.X.toarray()
+    effect_data = noise_vector + span_adata.X.A
 
     print("traversing latent ...")
 
