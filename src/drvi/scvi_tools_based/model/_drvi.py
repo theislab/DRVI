@@ -158,7 +158,9 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         """Update the source registry for an existing model to the latest version if any updates are needed."""
         from packaging.version import Version
 
-        source_registry_drvi_version = Version(source_registry.get("drvi_version", "0.1.0"))  # "0.1.0" for legacy code before pypi release
+        source_registry_drvi_version = Version(
+            source_registry.get("drvi_version", "0.1.0")
+        )  # "0.1.0" for legacy code before pypi release
         logger.info(f"The model is trained with DRVI version {source_registry_drvi_version}.")
 
         while source_registry_drvi_version < Version(drvi.__version__):
@@ -181,7 +183,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                 # No braking change yet!
                 source_registry_drvi_version = Version(drvi.__version__)
         logger.info(f"Loading source in DRVI version {drvi.__version__}.")
-        
+
         return source_registry
 
     @classmethod
