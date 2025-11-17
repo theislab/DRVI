@@ -10,6 +10,9 @@ from datetime import datetime
 from importlib.metadata import metadata
 from pathlib import Path
 
+# Temporary fix
+import drvi  # noqa: F401
+
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
 
