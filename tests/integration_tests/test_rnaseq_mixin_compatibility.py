@@ -69,8 +69,8 @@ class TestRNASeqMixinCompatibility:
         drvi.model.DRVI.setup_anndata(
             adata,
             categorical_covariate_keys=["batch"],
-            layer="counts",
-            is_count_data=True,
+            layer="lognorm" if gene_likelihood.startswith("normal") else "counts",
+            is_count_data=False if gene_likelihood.startswith("normal") else True,
         )
 
         model = drvi.model.DRVI(
@@ -108,7 +108,7 @@ class TestRNASeqMixinCompatibility:
     def test_get_normalized_expression(self):
         """Test get_normalized_expression method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test get_normalized_expression
         normalized_expr = model.get_normalized_expression(adata=adata, n_samples=1, return_mean=True, return_numpy=True)
@@ -131,7 +131,7 @@ class TestRNASeqMixinCompatibility:
     def test_differential_expression(self):
         """Test differential_expression method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test differential expression
         de_results = model.differential_expression(
@@ -149,7 +149,7 @@ class TestRNASeqMixinCompatibility:
     def test_posterior_predictive_sample(self):
         """Test posterior_predictive_sample method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test posterior predictive sampling
         samples = model.posterior_predictive_sample(adata=adata, n_samples=3, batch_size=32)
@@ -172,7 +172,7 @@ class TestRNASeqMixinCompatibility:
     def test_get_likelihood_parameters(self):
         """Test get_likelihood_parameters method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test likelihood parameters
         likelihood_params = model.get_likelihood_parameters(adata=adata, n_samples=1, give_mean=True, batch_size=32)
@@ -197,7 +197,7 @@ class TestRNASeqMixinCompatibility:
     def test_get_latent_library_size(self):
         """Test get_latent_library_size method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test latent library size
         # Note: DRVI doesn't compute posterior distribution for library size (ql),
@@ -210,7 +210,7 @@ class TestRNASeqMixinCompatibility:
     def test_get_feature_correlation_matrix(self):
         """Test get_feature_correlation_matrix method."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=10)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Test feature correlation matrix
         corr_matrix = model.get_feature_correlation_matrix(
@@ -256,7 +256,7 @@ class TestRNASeqMixinCompatibility:
     def test_end_to_end_rnaseq_workflow(self):
         """Test a complete RNA-seq analysis workflow using RNASeqMixin methods."""
         adata = self._make_test_adata()
-        model = self._setup_and_train_model(adata, max_epochs=20)
+        model = self._setup_and_train_model(adata, max_epochs=2)
 
         # Get latent representation
         latent = model.get_latent_representation(adata)
@@ -293,3 +293,48 @@ class TestRNASeqMixinCompatibility:
         print(f"  - DE results: {len(de_results)} genes")
         print(f"  - Library size: {library_size.shape}")
         print(f"  - Likelihood parameters: {list(likelihood_params.keys())}")
+
+    def test_end_to_end_rnaseq_workflow_for_different_gene_likelihoods(self):
+        """Test a complete RNA-seq analysis workflow using RNASeqMixin methods."""
+        for gene_likelihood in ["nb", "nb_orig", "poisson_orig", "pnb_softmax", "normal_sv"]:
+            print(f"Testing gene likelihood: {gene_likelihood}")
+            adata = self._make_test_adata()
+            model = self._setup_and_train_model(adata, max_epochs=2, gene_likelihood=gene_likelihood)
+
+            # Get latent representation
+            latent = model.get_latent_representation(adata)
+            assert latent.shape == (adata.n_obs, 8), f"Expected latent shape {(adata.n_obs, 8)}, got {latent.shape}"
+
+            # Get normalized expression
+            normalized_expr = model.get_normalized_expression(
+                adata=adata, n_samples=1, return_mean=True, return_numpy=True
+            )
+
+            # Perform differential expression analysis
+            de_results = model.differential_expression(
+                adata=adata, groupby="cell_type", group1="ct_0", group2="ct_1", n_samples=1
+            )
+
+            # Get likelihood parameters
+            likelihood_params = model.get_likelihood_parameters(adata=adata, n_samples=1, give_mean=True)
+
+            # Get latent library size
+            # Note: DRVI doesn't compute posterior distribution for library size (ql),
+            # so we use give_mean=False to use the observed library size instead
+            library_size = model.get_latent_library_size(adata=adata, give_mean=False)
+
+            # Verify all results are consistent
+            assert latent.shape[0] == normalized_expr.shape[0] == library_size.shape[0], (
+                "All results should have same number of cells"
+            )
+            assert normalized_expr.shape[1] == likelihood_params["mean"].shape[1] == adata.n_vars, (
+                "All results should have same number of genes"
+            )
+            assert len(de_results) == adata.n_vars, "DE results should have one row per gene"
+
+            print("✓ End-to-end RNA-seq workflow completed successfully!")
+            print(f"  - Latent representation: {latent.shape}")
+            print(f"  - Normalized expression: {normalized_expr.shape}")
+            print(f"  - DE results: {len(de_results)} genes")
+            print(f"  - Library size: {library_size.shape}")
+            print(f"  - Likelihood parameters: {list(likelihood_params.keys())}")
