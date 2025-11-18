@@ -13,6 +13,8 @@ from pathlib import Path
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
 
+# Temporary fix since readthedocs is not able to import the project
+import drvi  # noqa: F401 E402
 
 # -- Project information -----------------------------------------------------
 
@@ -167,6 +169,5 @@ nitpick_ignore = [
     ("py:func", "register_module_full_backward_hook"),
     ("py:func", "register_module_full_backward_pre_hook"),
     # DRVI internal references
-    ("py:class", "drvi.scvi_tools_based.merlin_data._data.MerlinData"),
     ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

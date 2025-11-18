@@ -60,8 +60,6 @@ optional-dependencies.dev = [
     "twine>=4.0.2",
 ]
 optional-dependencies.doc = [
-    # Disable for now as nvidia servers return 404
-    "merlin-dataloader==23.8.0",
     "docutils>=0.8,!=0.18.*,!=0.19.*",
     "sphinx>=4",
     "sphinx-book-theme>=1.0.0",
@@ -84,9 +82,6 @@ optional-dependencies.test = [
 optional-dependencies.tutorials = [
     "leidenalg",
     "gprofiler-official==0.3.5",
-]
-optional-dependencies.merlin = [
-    "merlin-dataloader==23.8.0",
 ]
 
 urls.Documentation = "https://drvi.readthedocs.io/"
