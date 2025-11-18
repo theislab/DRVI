@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 import numpy as np
 from anndata import AnnData
-from scvi import REGISTRY_KEYS, settings
+from scvi import REGISTRY_KEYS
 from scvi.data import AnnDataManager
 from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsField
 from scvi.model.base import BaseModelClass, RNASeqMixin, UnsupervisedTrainingMixin, VAEMixin
@@ -13,15 +13,6 @@ from scvi.utils import setup_anndata_dsp
 import drvi
 from drvi.nn_modules.feature_interface import FeatureInfoList
 from drvi.scvi_tools_based.data.fields import FixedCategoricalJointObsField
-from drvi.scvi_tools_based.merlin_data import (
-    MerlinData,
-    MerlinDataManager,
-    MerlinDataSplitter,
-    MerlinTransformedDataLoader,
-)
-from drvi.scvi_tools_based.merlin_data import (
-    fields as melin_fields,
-)
 from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
 
@@ -34,7 +25,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
     Parameters
     ----------
     adata
-        AnnData object or MerlinData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
+        AnnData object that has been registered via :meth:`~drvi.model.DRVI.setup_anndata`.
     n_latent
         Dimensionality of the latent space.
     encoder_dims
@@ -63,7 +54,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
 
     def __init__(
         self,
-        adata: AnnData | MerlinData,
+        adata: AnnData,
         n_latent: int = 32,
         encoder_dims: Sequence[int] = (128, 128),
         decoder_dims: Sequence[int] = (128, 128),
@@ -74,18 +65,6 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         **model_kwargs,
     ) -> None:
         super().__init__(adata)
-
-        # TODO: Remove later. Currently used to detect autoreload problems sooner.
-        if isinstance(adata, AnnData):
-            pass
-        elif MerlinData is not None and isinstance(adata, MerlinData):
-            self._data_splitter_cls = MerlinDataSplitter
-        else:
-            raise ValueError(
-                "Only AnnData and MerlinData are supported. "
-                "If you have passed an instance of MerlinData and still get this error, "
-                "make sure merlin is installed as a dependency."
-            )
 
         n_batch = self.summary_stats.n_batch
         n_cats_per_cov = [n_batch]
@@ -236,61 +215,9 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
 
-    @classmethod
-    def setup_merlin_data(
-        cls,
-        merlin_data: MerlinData,
-        labels_key: str | None = None,
-        layer: str = "X",
-        is_count_data: bool = True,
-        batch_key: str | None = None,
-        categorical_covariate_keys: list[str] | None = None,
-        continuous_covariate_keys: list[str] | None = None,
-        **kwargs,
-    ) -> None:
-        """Setup MerlinData for use with DRVI.
-
-        Parameters
-        ----------
-        merlin_data
-            MerlinData object to register.
-        labels_key
-            Key in `merlin_data` for labels.
-        layer
-            key in `merlin_data` to use as input.
-        is_count_data
-            Whether the data is count data.
-        batch_key
-            Key in `merlin_data` for batch information.
-        categorical_covariate_keys
-            List of categorical covariate keys in `merlin_data`.
-        continuous_covariate_keys
-            List of continuous covariate keys in `merlin_data`.
-        **kwargs
-            Additional keyword arguments passed to the MerlinDataManager registration.
-
-        Returns
-        -------
-        None
-            This method sets up the class for use with MerlinData and does not return anything.
-        """
-        setup_method_args = cls._get_setup_method_args(**locals())
-        setup_method_args["drvi_version"] = drvi.__version__
-
-        fields = [
-            melin_fields.MerlinLayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
-            melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.BATCH_KEY, batch_key),
-            melin_fields.MerlinCategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
-            melin_fields.MerlinCategoricalJointObsField(REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys),
-            melin_fields.MerlinNumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
-        ]
-        merlin_manager = MerlinDataManager(fields, setup_method_args=setup_method_args)
-        merlin_manager.register_fields(merlin_data, **kwargs)
-        cls.register_manager(merlin_manager)
-
     def _make_data_loader(
         self,
-        adata: AnnData | MerlinData,
+        adata: AnnData,
         indices: Sequence[int] | None = None,
         batch_size: int | None = None,
         shuffle: bool = False,
@@ -302,7 +229,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         Parameters
         ----------
         adata
-            AnnData or MerlinData object with equivalent structure to initial AnnData.
+            AnnData object with equivalent structure to initial AnnData.
         indices
             Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
@@ -319,29 +246,4 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         Any
             Data loader object for iteration.
         """
-        if isinstance(adata, AnnData):
-            return super()._make_data_loader(
-                adata, indices, batch_size, shuffle, data_loader_class, **data_loader_kwargs
-            )
-        elif MerlinData is not None and isinstance(adata, MerlinData):
-            adata_manager = self.get_anndata_manager(adata)
-            if adata_manager is None:
-                raise AssertionError(
-                    "AnnDataManager not found. Call `self._validate_anndata` prior to calling this function."
-                )
-            if batch_size is None:
-                batch_size = settings.batch_size
-            return MerlinTransformedDataLoader(
-                self.adata_manager.get_dataset("default"),
-                mapping=self.adata_manager.get_fields_schema_mapping(),
-                batch_size=batch_size,
-                shuffle=shuffle,
-                parts_per_chunk=1,
-                **data_loader_kwargs,
-            )
-        else:
-            raise ValueError(
-                "Only AnnData and MerlinData are supported. "
-                "If you have passed an instance of MerlinData and still get this error, "
-                "make sure merlin is installed as a dependency."
-            )
+        return super()._make_data_loader(adata, indices, batch_size, shuffle, data_loader_class, **data_loader_kwargs)
