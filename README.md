@@ -31,12 +31,12 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 Please refer to the [documentation][link-docs]. In particular, the
 
--   [Tutorials][link-tutorials], specially
-    -   [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
--   [API documentation][link-api], specially
-    -   [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
-    -   [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
-    -   [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+- [Tutorials][link-tutorials], specially
+    - [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
+- [API documentation][link-api], specially
+    - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
+    - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
+    - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
 
 ## System requirements
 
