@@ -4,7 +4,7 @@ requires = ["hatchling"]
 
 [project]
 name = "drvi-py"
-version = "0.1.10"
+version = "0.1.11"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
