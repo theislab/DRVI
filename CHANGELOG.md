@@ -4,9 +4,9 @@
 
 ## [0.1.10] - 2025-11-18
 
--   Remove merlin data support and all related code
--   Remove merlin-dataloader dependency
--   Add dependabot for dependency update notification (not used now, for next releases)
+- Remove merlin data support and all related code
+- Remove merlin-dataloader dependency
+- Add dependabot for dependency update notification (not used now, for next releases)
 
 ## [0.1.9] - 2025-07-01
 
