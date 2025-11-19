@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.1.11] - 2025-11-19
+
+- Add RnaSeqMixin from scvi-tools for RNA-seq specific methods (get_normalized_expression, differential_expression, posterior_predictive_sample, get_likelihood_parameters)
+- Fix bug in decode space handling where library size was not considered (issue #46)
+- Update decode_latent_samples logic (decode in log space by default)
+- Code improvements and bug fixes
+
+## [0.1.10] - 2025-11-18
+
+- Remove merlin data support and all related code
+- Remove merlin-dataloader dependency
+- Add dependabot for dependency update notification (not used now, for next releases)
+
 ## [0.1.9] - 2025-07-01
 
 - Add DRVI-APnoEXP baseline
