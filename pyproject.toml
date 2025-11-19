@@ -81,7 +81,7 @@ optional-dependencies.test = [
 ]
 optional-dependencies.tutorials = [
     "leidenalg",
-    "gprofiler-official==0.3.5",
+    "gprofiler-official==1.0.0",
 ]
 
 urls.Documentation = "https://drvi.readthedocs.io/"
