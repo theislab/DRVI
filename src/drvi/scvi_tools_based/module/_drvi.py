@@ -491,7 +491,7 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: pre_processed_input[
                 MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY
             ],
-            "n_samples": n_samples,  # TODO: make key for this
+            MODULE_KEYS.N_SAMPLES_KEY: n_samples,
         }
 
         if n_samples > 1:
@@ -545,7 +545,7 @@ class DRVIModule(BaseModuleClass):
             else:
                 cat_covs = batch_index
 
-        n_samples = inference_outputs.get("n_samples", 1)
+        n_samples = inference_outputs.get(MODULE_KEYS.N_SAMPLES_KEY, 1)
 
         input_dict = {
             MODULE_KEYS.Z_KEY: z,
@@ -553,7 +553,7 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: gene_likelihood_additional_info,
             MODULE_KEYS.CONT_COVS_KEY: cont_covs,
             MODULE_KEYS.CAT_COVS_KEY: cat_covs,
-            "n_samples": n_samples,  # TODO: make key for this
+            MODULE_KEYS.N_SAMPLES_KEY: n_samples,
         }
 
         if n_samples > 1:
