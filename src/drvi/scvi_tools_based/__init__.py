@@ -3,7 +3,7 @@ import logging
 from rich.console import Console
 from rich.logging import RichHandler
 
-from . import merlin_data, model, module
+from . import model, module
 
 logger = logging.getLogger(__name__)
 # set the logging level
@@ -21,4 +21,4 @@ logger.addHandler(ch)
 # this prevents double outputs
 logger.propagate = False
 
-__all__ = ["model", "module", "merlin_data"]
+__all__ = ["model", "module"]
