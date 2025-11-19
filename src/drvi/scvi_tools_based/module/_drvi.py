@@ -378,8 +378,15 @@ class DRVIModule(BaseModuleClass):
         """
         x = tensors[REGISTRY_KEYS.X_KEY]
 
-        cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
+        batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
+        cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
+
+        if batch_index is not None:
+            if cat_covs is not None:
+                cat_covs = torch.cat([batch_index, cat_covs], dim=1)
+            else:
+                cat_covs = batch_index
 
         input_dict = {"x": x, "cont_covs": cont_covs, "cat_covs": cat_covs}
         return input_dict
@@ -421,7 +428,11 @@ class DRVIModule(BaseModuleClass):
 
     @auto_move_data
     def inference(
-        self, x: torch.Tensor, cont_covs: torch.Tensor | None = None, cat_covs: torch.Tensor | None = None
+        self,
+        x: torch.Tensor,
+        cont_covs: torch.Tensor | None = None,
+        cat_covs: torch.Tensor | None = None,
+        n_samples: int = 1,
     ) -> dict[str, Any]:
         """High level inference method.
 
@@ -435,6 +446,8 @@ class DRVIModule(BaseModuleClass):
             Continuous covariates.
         cat_covs
             Categorical covariates.
+        n_samples
+            Number of samples to generate.
 
         Returns
         -------
@@ -471,13 +484,29 @@ class DRVIModule(BaseModuleClass):
             "z": z,
             "qz_m": qz_m,
             "qz_v": qz_v,
+            "ql": None,  # We do not model library size
             "library": pre_processed_input["library"],
             "x_mask": x_mask,
             "gene_likelihood_additional_info": pre_processed_input["gene_likelihood_additional_info"],
+            "n_samples": n_samples,
         }
+
+        if n_samples > 1:
+            for key in ["qz_m", "qz_v", "library", "x_mask"]:
+                if outputs[key] is None:
+                    continue
+                assert outputs[key].shape[0] == z.shape[0]
+                outputs[key] = outputs[key].repeat(n_samples, *([1] * (outputs[key].ndim - 1)))
+            outputs["z"] = Normal(outputs["qz_m"], outputs["qz_v"].sqrt()).rsample()
+
         return outputs
 
-    def _get_generative_input(self, tensors: TensorDict, inference_outputs: dict[str, Any]) -> dict[str, Any]:
+    def _get_generative_input(
+        self,
+        tensors: TensorDict,
+        inference_outputs: dict[str, Any],
+        transform_batch: int | None = None,
+    ) -> dict[str, Any]:
         """Prepare input for the generative model.
 
         Parameters
@@ -486,6 +515,8 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing tensor data.
         inference_outputs
             Outputs from the inference step.
+        transform_batch
+            Batch to condition on.
 
         Returns
         -------
@@ -498,8 +529,20 @@ class DRVIModule(BaseModuleClass):
         library = inference_outputs["library"]
         gene_likelihood_additional_info = inference_outputs["gene_likelihood_additional_info"]
 
-        cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
+        batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
+        cont_covs = tensors.get(REGISTRY_KEYS.CONT_COVS_KEY)
+
+        if transform_batch is not None:
+            batch_index = torch.ones_like(batch_index) * transform_batch
+
+        if batch_index is not None:
+            if cat_covs is not None:
+                cat_covs = torch.cat([batch_index, cat_covs], dim=1)
+            else:
+                cat_covs = batch_index
+
+        n_samples = inference_outputs.get("n_samples", 1)
 
         input_dict = {
             "z": z,
@@ -507,7 +550,16 @@ class DRVIModule(BaseModuleClass):
             "gene_likelihood_additional_info": gene_likelihood_additional_info,
             "cont_covs": cont_covs,
             "cat_covs": cat_covs,
+            "n_samples": n_samples,
         }
+
+        if n_samples > 1:
+            for key in ["cat_covs", "cont_covs"]:
+                if input_dict[key] is None:
+                    continue
+                assert input_dict[key].shape[0] == z.shape[0] // n_samples
+                input_dict[key] = input_dict[key].repeat(n_samples, *([1] * (input_dict[key].ndim - 1)))
+
         return input_dict
 
     @auto_move_data
@@ -516,8 +568,10 @@ class DRVIModule(BaseModuleClass):
         z: torch.Tensor,
         library: torch.Tensor,
         gene_likelihood_additional_info: Any,
-        cont_covs: torch.Tensor | None = None,
         cat_covs: torch.Tensor | None = None,
+        cont_covs: torch.Tensor | None = None,
+        transform_batch: torch.Tensor | None = None,
+        n_samples: int = 1,
     ) -> dict[str, Any]:
         """Runs the generative model.
 
@@ -533,12 +587,17 @@ class DRVIModule(BaseModuleClass):
             Continuous covariates.
         cat_covs
             Categorical covariates.
+        transform_batch
+            Batch to condition on. Currently not used but required for RNASeqMixin compatibility.
 
         Returns
         -------
         dict
             Dictionary containing generative model outputs.
         """
+        # Parameter transform_batch is not used!
+        # But, we keep it here since _rna_mixin.py checks module.generative to include this as a parameter!
+
         if self.shared_covariate_emb is not None:
             cat_covs = self.shared_covariate_emb(cat_covs.int())
         # form the likelihood
@@ -549,6 +608,17 @@ class DRVIModule(BaseModuleClass):
             library=library,
             gene_likelihood_additional_info=gene_likelihood_additional_info,
         )
+
+        if n_samples > 1:
+            n_batch = z.shape[0] // n_samples
+            for key, value in params.items():
+                value = value.reshape(n_samples, n_batch, *value.shape[1:])  # Shape : (n_batch, n_samples, n_genes)
+                params[key] = value
+
+            library = library.reshape(n_samples, n_batch, *library.shape[1:])
+            px = self.gene_likelihood_module.dist(
+                aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
+            )
 
         return {
             "px": px,
@@ -653,7 +723,7 @@ class DRVIModule(BaseModuleClass):
         dist = generative_outputs["px"]
 
         if n_samples > 1:
-            exprs = dist.sample().permute([1, 2, 0])  # Shape : (n_cells_batch, n_genes, n_samples)
+            exprs = dist.sample().movedim(0, -1)
         else:
             exprs = dist.sample()
 

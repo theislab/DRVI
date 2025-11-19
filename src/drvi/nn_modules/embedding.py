@@ -326,6 +326,9 @@ class MultiEmbedding(nn.Module):
         table, which is useful for transfer learning scenarios.
         """
         for emb, n_freeze in zip(self.emb_list, n_freeze_list, strict=False):
+            # If that specific category has no change in size, skip.
+            if not emb.weight.requires_grad:
+                continue
             emb.freeze(n_freeze, emb.embedding_dim)
 
     @property
