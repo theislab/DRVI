@@ -143,12 +143,12 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         logger.info(f"The model is trained with DRVI version {source_registry_drvi_version}.")
 
         while source_registry_drvi_version < Version(drvi.__version__):
-            if source_registry_drvi_version < Version("0.1.9"):
-                # No braking change up to 0.1.9
-                source_registry_drvi_version = Version("0.1.9")
-            elif source_registry_drvi_version == Version("0.1.9"):
+            if source_registry_drvi_version < Version("0.1.10"):
+                # No braking change up to 0.1.10
+                source_registry_drvi_version = Version("0.1.10")
+            elif source_registry_drvi_version == Version("0.1.10"):
                 # log the transfer
-                logger.info("Modifying model args from 0.1.9 to 0.1.10 (no user action required)")
+                logger.info("Modifying model args from 0.1.10 to 0.1.11 (no user action required)")
                 logger.info("Adding empty batch key ...")
                 source_registry["setup_args"]["batch_key"] = None
                 source_registry["field_registries"]["batch"] = {
@@ -156,8 +156,8 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                     "state_registry": {"categorical_mapping": np.array([0]), "original_key": "_scvi_batch"},
                     "summary_stats": {"n_batch": 1},
                 }
-                source_registry_drvi_version = Version("0.1.10")
-                logger.info("Done updating source registry from 0.1.9 to 0.1.10.")
+                source_registry_drvi_version = Version("0.1.11")
+                logger.info("Done updating source registry from 0.1.10 to 0.1.11.")
             else:
                 # No braking change yet!
                 source_registry_drvi_version = Version(drvi.__version__)
