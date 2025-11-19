@@ -208,9 +208,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
 
         # We may need to manupulate in case of version updates (only when loading a model).
         if "source_registry" in kwargs:
-            source_registry = kwargs["source_registry"]
-            source_registry = cls._update_source_registry_for_existing_model(source_registry)
-            kwargs["source_registry"] = source_registry
+            kwargs["source_registry"] = cls._update_source_registry_for_existing_model(kwargs["source_registry"])
 
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
