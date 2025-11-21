@@ -9,10 +9,6 @@ from scvi.module.base import BaseModuleClass, LossOutput, auto_move_data
 from torch.distributions import Normal
 from torch.utils.data import DataLoader
 
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
-    from typing import Any, Literal
-
 from drvi.nn_modules.embedding import MultiEmbedding
 from drvi.nn_modules.layer.factory import LayerFactory
 from drvi.nn_modules.noise_model import (
@@ -24,6 +20,10 @@ from drvi.nn_modules.noise_model import (
 from drvi.nn_modules.prior import GaussianMixtureModelPrior, StandardPrior, VampPrior
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any, Literal
 
 TensorDict = dict[str, torch.Tensor]
 

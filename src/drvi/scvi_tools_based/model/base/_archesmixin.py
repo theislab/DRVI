@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import logging
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import scvi
 import torch
-from anndata import AnnData
 from lightning import LightningDataModule
 from scvi import REGISTRY_KEYS
 from scvi.data._constants import _MODEL_NAME_KEY, _SETUP_ARGS_KEY, _SETUP_METHOD_NAME
@@ -13,6 +14,11 @@ from scvi.model.base._archesmixin import ArchesMixin, _get_loaded_data, _initial
 from torch import nn
 
 from drvi.scvi_tools_based.nn import FCLayers
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 logger = logging.getLogger(__name__)
 

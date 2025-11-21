@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import logging
-from collections.abc import Callable, Sequence
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import scvi
 import torch
-from anndata import AnnData
 from scvi import REGISTRY_KEYS
 from torch.nn import functional as F
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from typing import Any
+
+    from anndata import AnnData
 
 logger = logging.getLogger(__name__)
 

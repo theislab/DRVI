@@ -1,10 +1,15 @@
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 from scvi import distributions as scvi_distributions
 from torch import distributions as torch_distributions
 from torch.distributions import Distribution
 from torch.nn import functional as F
+
+if TYPE_CHECKING:
+    from typing import Any, Literal
 
 
 class NoiseModel:

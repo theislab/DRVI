@@ -1,11 +1,16 @@
-from collections.abc import Callable
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 from torch import nn
 from torch.distributions import Normal, kl_divergence
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 # Standard, VaMP, GMM from Karin's CSI repo
 

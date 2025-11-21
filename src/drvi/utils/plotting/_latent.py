@@ -1,13 +1,19 @@
-from collections.abc import Sequence
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
 import scanpy as sc
-from anndata import AnnData
 from matplotlib import pyplot as plt
 
 from drvi.utils.plotting import cmap
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Literal
+
+    from anndata import AnnData
 
 
 def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> AnnData:

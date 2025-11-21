@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # For backward compatibility
 try:
     from scvi.module._constants import _MODULE_KEYS as _SCVI_MODULE_KEYS

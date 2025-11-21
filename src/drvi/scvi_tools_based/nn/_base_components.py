@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import collections
 import math
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING
 
 import torch
 from torch import nn
@@ -13,6 +14,10 @@ from drvi.nn_modules.freezable import FreezableBatchNorm1d, FreezableLayerNorm
 from drvi.nn_modules.layer.factory import FCLayerFactory, LayerFactory
 from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.noise_model import NoiseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any, Literal
 
 
 def _identity(x: torch.Tensor) -> torch.Tensor:
