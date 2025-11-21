@@ -316,7 +316,7 @@ class GenerativeMixin:
         >>> import anndata as ad
         >>> # Define function to extract latent means
         >>> def extract_latent_means(inference_outputs, generative_outputs, losses, store):
-        ...     store.append(inference_outputs["qz_m"].detach().cpu())
+        ...     store.append(inference_outputs["qzm"].detach().cpu())
         >>> # Define aggregation function
         >>> def concatenate_latents(store):
         ...     return torch.cat(store, dim=0).numpy()

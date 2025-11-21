@@ -135,16 +135,16 @@ class TestRNASeqMixinCompatibility:
 
         # Test differential expression
         de_results = model.differential_expression(
-            adata=adata, groupby="cell_type", group1="ct_0", group2="ct_1", n_samples=1, batch_size=32
+            adata=adata, groupby="cell_type", group1="ct_0", group2="ct_1", batch_size=32
         )
 
         print(de_results.columns)
 
         assert isinstance(de_results, pd.DataFrame), "DE results should be a DataFrame"
         assert len(de_results) == adata.n_vars, "DE results should have one row per gene"
-        assert "lfc_mean" in de_results.columns, "DE results should contain lfc_mean column"
-        assert "bayes_factor" in de_results.columns, "DE results should contain bayes_factor column"
-        assert "proba_de" in de_results.columns, "DE results should contain proba_de column"
+        assert "bayes_factor" in de_results.columns
+        assert "proba_m1" in de_results.columns
+        assert "proba_m2" in de_results.columns
 
     def test_posterior_predictive_sample(self):
         """Test posterior_predictive_sample method."""
@@ -174,25 +174,28 @@ class TestRNASeqMixinCompatibility:
         adata = self._make_test_adata()
         model = self._setup_and_train_model(adata, max_epochs=2)
 
-        # Test likelihood parameters
-        likelihood_params = model.get_likelihood_parameters(adata=adata, n_samples=1, give_mean=True, batch_size=32)
+        for n_samples in [1, 2]:
+            # Test likelihood parameters
+            likelihood_params = model.get_likelihood_parameters(
+                adata=adata, n_samples=n_samples, give_mean=True, batch_size=32
+            )
 
-        assert isinstance(likelihood_params, dict), "Likelihood parameters should be a dict"
-        assert "mean" in likelihood_params, "Should contain mean parameter"
-        assert "dispersions" in likelihood_params, "Should contain dispersions parameter"
+            assert isinstance(likelihood_params, dict), "Likelihood parameters should be a dict"
+            assert "mean" in likelihood_params, "Should contain mean parameter"
+            assert "dispersions" in likelihood_params, "Should contain dispersions parameter"
 
-        mean = likelihood_params["mean"]
-        dispersions = likelihood_params["dispersions"]
+            mean = likelihood_params["mean"]
+            dispersions = likelihood_params["dispersions"]
 
-        assert mean.shape == (adata.n_obs, adata.n_vars), (
-            f"Mean shape should be {(adata.n_obs, adata.n_vars)}, got {mean.shape}"
-        )
-        assert dispersions.shape == (adata.n_obs, adata.n_vars), (
-            f"Dispersions shape should be {(adata.n_obs, adata.n_vars)}, got {dispersions.shape}"
-        )
+            assert mean.shape == (adata.n_obs, adata.n_vars), (
+                f"Mean shape should be {(adata.n_obs, adata.n_vars)}, got {mean.shape}"
+            )
+            assert dispersions.shape == (adata.n_obs, adata.n_vars), (
+                f"Dispersions shape should be {(adata.n_obs, adata.n_vars)}, got {dispersions.shape}"
+            )
 
-        assert np.all(mean >= 0), "Mean should be non-negative"
-        assert np.all(dispersions > 0), "Dispersions should be positive"
+            assert np.all(mean >= 0), "Mean should be non-negative"
+            assert np.all(dispersions > 0), "Dispersions should be positive"
 
     def test_get_latent_library_size(self):
         """Test get_latent_library_size method."""
@@ -267,7 +270,10 @@ class TestRNASeqMixinCompatibility:
 
         # Perform differential expression analysis
         de_results = model.differential_expression(
-            adata=adata, groupby="cell_type", group1="ct_0", group2="ct_1", n_samples=1
+            adata=adata,
+            groupby="cell_type",
+            group1="ct_0",
+            group2="ct_1",
         )
 
         # Get likelihood parameters
@@ -312,7 +318,10 @@ class TestRNASeqMixinCompatibility:
 
             # Perform differential expression analysis
             de_results = model.differential_expression(
-                adata=adata, groupby="cell_type", group1="ct_0", group2="ct_1", n_samples=1
+                adata=adata,
+                groupby="cell_type",
+                group1="ct_0",
+                group2="ct_1",
             )
 
             # Get likelihood parameters

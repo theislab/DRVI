@@ -495,12 +495,20 @@ class DRVIModule(BaseModuleClass):
         }
 
         if n_samples > 1:
-            for key in ["qz_m", "qz_v", "library", "x_mask"]:
+            for key in [
+                MODULE_KEYS.Z_KEY,
+                MODULE_KEYS.QZM_KEY,
+                MODULE_KEYS.QZV_KEY,
+                MODULE_KEYS.LIBRARY_KEY,
+                MODULE_KEYS.X_MASK_KEY,
+            ]:
                 if outputs[key] is None:
                     continue
                 assert outputs[key].shape[0] == z.shape[0]
-                outputs[key] = outputs[key].repeat(n_samples, *([1] * (outputs[key].ndim - 1)))
-            outputs["z"] = Normal(outputs["qz_m"], outputs["qz_v"].sqrt()).rsample()
+                outputs[key] = outputs[key].unsqueeze(0).repeat(n_samples, *([1] * outputs[key].ndim))
+            outputs[MODULE_KEYS.Z_KEY] = Normal(
+                outputs[MODULE_KEYS.QZM_KEY], outputs[MODULE_KEYS.QZV_KEY].sqrt()
+            ).rsample()
 
         return outputs
 
@@ -557,12 +565,14 @@ class DRVIModule(BaseModuleClass):
         }
 
         if n_samples > 1:
-            for key in ["cat_covs", "cont_covs"]:
+            # Repeat the covariates for each sample
+            for key in [MODULE_KEYS.CAT_COVS_KEY, MODULE_KEYS.CONT_COVS_KEY]:
                 if input_dict[key] is None:
                     continue
-                assert input_dict[key].shape[0] == z.shape[0] // n_samples
                 input_dict[key] = input_dict[key].repeat(n_samples, *([1] * (input_dict[key].ndim - 1)))
-
+            # Combine samples and batch dimensions into the first dimension
+            for key in [MODULE_KEYS.Z_KEY, MODULE_KEYS.LIBRARY_KEY]:
+                input_dict[key] = input_dict[key].flatten(0, 1)
         return input_dict
 
     @auto_move_data
@@ -694,6 +704,7 @@ class DRVIModule(BaseModuleClass):
         tensors: TensorDict,
         n_samples: int = 1,
         library_size: int = 1,
+        generative_kwargs: dict | None = None,
     ) -> torch.Tensor:
         # Note: Not tested
         r"""
@@ -709,6 +720,8 @@ class DRVIModule(BaseModuleClass):
             Number of required samples for each cell.
         library_size
             Library size to scale samples to.
+        generative_kwargs
+            Keyword args for ``generative()`` in fwd pass
 
         Returns
         -------
@@ -722,6 +735,7 @@ class DRVIModule(BaseModuleClass):
         ) = self.forward(
             tensors,
             inference_kwargs=inference_kwargs,
+            generative_kwargs=generative_kwargs,
             compute_loss=False,
         )
 
