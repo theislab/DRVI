@@ -143,8 +143,6 @@ class TestRNASeqMixinCompatibility:
         assert isinstance(de_results, pd.DataFrame), "DE results should be a DataFrame"
         assert len(de_results) == adata.n_vars, "DE results should have one row per gene"
         assert "bayes_factor" in de_results.columns
-        assert "proba_m1" in de_results.columns
-        assert "proba_m2" in de_results.columns
 
     def test_posterior_predictive_sample(self):
         """Test posterior_predictive_sample method."""

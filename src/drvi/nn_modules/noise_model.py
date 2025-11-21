@@ -2,6 +2,7 @@ from typing import Any, Literal
 
 import torch
 from scvi import distributions as scvi_distributions
+from torch import distributions as torch_distributions
 from torch.distributions import Distribution
 from torch.nn import functional as F
 
@@ -221,6 +222,27 @@ def library_size_correction(
     return x
 
 
+# Just for scvi RNASeqMixin compatibility. TODO: remove when scvi updated code.
+class Normal(torch_distributions.Normal):
+    @property
+    def mu(self) -> torch.Tensor:
+        return self.get_normalized("mu")
+
+    @property
+    def theta(self) -> torch.Tensor:
+        return self.get_normalized("theta")
+
+    def get_normalized(self, key) -> torch.Tensor:
+        if key == "mu":
+            return self.loc
+        elif key == "theta":
+            return self.scale
+        elif key == "scale":
+            return self.loc
+        else:
+            raise ValueError(f"normalized key {key} not recognized")
+
+
 class NormalNoiseModel(NoiseModel):
     """Normal (Gaussian) noise model for continuous data.
 
@@ -308,11 +330,7 @@ class NormalNoiseModel(NoiseModel):
         var = parameters["var"]
         if self.model_var:
             var = torch.nan_to_num(torch.exp(var), posinf=100, neginf=0) + self.eps
-        # normal_mu=mean since we do not model library for normalized data.
-        output_dist = scvi_distributions.Normal(mean, torch.abs(var).sqrt(), normal_mu=mean)
-        # Just for scvi RNASeqMixin compatibility. TODO: remove when scvi updated code.
-        output_dist.mu = mean
-        output_dist.theta = var
+        output_dist = Normal(mean, torch.abs(var).sqrt())
         return output_dist
 
 
@@ -643,6 +661,10 @@ class LogNegativeBinomial(Distribution):
     @property
     def theta(self) -> torch.Tensor:
         return self.get_normalized("theta")
+
+    @property
+    def scale(self) -> torch.Tensor:
+        return self.get_normalized("scale")
 
     def get_normalized(self, key: str) -> torch.Tensor:
         if key == "mu":
