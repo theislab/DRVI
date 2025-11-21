@@ -6,8 +6,8 @@ The DRVI (Disentangled Representation Variational Inference) model is a model de
 
 DRVI extends the standard variational autoencoder architecture with specialized decoder architecture. The model learns disentangled representations and separates different sources of variation in the data, such as:
 
-- **Biological factors**: Cell types, developmental processes, perturbation responses, signaling pathways
-- **Technical factors**: Background expressions, technical stress responses
+-   **Biological factors**: Cell types, developmental processes, perturbation responses, signaling pathways
+-   **Technical factors**: Background expressions, technical stress responses
 
 ## Core Components
 
@@ -62,7 +62,6 @@ DRVI.setup_anndata(
 # Initialize the model
 model = DRVI(
     adata,
-    categorical_covariates=["batch"],
     n_latent=64,
     encoder_dims=[128, 128],
     decoder_dims=[128, 128],

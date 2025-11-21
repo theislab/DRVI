@@ -35,14 +35,14 @@ classifiers = [
 
 # Please make an issue if you need wider range of versions
 dependencies = [
-    "torch>=2.1.0",
+    "scvi-tools>=1.0.4",
     "lightning>=2.0",
+    "torch>=2.1.0",
     "scanpy>=1.9.5",
+    "anndata>=0.10.2",
     "scikit-learn>=1.5.1",
     "scipy>=1.11.3",
-    "scvi-tools>=1.0.4",
-    "anndata>=0.10.2",
-    "numpy>=1.16.1,<2.0.0",  # for np.linspace
+    "numpy>=1.16.1",
     "pandas>=1.2.0",
     # for debug logging (referenced from the issue template)
     "session-info",

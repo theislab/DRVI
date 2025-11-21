@@ -1,5 +1,6 @@
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -7,6 +8,10 @@ from scvi import REGISTRY_KEYS
 from scvi.module.base import BaseModuleClass, LossOutput, auto_move_data
 from torch.distributions import Normal
 from torch.utils.data import DataLoader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any, Literal
 
 from drvi.nn_modules.embedding import MultiEmbedding
 from drvi.nn_modules.layer.factory import LayerFactory
