@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
     from typing import Any, Literal
 
-TensorDict = dict[str, torch.Tensor]
+    TensorDict = dict[str, torch.Tensor]
 
 
 class DRVIModule(BaseModuleClass):
