@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
-from anndata import AnnData
 
 from drvi.model import DRVI
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 def set_latent_dimension_stats(

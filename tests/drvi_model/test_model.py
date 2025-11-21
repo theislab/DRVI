@@ -51,9 +51,9 @@ class TestDRVIModel:
         adata.layers["lognorm"] = np.log1p(adata.X)
 
         if not is_sparse:
-            adata.X = adata.X.A
+            adata.X = adata.X.toarray()
             for l in ["counts", "lognorm"]:
-                adata.layers[l] = adata.layers[l].A
+                adata.layers[l] = adata.layers[l].toarray()
 
         return adata
 

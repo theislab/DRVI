@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -8,6 +10,9 @@ from torch import nn
 from torch.nn import functional as F
 
 from drvi.nn_modules.embedding import FeatureEmbedding
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 class MultiOneHotEncoding(nn.Module):
@@ -182,7 +187,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
         return MultiOneHotEncoding(n_embedding_list, **kwargs)
 
     @classmethod
-    def from_numpy_array(cls, sentences_array: np.ndarray, **kwargs: Any) -> "FeatureOneHotEncoding":
+    def from_numpy_array(cls, sentences_array: np.ndarray, **kwargs: Any) -> FeatureOneHotEncoding:
         """Create FeatureOneHotEncoding from a numpy array.
 
         Parameters
@@ -208,7 +213,7 @@ class FeatureOneHotEncoding(FeatureEmbedding):
         return cls(vocab_list, **kwargs)
 
     @classmethod
-    def from_pandas_dataframe(cls, sentences_df: pd.DataFrame, **kwargs: Any) -> "FeatureOneHotEncoding":
+    def from_pandas_dataframe(cls, sentences_df: pd.DataFrame, **kwargs: Any) -> FeatureOneHotEncoding:
         """Create FeatureOneHotEncoding from a pandas DataFrame.
 
         Parameters

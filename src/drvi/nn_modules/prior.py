@@ -1,9 +1,16 @@
-from collections.abc import Callable
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 from torch import nn
 from torch.distributions import Normal, kl_divergence
+
+from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 # Standard, VaMP, GMM from Karin's CSI repo
 
@@ -198,7 +205,7 @@ class VampPrior(Prior):
         self.encoder.train(False)
         if self.input_type == "scfemb":
             z = self.encoder({**self.pi_aux_data, **self.pi_tensor_data})
-            output = z["qz_mean"], z["qz_var"]
+            output = z[MODULE_KEYS.QZM_KEY], z[MODULE_KEYS.QZV_KEY]
         elif self.input_type == "scvi":
             if self.preparation_function is None:
                 raise ValueError("preparation_function must be provided for scvi input type")
