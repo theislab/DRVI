@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import numpy as np
 import pandas as pd
 import scvi
+from anndata import AnnData
 from scipy import sparse
 
 from drvi.model import DRVI
-
-if TYPE_CHECKING:
-    from anndata import AnnData
 
 
 def iterate_dimensions(
