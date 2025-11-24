@@ -1,9 +1,14 @@
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from torch import nn
 
 from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.layer.structures import SimpleResidual
+
+if TYPE_CHECKING:
+    from typing import Any, Literal
 
 
 class LayerFactory:

@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2025-11-24
+
+- Update upper bound of all dependencies
+- Align with the latest changes of scvi-tools
 
 ## [0.1.11] - 2025-11-19
 

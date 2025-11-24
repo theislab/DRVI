@@ -1,10 +1,10 @@
+from __future__ import annotations
+
 import collections
 import math
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING
 
 import torch
-from scvi.nn._utils import one_hot
 from torch import nn
 from torch.distributions import Normal
 from torch.nn import functional as F
@@ -14,6 +14,10 @@ from drvi.nn_modules.freezable import FreezableBatchNorm1d, FreezableLayerNorm
 from drvi.nn_modules.layer.factory import FCLayerFactory, LayerFactory
 from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.noise_model import NoiseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any, Literal
 
 
 def _identity(x: torch.Tensor) -> torch.Tensor:
@@ -323,7 +327,7 @@ class FCLayers(nn.Module):
                 if n_cat and cat is None:
                     raise ValueError("cat not provided while n_cat != 0 in init. params.")
                 if n_cat > 1:  # n_cat = 1 will be ignored - no additional information
-                    concat_list += [one_hot(cat, n_cat)]
+                    concat_list += [F.one_hot(cat.long().squeeze(-1), n_cat).float()]
         elif self.covariate_vector_modeling == "emb_shared":
             concat_list = [cat_full_tensor]
         else:

@@ -1,20 +1,33 @@
+from __future__ import annotations
+
 import logging
-from collections.abc import Sequence
-from typing import Any, Literal
+import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
-from anndata import AnnData
-from scvi import REGISTRY_KEYS
+import scvi
+from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
 from scvi.data.fields import CategoricalObsField, LayerField, NumericalJointObsField
 from scvi.model.base import BaseModelClass, RNASeqMixin, UnsupervisedTrainingMixin, VAEMixin
 from scvi.utils import setup_anndata_dsp
 
 import drvi
-from drvi.nn_modules.feature_interface import FeatureInfoList
 from drvi.scvi_tools_based.data.fields import FixedCategoricalJointObsField
 from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Any, Literal
+
+    from anndata import AnnData
+
+
+_DRVI_LATENT_QZM = "_drvi_latent_qzm"
+_DRVI_LATENT_QZV = "_drvi_latent_qzv"
+_DRVI_OBSERVED_LIB_SIZE = "_drvi_observed_lib_size"
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +50,11 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
     prior_init_obs
         When using "gmm_x" or "vamp_x" priors, these observations are used to initialize the prior parameters.
         Number of observations must match the x value in the prior name.
-    categorical_covariates
-        List of categorical covariates to condition on. Each covariate can specify its embedding dimension
-        by appending @dim (e.g. "batch@32"). Default embedding dimension is 10.
+    categorical_embedding_dims
+        Dictionary mapping categorical covariate names to their embedding dimensions.
+        Used only if `covariate_modeling_strategy` passed to DRVIModule is based on embedding (not onehot encoding).
+        Keys should match the covariate names used in :meth:`~drvi.model.DRVI.setup_anndata`.
+        If not provided, default embedding dimension of 10 is used for all covariates.
     **model_kwargs
         Additional keyword arguments passed to :class:`~drvi.model.DRVIModule`.
 
@@ -52,49 +67,47 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
     >>> adata.obsm["latent"] = vae.get_latent_representation()
     """
 
+    _module_cls = DRVIModule
+    _LATENT_QZM_KEY = _DRVI_LATENT_QZM
+    _LATENT_QZV_KEY = _DRVI_LATENT_QZV
+    _DEFAULT_CATEGORICAL_EMBEDDING_DIM = 10
+
     def __init__(
         self,
-        adata: AnnData,
+        adata: AnnData | None = None,
+        registry: dict | None = None,
         n_latent: int = 32,
         encoder_dims: Sequence[int] = (128, 128),
         decoder_dims: Sequence[int] = (128, 128),
         prior: Literal["normal", "gmm_x", "vamp_x"] = "normal",
         prior_init_obs: np.ndarray | None = None,
-        batch_key: str | None = None,
-        categorical_covariates: list[str] = (),
+        categorical_embedding_dims: dict[str, int] | None = None,
         **model_kwargs,
     ) -> None:
-        super().__init__(adata)
+        if scvi.__version__ >= "1.3.1":
+            super().__init__(adata, registry)
+        else:
+            super().__init__(adata)
+
+        # TODO: deprecate in near future
+        for key in ["categorical_covariates", "batch_key"]:
+            if key in model_kwargs:
+                model_kwargs.pop(key)
+                warnings.warn(
+                    f"Passing {key} to DRVI model is deprecated."
+                    "It is enough to pass this argument to DRVI.setup_anndata."
+                    "This will cause error in the near future.",
+                    DeprecationWarning,
+                    stacklevel=settings.warnings_stacklevel,
+                )
 
         n_batch = self.summary_stats.n_batch
-        n_cats_per_cov = [n_batch]
-        if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
-            cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
-            n_cats_per_cov = n_cats_per_cov + list(cat_cov_stats.n_cats_per_key)
-
-        if batch_key is not None:
-            all_categorical_covariates = [batch_key] + list(categorical_covariates)
-            has_batch = 1
-        else:
-            all_categorical_covariates = list(categorical_covariates)
-            has_batch = 0
-        categorical_covariates_info = FeatureInfoList(all_categorical_covariates, axis="obs", default_dim=10)
-
-        # validations
-        if n_batch > 1:
-            batch_original_key = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY).original_key
-            assert categorical_covariates_info.names[0] == batch_original_key
-            categorical_covariates_dims = categorical_covariates_info.dims
-        else:
-            assert batch_key is None
-            categorical_covariates_dims = [1] + categorical_covariates_info.dims
-        if REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
-            cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
-            assert tuple(categorical_covariates_info.names[has_batch:]) == tuple(cat_cov_stats.field_keys)
-        else:
-            assert len(categorical_covariates_info) == has_batch
-
+        n_cats_per_cov = [n_batch] + self._get_n_cats_per_cov()
         n_continuous_cov = self.summary_stats.get("n_extra_continuous_covs", 0)
+
+        categorical_covariates_dims = self._compute_categorical_covariates_dims(
+            n_cats_per_cov, categorical_embedding_dims
+        )
 
         prior_init_dataloader = None
         if prior_init_obs is not None:
@@ -104,7 +117,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                 adata=adata[prior_init_obs], batch_size=len(prior_init_obs), shuffle=False
             )
 
-        self.module = DRVIModule(
+        self._module_kwargs = dict(
             n_input=self.summary_stats["n_vars"],
             n_latent=n_latent,
             encoder_dims=encoder_dims,
@@ -117,20 +130,64 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             **model_kwargs,
         )
 
+        self.module = self._module_cls(**self._module_kwargs)
+
         self._model_summary_string = (
             "DRVI \n"
-            + (f"Covariates: {categorical_covariates_info.names}, \n" if len(categorical_covariates_info) > 0 else "")
-            + f"Latent size: {self.module.n_latent}, "
+            f"Latent size: {self.module.n_latent}, "
             f"splits: {self.module.n_split_latent}, "
             f"pooling of splits: '{self.module.split_aggregation}', \n"
             f"Encoder dims: {encoder_dims}, \n"
             f"Decoder dims: {decoder_dims}, \n"
             f"Gene likelihood: {self.module.gene_likelihood}, \n"
         )
+
         # necessary line to get params that will be used for saving/loading
         self.init_params_ = self._get_init_params(locals())
 
         logger.info("The model has been initialized")
+
+    def _get_n_cats_per_cov(self) -> list[int]:
+        """Get the number of categories per categorical covariate."""
+        if scvi.__version__ < "1.3.1" and REGISTRY_KEYS.CAT_COVS_KEY in self.adata_manager.data_registry:
+            cat_cov_stats = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)
+            return list(cat_cov_stats.n_cats_per_key)
+        elif scvi.__version__ >= "1.3.1" and REGISTRY_KEYS.CAT_COVS_KEY in self.registry["field_registries"]:
+            cat_cov_stats = self.registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"]
+            return cat_cov_stats.get("n_cats_per_key", [])
+        return []
+
+    def _compute_categorical_covariates_dims(
+        self,
+        n_cats_per_cov: list[int],
+        categorical_embedding_dims: dict[str, int] | None,
+    ) -> list[int]:
+        """Compute categorical covariates embedding dimensions.
+
+        Parameters
+        ----------
+        n_cats_per_cov
+            Number of categories per categorical covariate. This includes the batch covariate.
+        categorical_embedding_dims
+            Dictionary mapping covariate names to their embedding dimensions. This includes the batch covariate.
+
+        Returns
+        -------
+        list[int]
+            List of embedding dimensions for each categorical covariate.
+        """
+        categorical_embedding_dims = categorical_embedding_dims or {}
+        categorical_covariates_dims = [self._DEFAULT_CATEGORICAL_EMBEDDING_DIM] * len(n_cats_per_cov)
+        if n_cats_per_cov[0] > 1:
+            batch_original_key = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY).original_key
+            if batch_original_key in categorical_embedding_dims:
+                categorical_covariates_dims[0] = categorical_embedding_dims[batch_original_key]
+        if len(n_cats_per_cov) > 1:
+            cat_cov_names = self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).field_keys
+            for i, obs_name in enumerate(cat_cov_names):
+                if obs_name in categorical_embedding_dims:
+                    categorical_covariates_dims[i + 1] = categorical_embedding_dims[obs_name]
+        return categorical_covariates_dims
 
     @staticmethod
     def _update_source_registry_for_existing_model(source_registry: dict[str, Any]) -> dict[str, Any]:
@@ -170,10 +227,10 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
     def setup_anndata(
         cls,
         adata: AnnData,
-        labels_key: str | None = None,
         layer: str | None = None,
         is_count_data: bool = True,
         batch_key: str | None = None,
+        labels_key: str | None = None,
         categorical_covariate_keys: list[str] | None = None,
         continuous_covariate_keys: list[str] | None = None,
         **kwargs,
@@ -197,6 +254,10 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         setup_method_args = cls._get_setup_method_args(**locals())
         setup_method_args["drvi_version"] = drvi.__version__
 
+        # Manupulate kwargs in case of version updates (only when loading a model).
+        if "source_registry" in kwargs:
+            kwargs["source_registry"] = cls._update_source_registry_for_existing_model(kwargs["source_registry"])
+
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
             CategoricalObsField(REGISTRY_KEYS.BATCH_KEY, batch_key),
@@ -205,43 +266,5 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             NumericalJointObsField(REGISTRY_KEYS.CONT_COVS_KEY, continuous_covariate_keys),
         ]
         adata_manager = AnnDataManager(fields=anndata_fields, setup_method_args=setup_method_args)
-
-        # We may need to manupulate in case of version updates (only when loading a model).
-        if "source_registry" in kwargs:
-            kwargs["source_registry"] = cls._update_source_registry_for_existing_model(kwargs["source_registry"])
-
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
-
-    def _make_data_loader(
-        self,
-        adata: AnnData,
-        indices: Sequence[int] | None = None,
-        batch_size: int | None = None,
-        shuffle: bool = False,
-        data_loader_class: type | None = None,
-        **data_loader_kwargs,
-    ) -> Any:
-        """Create a AnnDataLoader object for data iteration.
-
-        Parameters
-        ----------
-        adata
-            AnnData object with equivalent structure to initial AnnData.
-        indices
-            Indices of cells in adata to use. If `None`, all cells are used.
-        batch_size
-            Minibatch size for data loading into model.
-        shuffle
-            Whether observations are shuffled each iteration though.
-        data_loader_class
-            Class to use for data loader.
-        data_loader_kwargs
-            Kwargs to the class-specific data loader class.
-
-        Returns
-        -------
-        Any
-            Data loader object for iteration.
-        """
-        return super()._make_data_loader(adata, indices, batch_size, shuffle, data_loader_class, **data_loader_kwargs)
