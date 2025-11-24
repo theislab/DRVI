@@ -18,9 +18,9 @@ requires-python = ">=3.10,<3.13"
 
 # PyPI classifiers
 classifiers = [
-  "License :: OSI Approved :: BSD License",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
   "Natural Language :: English",
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: POSIX :: Linux",
@@ -34,38 +34,17 @@ classifiers = [
 
 # Please make an issue if you need wider range of versions
 dependencies = [
-    "scvi-tools>=1.0.4,<1.4.1",
-    "lightning>=2.0,<2.6",
-    "torch>=2.1.0,<2.10",
-    "scanpy>=1.9.5,<1.12",
-    "anndata>=0.10.2,<0.13",
-    "scikit-learn>=1.5.1,<1.8",
-    "scipy>=1.11.3,<1.17",
-    "numpy>=1.16.1,<2.4",
-    "pandas>=1.2.0,<2.4",
-    # for debug logging (referenced from the issue template)
-    "session-info2",
-]
-optional-dependencies.restrict = [
-    "torch>=2.1.0,<2.4",
-    "lightning>=2.0,<2.1",
-    "scanpy==1.9.5",
-    "scikit-learn>=1.5.1",
-    "scipy>=1.11.3,<1.13",
-    "scvi-tools==1.0.4",
-    ## TODO: Remove when scvi-tools and jax become ok again
-    "jax<=0.4.20",
-    "jaxlib<=0.4.20",
-    ## END_TODO
-    "anndata>=0.10.2,<0.11",
-    "numpy>=1.16.1,<2.0.0",  # for np.linspace
-    "pandas>=1.2.0",
-    ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
-    # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
-    "urllib3<2",
-    ## END_TODO
-    # for debug logging (referenced from the issue template)
-    "session-info2",
+  "anndata>=0.10.2,<0.13",
+  "lightning>=2,<2.6",
+  "numpy>=1.16.1,<2.4",
+  "pandas>=1.2,<2.4",
+  "scanpy>=1.9.5,<1.12",
+  "scikit-learn>=1.5.1,<1.8",
+  "scipy>=1.11.3,<1.17",
+  "scvi-tools>=1.0.4,<1.4.1",
+  # for debug logging (referenced from the issue template)
+  "session-info2",
+  "torch>=2.1,<2.10",
 ]
 optional-dependencies.dev = [
   "pre-commit",
@@ -88,14 +67,35 @@ optional-dependencies.doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
+optional-dependencies.restrict = [
+  ## END_TODO
+  "anndata>=0.10.2,<0.11",
+  ## TODO: Remove when scvi-tools and jax become ok again
+  "jax<=0.4.20",
+  "jaxlib<=0.4.20",
+  "lightning>=2,<2.1",
+  "numpy>=1.16.1,<2",    # for np.linspace
+  "pandas>=1.2",
+  "scanpy==1.9.5",
+  "scikit-learn>=1.5.1",
+  "scipy>=1.11.3,<1.13",
+  "scvi-tools==1.0.4",
+  ## END_TODO
+  # for debug logging (referenced from the issue template)
+  "session-info2",
+  "torch>=2.1,<2.4",
+  ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
+  # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
+  "urllib3<2",
+]
 optional-dependencies.test = [
   "coverage>=7.10",
   "pytest",
   "pytest-cov",     # For VS Code’s coverage functionality
 ]
 optional-dependencies.tutorials = [
-    "leidenalg",
-    "gprofiler-official>=0.3.5,<1.1",
+  "gprofiler-official>=0.3.5,<1.1",
+  "leidenalg",
 ]
 
 # https://docs.pypi.org/project_metadata/#project-urls
@@ -104,7 +104,7 @@ urls.Homepage = "https://github.com/theislab/drvi"
 urls.Source = "https://github.com/theislab/drvi"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/drvi"]
+packages = [ "src/drvi" ]
 
 [tool.hatch.envs.default]
 installer = "uv"
@@ -164,6 +164,10 @@ lint.select = [
 lint.ignore = [
   "B008", # Errors from function calls in argument defaults. These are fine when the result is immutable.
   "D100", # Missing docstring in public module
+  # For now skip missing docstrings for public classes, methods, and functions. TODO: remove this
+  "D101",
+  "D102",
+  "D103",
   "D104", # Missing docstring in public package
   "D105", # __magic__ methods are often self-explanatory, allow missing docstrings
   "D107", # Missing docstring in __init__
@@ -174,12 +178,7 @@ lint.ignore = [
   "D401", # First line should be in imperative mood; try rephrasing
   "E501", # line too long -> we accept long comment lines; formatter gets rid of long code lines
   "E731", # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
-  "E741", # allow I, O, l as variable names -> I is the identity matrix
   "E741", # allow I, O, l as variable names -> I is the identity matrix    "D101",
-  # For now skip missing docstrings for public classes, methods, and functions. TODO: remove this
-  "D101",
-  "D102",
-  "D103",
 ]
 lint.per-file-ignores."*/__init__.py" = [ "F401" ]
 lint.per-file-ignores."docs/*" = [ "I" ]
