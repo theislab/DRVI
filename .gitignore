@@ -19,3 +19,7 @@ __pycache__/
 # docs
 /docs/generated/
 /docs/_build/
+
+# IDEs
+/.idea/
+/.vscode/
