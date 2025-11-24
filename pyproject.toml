@@ -71,7 +71,7 @@ optional-dependencies.restrict = [
   "jax<=0.4.20",
   "jaxlib<=0.4.20",
   "lightning>=2,<2.1",
-  "numpy>=1.16.1,<2",    # for np.linspace
+  "numpy>=1.16.1,<2",      # for np.linspace
   "pandas>=1.2",
   "scanpy==1.9.5",
   "scikit-learn>=1.5.1",
