@@ -63,7 +63,7 @@ optional-dependencies.restrict = [
     "pandas>=1.2.0",
     ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
     # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
-    "urllib3<2",
+    "urllib3<3",
     ## END_TODO
     # for debug logging (referenced from the issue template)
     "session-info",
