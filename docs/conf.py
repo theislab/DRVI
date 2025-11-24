@@ -16,12 +16,14 @@ from sphinxcontrib import katex
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
 
+# Temporary fix since readthedocs is not able to import the project
+import drvi  # noqa: F401 E402
 
 # -- Project information -----------------------------------------------------
 
 # NOTE: If you installed your project in editable mode, this might be stale.
 #       If this is the case, reinstall it to refresh the metadata
-info = metadata("drvi")
+info = metadata("drvi-py")
 project = info["Name"]
 author = info["Author"]
 copyright = f"{datetime.now():%Y}, {author}."
@@ -39,7 +41,7 @@ needs_sphinx = "4.0"
 
 html_context = {
     "display_github": True,  # Integrate GitHub
-    "github_user": "moinfar",
+    "github_user": "theislab",
     "github_repo": project,
     "github_version": "main",
     "conf_py_path": "/docs/",
@@ -54,12 +56,14 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
+    "sphinx.ext.mathjax",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py")],
@@ -100,6 +104,17 @@ intersphinx_mapping = {
     "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
     "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    # DRVI related stuff
+    ## General
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    ## Deep learning
+    "torch": ("https://docs.pytorch.org/docs/stable", None),
+    "lightning": ("https://lightning.ai/docs/pytorch/stable/", None),
+    ## Special
+    "mudata": ("https://mudata.readthedocs.io/en/stable/", None),
+    "scvi-tools": ("https://docs.scvi-tools.org/en/stable/", None),
 }
 
 # List of patterns, relative to source directory, that match files and
@@ -124,6 +139,7 @@ html_theme_options = {
     "use_repository_button": True,
     "path_to_docs": "docs/",
     "navigation_with_keys": False,
+    "use_source_button": True,
 }
 
 pygments_style = "default"
@@ -133,4 +149,32 @@ nitpick_ignore = [
     # If building the documentation fails because of a missing link that is outside your control,
     # you can add an exception to this list.
     #     ("py:class", "igraph.Graph"),
+    # PyTorch references that are not properly resolved
+    ("py:class", "Module"),
+    ("py:class", "torch.nn.modules.Module"),
+    ("py:class", "torch.nn.Parameter"),
+    ("py:class", "Tensor"),
+    ("py:class", "optional"),
+    ("py:class", "torch.utils.hooks.RemovableHandle"),
+    ("py:class", "Dropout"),
+    ("py:class", "BatchNorm"),
+    ("py:class", "Parameter"),
+    ("py:attr", "state_dict"),
+    ("py:attr", "strict"),
+    ("py:attr", "assign"),
+    ("py:attr", "persistent"),
+    ("py:attr", "grad_input"),
+    ("py:attr", "grad_output"),
+    ("py:attr", "requires_grad"),
+    ("py:attr", "dst_type"),
+    ("py:attr", "dtype"),
+    ("py:attr", "device"),
+    ("py:attr", "non_blocking"),
+    ("py:func", "add_module"),
+    ("py:func", "register_module_forward_hook"),
+    ("py:func", "register_module_forward_pre_hook"),
+    ("py:func", "register_module_full_backward_hook"),
+    ("py:func", "register_module_full_backward_pre_hook"),
+    # DRVI internal references
+    ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

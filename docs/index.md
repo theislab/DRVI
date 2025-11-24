@@ -3,13 +3,30 @@
 ```
 
 ```{toctree}
+:caption: 'API'
 :hidden: true
 :maxdepth: 1
 
-api.md
+api/model
+api/tools
+api/plotting
+api/metrics
+```
+
+```{toctree}
+:caption: 'General'
+:hidden: true
+:maxdepth: 1
+
 changelog.md
 contributing.md
 references.md
+```
 
-notebooks/example
+```{toctree}
+:caption: 'Usage'
+:hidden: true
+:maxdepth: 1
+
+tutorials/index.md
 ```

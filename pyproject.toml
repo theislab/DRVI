@@ -3,8 +3,8 @@ build-backend = "hatchling.build"
 requires = [ "hatchling" ]
 
 [project]
-name = "drvi"
-version = "0.0.1"
+name = "drvi-py"
+version = "0.2.0"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -14,18 +14,58 @@ maintainers = [
 authors = [
   { name = "Amir Ali Moinfar" },
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.10,<3.13"
+
+# PyPI classifiers
 classifiers = [
+  "License :: OSI Approved :: BSD License",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
+
+# Please make an issue if you need wider range of versions
 dependencies = [
-  "anndata",
-  # for debug logging (referenced from the issue template)
-  "session-info2",
+    "scvi-tools>=1.0.4,<1.4.1",
+    "lightning>=2.0,<2.6",
+    "torch>=2.1.0,<2.10",
+    "scanpy>=1.9.5,<1.12",
+    "anndata>=0.10.2,<0.13",
+    "scikit-learn>=1.5.1,<1.8",
+    "scipy>=1.11.3,<1.17",
+    "numpy>=1.16.1,<2.4",
+    "pandas>=1.2.0,<2.4",
+    # for debug logging (referenced from the issue template)
+    "session-info2",
+]
+optional-dependencies.restrict = [
+    "torch>=2.1.0,<2.4",
+    "lightning>=2.0,<2.1",
+    "scanpy==1.9.5",
+    "scikit-learn>=1.5.1",
+    "scipy>=1.11.3,<1.13",
+    "scvi-tools==1.0.4",
+    ## TODO: Remove when scvi-tools and jax become ok again
+    "jax<=0.4.20",
+    "jaxlib<=0.4.20",
+    ## END_TODO
+    "anndata>=0.10.2,<0.11",
+    "numpy>=1.16.1,<2.0.0",  # for np.linspace
+    "pandas>=1.2.0",
+    ## TODO: update this when this is resolved: https://github.com/boto/botocore/issues/2926
+    # lightning-cloud depends on boto3 that is currently not compatible with urllib3 so resolution takes forever
+    "urllib3<2",
+    ## END_TODO
+    # for debug logging (referenced from the issue template)
+    "session-info2",
 ]
 optional-dependencies.dev = [
   "pre-commit",
@@ -53,13 +93,18 @@ optional-dependencies.test = [
   "pytest",
   "pytest-cov",     # For VS Code’s coverage functionality
 ]
+optional-dependencies.tutorials = [
+    "leidenalg",
+    "gprofiler-official>=0.3.5,<1.1",
+]
+
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://drvi.readthedocs.io/"
-urls.Homepage = "https://github.com/moinfar/drvi"
-urls.Source = "https://github.com/moinfar/drvi"
+urls.Homepage = "https://github.com/theislab/drvi"
+urls.Source = "https://github.com/theislab/drvi"
 
 [tool.hatch.build.targets.wheel]
-packages = [ "src/drvi-py" ]
+packages = ["src/drvi"]
 
 [tool.hatch.envs.default]
 installer = "uv"
@@ -67,19 +112,24 @@ features = [ "dev" ]
 
 [tool.hatch.envs.docs]
 features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
+scripts.build = "sphinx-build -M html docs docs/_build --keep-going {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
 # Test the lowest and highest supported Python versions with normal deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "stable" ]
-python = [ "3.11", "3.14" ]
+python = [ "3.10", "3.12" ]
 
 # Test the newest supported Python version also with pre-release deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "pre" ]
-python = [ "3.14" ]
+python = [ "3.12" ]
+
+# Test with restricted dependencies (older versions for compatibility)
+[[tool.hatch.envs.hatch-test.matrix]]
+features = [ "test", "restrict" ]
+python = [ "3.10" ]
 
 [tool.hatch.envs.hatch-test]
 features = [ "dev", "test" ]
@@ -125,6 +175,11 @@ lint.ignore = [
   "E501", # line too long -> we accept long comment lines; formatter gets rid of long code lines
   "E731", # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
   "E741", # allow I, O, l as variable names -> I is the identity matrix
+  "E741", # allow I, O, l as variable names -> I is the identity matrix    "D101",
+  # For now skip missing docstrings for public classes, methods, and functions. TODO: remove this
+  "D101",
+  "D102",
+  "D103",
 ]
 lint.per-file-ignores."*/__init__.py" = [ "F401" ]
 lint.per-file-ignores."docs/*" = [ "I" ]
@@ -139,7 +194,7 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = [ "drvi-py" ]
+source = [ "drvi" ]
 patch = [ "subprocess" ]
 omit = [
   "**/test_*.py",
