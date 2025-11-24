@@ -436,7 +436,7 @@ class PoissonNoiseModel(NoiseModel):
         else:
             raise NotImplementedError()
         output_dist = scvi_distributions.Poisson(trans_mean, scale=trans_scale)
-        # Just for scvi RNASeqMixin compatibility. TODO: remove when scvi updated code.
+        # Just for scvi RNASeqMixin backward compatibility. TODO: remove when restricting scvi to more recent version.
         output_dist.mu = trans_mean
         output_dist.theta = torch.ones_like(trans_mean)
         return output_dist
@@ -658,7 +658,7 @@ class LogNegativeBinomial(Distribution):
     def log_prob(self, value: torch.Tensor) -> torch.Tensor:
         return self.negative_binomial_log_ver(value, self.log_m, self.log_r, eps=self._eps)
 
-    # Just for scvi RNASeqMixin compatibility. TODO: remove when scvi updated code.
+    # Just for scvi RNASeqMixin backward compatibility. TODO: remove when restricting scvi to more recent version.
     @property
     def mu(self) -> torch.Tensor:
         return self.get_normalized("mu")

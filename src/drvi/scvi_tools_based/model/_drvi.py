@@ -52,6 +52,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         Number of observations must match the x value in the prior name.
     categorical_embedding_dims
         Dictionary mapping categorical covariate names to their embedding dimensions.
+        Used only if `covariate_modeling_strategy` passed to DRVIModule is based on embedding (not onehot encoding).
         Keys should match the covariate names used in :meth:`~drvi.model.DRVI.setup_anndata`.
         If not provided, default embedding dimension of 10 is used for all covariates.
     **model_kwargs
@@ -67,8 +68,8 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
     """
 
     _module_cls = DRVIModule
-    _LATENT_QZM_KEY = "drvi_latent_qzm"
-    _LATENT_QZV_KEY = "drvi_latent_qzv"
+    _LATENT_QZM_KEY = _DRVI_LATENT_QZM
+    _LATENT_QZV_KEY = _DRVI_LATENT_QZV
     _DEFAULT_CATEGORICAL_EMBEDDING_DIM = 10
 
     def __init__(
