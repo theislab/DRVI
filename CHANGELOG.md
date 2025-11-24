@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning][].
 - Update upper bound of all dependencies
 - Align with the latest changes of scvi-tools
 
+### Added
+
+- Use cruft for scverse template management
+
 ## [0.1.11] - 2025-11-19
 
 ### Added
