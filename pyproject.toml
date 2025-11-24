@@ -56,7 +56,7 @@ optional-dependencies.restrict = [
     "scvi-tools==1.0.4",
     ## TODO: Remove when scvi-tools and jax become ok again
     "jax<=0.4.20",
-    "jaxlib<=0.4.20",
+    "jaxlib<=0.6.2",
     ## END_TODO
     "anndata>=0.10.2,<0.11",
     "numpy>=1.16.1,<2.0.0",  # for np.linspace
