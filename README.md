@@ -3,20 +3,16 @@
 [![Build][badge-build]][link-build]
 [![Tests][badge-tests]][link-tests]
 [![Codecov][badge-codecov]][link-codecov]
-[![Documentation][badge-docs]][link-docs]
-[![Python Version][badge-pyver]][link-pypi]
+[![Documentation][badge-docs]][documentation]
+[![Python Version][badge-pyver]][pypi]
 [![PyPI Downloads][badge-pypi-downloads]][link-pepy]
 
 [badge-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml/badge.svg
 [badge-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml/badge.svg
-[link-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml
-[link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml
+[badge-codecov]: https://codecov.io/gh/theislab/drvi/graph/badge.svg?token=zeA0Sr3NVF
 [badge-docs]: https://img.shields.io/readthedocs/drvi/latest.svg?label=Read%20the%20Docs
 [badge-pyver]: https://img.shields.io/pypi/pyversions/drvi-py
 [badge-pypi-downloads]: https://static.pepy.tech/personalized-badge/drvi-py?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=%F0%9F%93%A6+downloads
-[link-pepy]: https://pepy.tech/projects/drvi-py
-[badge-codecov]: https://codecov.io/gh/theislab/drvi/graph/badge.svg?token=zeA0Sr3NVF
-[link-codecov]: https://codecov.io/gh/theislab/drvi
 
 Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
@@ -29,11 +25,11 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 
 ## Getting started
 
-Please refer to the [documentation][link-docs]. In particular, the
+Please refer to the [documentation][]. In particular, the
 
-- [Tutorials][link-tutorials], specially
+- [Tutorials][], specially
     - [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
-- [API documentation][link-api], specially
+- [Api documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
@@ -51,13 +47,13 @@ While CPU-based systems are supported, GPU-powered systems are strongly recommen
 ## Installation
 
 You need to have Python 3.10, 3.11, or 3.12 installed on your system. If you don't have
-Python installed, we recommend installing [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge).
+Python installed, we recommend installing [uv][link-uv].
 
-There are several options to install drvi:
+There are several alternative options to install drvi:
 
 <!-- TODO: remove install time! -->
 
-1. Install the latest release of `drvi-py` from [PyPI][link-pypi], which should take around two minutes:
+1. Install the latest release of `drvi-py` from [PyPI][], which should take around two minutes:
 
 ```bash
 pip install drvi-py
@@ -80,10 +76,8 @@ See the [changelog][changelog].
 
 ## Contact
 
-<!-- TODO: make clear where to ask questions: -->
-<!-- For questions and help requests, you can reach out in the [scverse discourse][scverse-discourse]. -->
-
-If you found a bug, please use the [issue tracker][issue-tracker].
+For questions and help requests, you can reach out in the [scverse discourse][].
+If you found a bug, please use the [issue tracker][].
 
 ## Citation
 
@@ -95,12 +89,19 @@ If DRVI is helpful in your research, please consider citing the following paper:
 
 ## Reproducibility
 
-Code, notebooks, and instructions to reproduce the results from the paper are available at the [reproducibility repository][repr-repo].
+Code, notebooks, and instructions to reproduce the results from the paper are available at the [reproducibility repository][].
 
-[repr-repo]: https://github.com/theislab/drvi_reproducibility
-[issue-tracker]: https://github.com/theislab/drvi/issues
+[link-build]: https://github.com/theislab/drvi/actions/workflows/build.yaml
+[link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml
+[link-codecov]: https://codecov.io/gh/theislab/drvi
+[link-pepy]: https://pepy.tech/projects/drvi-py
+
+[uv]: https://github.com/astral-sh/uv
+[scverse discourse]: https://discourse.scverse.org/
+[issue tracker]: https://github.com/theislab/drvi/issues
+[documentation]: https://drvi.readthedocs.io
 [changelog]: https://drvi.readthedocs.io/latest/changelog.html
-[link-docs]: https://drvi.readthedocs.io
-[link-api]: https://drvi.readthedocs.io
-[link-tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
-[link-pypi]: https://pypi.org/project/drvi-py
+[api documentation]: https://drvi.readthedocs.io
+[pypi]: https://pypi.org/project/drvi-py
+[tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
+[reproducibility repository]: https://github.com/theislab/drvi_reproducibility

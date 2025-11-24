@@ -12,11 +12,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    # to fail on error in multiline statements (-e), in pipes (-o pipefail), and on unset variables (-u).
-    shell: bash -euo pipefail {0}
-
 jobs:
   # Get the test environment from hatch as defined in pyproject.toml.
   # This ensures that the pyproject.toml is the single point of truth for test definitions and the same tests are
@@ -28,12 +23,12 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
           fetch-depth: 0
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
       - name: Get test environments
         id: get-envs
         run: |
@@ -62,12 +57,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
           fetch-depth: 0
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.env.python }}
           cache-dependency-glob: pyproject.toml
@@ -78,11 +73,15 @@ jobs:
           MPLBACKEND: agg
           PLATFORM: ${{ matrix.os }}
           DISPLAY: :42
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov
+        run: uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto
       - name: generate coverage report
-        run: uvx hatch run ${{ matrix.env.name }}:coverage xml
+        run: |
+          # See https://coverage.readthedocs.io/en/latest/config.html#run-patch
+          test -f .coverage || uvx hatch run ${{ matrix.env.name }}:cov-combine
+          uvx hatch run ${{ matrix.env.name }}:cov-report   # report visibly
+          uvx hatch run ${{ matrix.env.name }}:coverage xml # create report for upload
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
