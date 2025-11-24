@@ -17,7 +17,7 @@ __pycache__/
 /.coverage*
 
 # docs
-/docs/generated/
+/docs/**/generated/
 /docs/_build/
 
 # IDEs
