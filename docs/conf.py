@@ -16,9 +16,6 @@ from sphinxcontrib import katex
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
 
-# Temporary fix since readthedocs is not able to import the project
-import drvi  # noqa: F401 E402
-
 # -- Project information -----------------------------------------------------
 
 # NOTE: If you installed your project in editable mode, this might be stale.
