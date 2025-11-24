@@ -62,7 +62,6 @@ DRVI.setup_anndata(
 # Initialize the model
 model = DRVI(
     adata,
-    categorical_covariates=["batch"],
     n_latent=64,
     encoder_dims=[128, 128],
     decoder_dims=[128, 128],

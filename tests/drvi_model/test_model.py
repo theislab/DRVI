@@ -51,9 +51,9 @@ class TestDRVIModel:
         adata.layers["lognorm"] = np.log1p(adata.X)
 
         if not is_sparse:
-            adata.X = adata.X.A
+            adata.X = adata.X.toarray()
             for l in ["counts", "lognorm"]:
-                adata.layers[l] = adata.layers[l].A
+                adata.layers[l] = adata.layers[l].toarray()
 
         return adata
 
@@ -134,14 +134,6 @@ class TestDRVIModel:
                 layer="counts" if gene_likelihood in ["nb", "pnb"] else "lognorm",
             )
 
-    def test_integration_without_covariates(self):
-        adata = self.make_test_adata()
-        self._general_integration_test(
-            adata,
-            categorical_covariates=[],
-            data_kwargs=dict(categorical_covariate_keys=[]),  # noqa: C408
-        )
-
     def test_integration_with_different_covariate_modelings(self):
         adata = self.make_test_adata()
         for encode_covariates in [False, True]:
@@ -174,15 +166,46 @@ class TestDRVIModel:
 
     def test_multilevel_batch_integration(self):
         adata = self.make_test_adata()
+        # Scenario 0
+        self._general_integration_test(
+            adata,
+            batch_key="batch",
+            categorical_covariates=[],
+            data_kwargs=dict(batch_key="batch", categorical_covariate_keys=[]),  # noqa: C408
+        )
+        # Scenario 1
         self._general_integration_test(
             adata,
             categorical_covariates=["batch", "batch_2"],
             data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
         )
+        # Scenario 2
+        self._general_integration_test(
+            adata,
+            batch_key="batch",
+            categorical_covariates=["batch_2"],
+            data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
+        )
+        # Scenario 3 (just batch key)
+        self._general_integration_test(
+            adata,
+            batch_key="batch",
+            data_kwargs=dict(batch_key="batch"),  # noqa: C408
+        )
+        # Scenario 4 with VaMP prior
         self._general_integration_test(
             adata,
             categorical_covariates=["batch", "batch_2"],
             data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
+            prior="vamp_5",
+            prior_init_obs=adata.obs.index.to_series().sample(5),
+        )
+        # Scenario 5 with VaMP prior
+        self._general_integration_test(
+            adata,
+            batch_key="batch",
+            categorical_covariates=["batch_2"],
+            data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
             prior="vamp_5",
             prior_init_obs=adata.obs.index.to_series().sample(5),
         )
@@ -239,6 +262,7 @@ class TestDRVIModel:
             "emb_shared",
             "emb_linear",
         ]:
+            print(f"Testing query to reference mapping for {cms}")
             self._general_query_to_reference(adata_reference, adata_query, covariate_modeling_strategy=cms)
 
     def test_query_to_reference_mapping_with_different_splits(self):
@@ -334,4 +358,21 @@ class TestDRVIModel:
 
         latent = model.get_latent_representation(adata)
         reconstruction = model.decode_latent_samples(latent, cat_values=cat_values, map_cat_values=True)
+        assert reconstruction.shape == adata.X.shape
+
+    def test_reconstruction_of_a_latent_multi_batch(self):
+        adata = self.make_test_adata()
+        model = self._general_integration_test(
+            adata,
+            batch_key="batch",
+            categorical_covariates=["batch_2"],
+            data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
+        )["model"]
+        batch_values = adata.obs[["batch"]].values
+        cat_values = adata.obs[["batch_2"]].values
+
+        latent = model.get_latent_representation(adata)
+        reconstruction = model.decode_latent_samples(
+            latent, batch_values=batch_values, cat_values=cat_values, map_cat_values=True
+        )
         assert reconstruction.shape == adata.X.shape

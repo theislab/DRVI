@@ -1,12 +1,18 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy
-from anndata import AnnData
 
 from drvi.model import DRVI
 from drvi.utils.tools.interpretability._latent_traverse import get_dimensions_of_traverse_data, traverse_latent
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from anndata import AnnData
 
 
 def find_differential_effects(
