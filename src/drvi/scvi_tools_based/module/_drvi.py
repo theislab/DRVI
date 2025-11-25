@@ -687,9 +687,7 @@ class DRVIModule(BaseModuleClass):
                 params[key] = value
 
             library = library.reshape(n_samples, n_batch, *library.shape[1:])
-            px = self.gene_likelihood_module.dist(
-                aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
-            )
+            px = self.gene_likelihood_module.dist(parameters=params, lib_y=library)
 
         return {
             MODULE_KEYS.PX_KEY: px,
