@@ -618,7 +618,7 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.CONT_COVS_KEY: cont_covs,
             MODULE_KEYS.CAT_COVS_KEY: cat_covs,
             MODULE_KEYS.N_SAMPLES_KEY: n_samples,
-            "reconstruction_indices": reconstruction_indices,  # TODO: make a name for "reconstruction_indices"
+            MODULE_KEYS.RECONSTRUCTION_INDICES: reconstruction_indices,
         }
 
         if n_samples > 1:
@@ -693,7 +693,7 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.PX_KEY: px,
             MODULE_KEYS.PX_PARAMS_KEY: params,
             MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY: original_params,
-            "reconstruction_indices": reconstruction_indices,
+            MODULE_KEYS.RECONSTRUCTION_INDICES: reconstruction_indices,
         }
 
     def _get_reconstruction_loss(
@@ -729,8 +729,8 @@ class DRVIModule(BaseModuleClass):
             mse = torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0)
 
         return {
-            "loss": reconst_loss,
-            "mse": mse,
+            MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss,
+            MODULE_KEYS.MSE_LOSS_KEY: mse,
         }
 
     def _get_kl_divergence_z(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> torch.Tensor:
@@ -767,11 +767,11 @@ class DRVIModule(BaseModuleClass):
         qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
         qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
         px = generative_outputs[MODULE_KEYS.PX_KEY]
-        reconstruction_indices = generative_outputs["reconstruction_indices"]
+        reconstruction_indices = generative_outputs[MODULE_KEYS.RECONSTRUCTION_INDICES]
 
         kl_divergence_z = self._get_kl_divergence_z(qz_m, qz_v)
         reconst_losses = self._get_reconstruction_loss(px, x, x_mask, reconstruction_indices)
-        reconst_loss = reconst_losses["loss"]
+        reconst_loss = reconst_losses[MODULE_KEYS.RECONSTRUCTION_LOSS_KEY]
         assert kl_divergence_z.shape == reconst_loss.shape
 
         kl_local_for_warmup = kl_divergence_z
@@ -781,15 +781,14 @@ class DRVIModule(BaseModuleClass):
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
 
-        # TODO: make name for dict keys
         kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z}
-        reconstruction_loss = {"reconstruction_loss": reconst_loss}
+        reconstruction_loss = {MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss}
         return LossOutput(
             loss=loss,
             reconstruction_loss=reconstruction_loss,
             kl_local=kl_local,
             extra_metrics={
-                MODULE_KEYS.MSE_LOSS_KEY: reconst_losses["mse"],
+                MODULE_KEYS.MSE_LOSS_KEY: reconst_losses[MODULE_KEYS.MSE_LOSS_KEY],
             },
         )
 
