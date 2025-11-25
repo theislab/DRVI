@@ -34,6 +34,7 @@ class LinearLayer(nn.Linear):
         else:
             raise NotImplementedError()
 
+
 if TYPE_CHECKING:
     from typing import Any
 

@@ -9,7 +9,7 @@ from torch.distributions import Distribution
 from torch.nn import functional as F
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Literal
 
 
 class NoiseModel:
