@@ -1,7 +1,13 @@
-from anndata import AnnData
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pandas.api.types import CategoricalDtype
 from scvi.data._utils import _make_column_categorical
 from scvi.data.fields import CategoricalJointObsField
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 class FixedCategoricalJointObsField(CategoricalJointObsField):

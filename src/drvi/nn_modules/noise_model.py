@@ -1,9 +1,15 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
-from scvi.distributions import NegativeBinomial
-from torch.distributions import Distribution, Normal, Poisson
+from scvi import distributions as scvi_distributions
+from torch import distributions as torch_distributions
+from torch.distributions import Distribution
 from torch.nn import functional as F
+
+if TYPE_CHECKING:
+    from typing import Any, Literal
 
 
 class NoiseModel:
@@ -241,6 +247,27 @@ def preprocess_count_data(
     return x
 
 
+# Just for scvi RNASeqMixin compatibility. TODO: remove when scvi updated code.
+class Normal(torch_distributions.Normal):
+    @property
+    def mu(self) -> torch.Tensor:
+        return self.get_normalized("mu")
+
+    @property
+    def theta(self) -> torch.Tensor:
+        return self.get_normalized("theta")
+
+    def get_normalized(self, key) -> torch.Tensor:
+        if key == "mu":
+            return self.loc
+        elif key == "theta":
+            return self.scale
+        elif key == "scale":
+            return self.loc
+        else:
+            raise ValueError(f"normalized key {key} not recognized")
+
+
 class NormalNoiseModel(NoiseModel):
     """Normal (Gaussian) noise model for continuous data.
 
@@ -320,10 +347,12 @@ class NormalNoiseModel(NoiseModel):
         Normal
             Normal distribution with specified mean and variance.
         """
+        mean = parameters["mean"]
         var = parameters["var"]
         if self.model_var:
             var = torch.nan_to_num(torch.exp(var), posinf=100, neginf=0) + self.eps
-        return Normal(parameters["mean"], torch.abs(var).sqrt())
+        output_dist = Normal(mean, torch.abs(var).sqrt())
+        return output_dist
 
 
 class PoissonNoiseModel(NoiseModel):
@@ -400,14 +429,18 @@ class PoissonNoiseModel(NoiseModel):
         library_size = lib_y
 
         if self.mean_transformation == "exp":
-            trans_mean = torch.exp(mean)
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            trans_scale = torch.exp(mean)
+            trans_mean = library_size_correction(trans_scale, library_size, self.library_normalization, log_space=False)
         elif self.mean_transformation == "softmax":
-            trans_mean = torch.softmax(mean, dim=-1)
-            trans_mean = library_size.unsqueeze(-1) * trans_mean
+            trans_scale = torch.softmax(mean, dim=-1)
+            trans_mean = library_size.unsqueeze(-1) * trans_scale
         else:
             raise NotImplementedError()
-        return Poisson(trans_mean)
+        output_dist = scvi_distributions.Poisson(trans_mean, scale=trans_scale)
+        # Just for scvi RNASeqMixin backward compatibility. TODO: remove when restricting scvi to more recent version.
+        output_dist.mu = trans_mean
+        output_dist.theta = torch.ones_like(trans_mean)
+        return output_dist
 
 
 class NegativeBinomialNoiseModel(NoiseModel):
@@ -493,22 +526,22 @@ class NegativeBinomialNoiseModel(NoiseModel):
         library_size = lib_y
 
         if self.mean_transformation == "exp":
-            trans_mean = torch.exp(mean)
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = torch.exp(mean)
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         elif self.mean_transformation == "softmax":
-            trans_mean = torch.softmax(mean, dim=-1)
-            trans_mean = library_size.unsqueeze(-1) * trans_mean
+            px_scale = torch.softmax(mean, dim=-1)
+            px_rate = library_size.unsqueeze(-1) * px_scale
         # `softplus` and `none` for ablation. Useless in practice.
         elif self.mean_transformation == "softplus":
-            trans_mean = F.softplus(mean)
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = F.softplus(mean)
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         elif self.mean_transformation == "none":
-            trans_mean = mean
-            trans_mean = library_size_correction(trans_mean, library_size, self.library_normalization, log_space=False)
+            px_scale = mean
+            px_rate = library_size_correction(px_scale, library_size, self.library_normalization, log_space=False)
         else:
             raise NotImplementedError()
         trans_r = torch.exp(r)
-        return NegativeBinomial(mu=trans_mean, theta=trans_r, scale=None)
+        return scvi_distributions.NegativeBinomial(mu=px_rate, theta=trans_r, scale=px_scale)
 
 
 class LogNegativeBinomial(Distribution):
@@ -535,10 +568,13 @@ class LogNegativeBinomial(Distribution):
     are computed as exp(log_m) and exp(log_r) respectively.
     """
 
-    def __init__(self, log_m, log_r, eps: float = 1e-8, validate_args=False) -> None:
+    def __init__(
+        self, log_m, log_r, log_scale: torch.Tensor | None = None, eps: float = 1e-8, validate_args=False
+    ) -> None:
         self.log_m = log_m
         self.log_r = log_r
         self._eps = eps
+        self.log_scale = log_scale
         super().__init__(validate_args=validate_args)
 
     @property
@@ -551,17 +587,6 @@ class LogNegativeBinomial(Distribution):
             Mean of the distribution.
         """
         return torch.exp(self.log_m)
-
-    @property
-    def theta(self):
-        """Get the dispersion parameter.
-
-        Returns
-        -------
-        torch.Tensor
-            Dispersion parameter of the distribution.
-        """
-        return torch.exp(self.log_r)
 
     @property
     def variance(self):
@@ -631,6 +656,29 @@ class LogNegativeBinomial(Distribution):
 
     def log_prob(self, value: torch.Tensor) -> torch.Tensor:
         return self.negative_binomial_log_ver(value, self.log_m, self.log_r, eps=self._eps)
+
+    # Just for scvi RNASeqMixin backward compatibility. TODO: remove when restricting scvi to more recent version.
+    @property
+    def mu(self) -> torch.Tensor:
+        return self.get_normalized("mu")
+
+    @property
+    def theta(self) -> torch.Tensor:
+        return self.get_normalized("theta")
+
+    @property
+    def scale(self) -> torch.Tensor:
+        return self.get_normalized("scale")
+
+    def get_normalized(self, key: str) -> torch.Tensor:
+        if key == "mu":
+            return torch.exp(self.log_m)
+        elif key == "theta":
+            return torch.exp(self.log_r)
+        elif key == "scale":
+            return torch.exp(self.log_scale)
+        else:
+            raise ValueError(f"normalized key {key} not recognized")
 
 
 class LogNegativeBinomialNoiseModel(NoiseModel):
@@ -721,11 +769,12 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         library_size = lib_y
 
         if self.mean_transformation == "none":
-            trans_mean = library_size_correction(mean, library_size, self.library_normalization, log_space=True)
+            trans_scale = mean
+            trans_mean = library_size_correction(trans_scale, library_size, self.library_normalization, log_space=True)
         elif self.mean_transformation == "softmax":
-            trans_mean = mean - torch.logsumexp(mean, dim=-1, keepdim=True)
-            trans_mean = torch.log(library_size.clip(1)).unsqueeze(-1) + trans_mean
+            trans_scale = mean - torch.logsumexp(mean, dim=-1, keepdim=True)
+            trans_mean = torch.log(library_size.clip(1)).unsqueeze(-1) + trans_scale
         else:
             raise NotImplementedError()
         trans_r = r
-        return LogNegativeBinomial(log_m=trans_mean, log_r=trans_r)
+        return LogNegativeBinomial(log_m=trans_mean, log_r=trans_r, log_scale=trans_scale)

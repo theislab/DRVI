@@ -1,0 +1,43 @@
+{
+  "template": "https://github.com/scverse/cookiecutter-scverse",
+  "commit": "d22acc9d27ed6b37ea4ab18f7c6397be4288960c",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "drvi-py",
+      "package_name": "drvi",
+      "project_description": "Unsupervised Deep Disentangled Representation of Single-Cell Omics",
+      "author_full_name": "Amir Ali Moinfar",
+      "author_email": "moinfar.amirali@gmail.com",
+      "github_user": "theislab",
+      "github_repo": "drvi",
+      "license": "BSD 3-Clause License",
+      "ide_integration": false,
+      "_copy_without_render": [
+        ".github/workflows/build.yaml",
+        ".github/workflows/test.yaml",
+        "docs/_templates/autosummary/**.rst"
+      ],
+      "_exclude_on_template_update": [
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "docs/api.md",
+        "docs/index.md",
+        "docs/notebooks/example.ipynb",
+        "docs/references.bib",
+        "docs/references.md",
+        "src/**",
+        "tests/**"
+      ],
+      "_render_devdocs": false,
+      "_jinja2_env_vars": {
+        "lstrip_blocks": true,
+        "trim_blocks": true
+      },
+      "_template": "https://github.com/scverse/cookiecutter-scverse",
+      "_commit": "d22acc9d27ed6b37ea4ab18f7c6397be4288960c"
+    }
+  },
+  "directory": null
+}

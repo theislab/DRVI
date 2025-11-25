@@ -1,10 +1,10 @@
+from __future__ import annotations
+
 import collections
 import math
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING
 
 import torch
-from scvi.nn._utils import one_hot
 from torch import nn
 from torch.distributions import Normal
 from torch.nn import functional as F
@@ -15,6 +15,10 @@ from drvi.nn_modules.gradients import GradientScaler
 from drvi.nn_modules.layer.factory import FCLayerFactory, LayerFactory
 from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
 from drvi.nn_modules.noise_model import NoiseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+    from typing import Any, Literal
 
 
 def _identity(x: torch.Tensor) -> torch.Tensor:
@@ -101,7 +105,7 @@ class FCLayers(nn.Module):
 
         self.n_cat_list = list(n_cat_list) if n_cat_list is not None else []
         if self.covariate_vector_modeling == "one_hot":
-            covariate_embs_dim = self.n_cat_list
+            covariate_embs_dim = [n_cat if n_cat > 1 else 0 for n_cat in self.n_cat_list]
         else:
             covariate_embs_dim = list(covariate_embs_dim)
             assert len(covariate_embs_dim) == len(self.n_cat_list)
@@ -227,18 +231,19 @@ class FCLayers(nn.Module):
 
         def make_hook_function(weight: torch.Tensor) -> Callable[[torch.Tensor], torch.Tensor]:
             w_size = weight.size()
+            sum_n_cats_per_cov = sum([n_cat if n_cat > 1 else 0 for n_cat in n_cats_per_cov])
             if weight.dim() == 2:
                 # 2D tensors
                 with torch.no_grad():
                     # Freeze gradients for normal nodes
-                    if w_size[1] == sum(n_cats_per_cov):
+                    if w_size[1] == sum_n_cats_per_cov:
                         transfer_mask = []
                     else:
-                        transfer_mask = [
-                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov)], device=weight.device)
-                        ]
+                        transfer_mask = [torch.zeros([w_size[0], w_size[1] - sum_n_cats_per_cov], device=weight.device)]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
                     for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                        n_cat_new = n_cat_new if n_cat_new > 1 else 0
+                        n_cat_old = n_cat_old if n_cat_old > 1 else 0
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old], device=weight.device))
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(torch.ones([w_size[0], n_cat_new - n_cat_old], device=weight.device))
@@ -247,14 +252,16 @@ class FCLayers(nn.Module):
                 # 3D tensors
                 with torch.no_grad():
                     # Freeze gradients for normal nodes
-                    if w_size[1] == sum(n_cats_per_cov):
+                    if w_size[1] == sum_n_cats_per_cov:
                         transfer_mask = []
                     else:
                         transfer_mask = [
-                            torch.zeros([w_size[0], w_size[1] - sum(n_cats_per_cov), w_size[2]], device=weight.device)
+                            torch.zeros([w_size[0], w_size[1] - sum_n_cats_per_cov, w_size[2]], device=weight.device)
                         ]
                     # Iterate over the categories and Freeze old caterogies and make new ones trainable
                     for n_cat_new, n_cat_old in zip(n_cats_per_cov, previous_n_cats_per_cov, strict=False):
+                        n_cat_new = n_cat_new if n_cat_new > 1 else 0
+                        n_cat_old = n_cat_old if n_cat_old > 1 else 0
                         transfer_mask.append(torch.zeros([w_size[0], n_cat_old, w_size[2]], device=weight.device))
                         if n_cat_new > n_cat_old:
                             transfer_mask.append(
@@ -324,7 +331,8 @@ class FCLayers(nn.Module):
             for n_cat, cat in zip(self.n_cat_list, cat_list, strict=False):
                 if n_cat and cat is None:
                     raise ValueError("cat not provided while n_cat != 0 in init. params.")
-                concat_list += [one_hot(cat, n_cat)]
+                if n_cat > 1:  # n_cat = 1 will be ignored - no additional information
+                    concat_list += [F.one_hot(cat.long().squeeze(-1), n_cat).float()]
         elif self.covariate_vector_modeling == "emb_shared":
             concat_list = [cat_full_tensor]
         else:
@@ -361,8 +369,9 @@ class FCLayers(nn.Module):
                             kwargs = {}
                         if layer in self.injectable_layers:
                             if self.covariate_projection_modeling == "cat":
-                                current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
-                                x = torch.cat((x, current_cat_tensor), dim=-1)
+                                if len(concat_list_layer) > 0:
+                                    current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
+                                    x = torch.cat((x, current_cat_tensor), dim=-1)
                                 x = layer(x, **kwargs)
                             elif self.covariate_projection_modeling in ["linear"]:
                                 x = layer(x, **kwargs) + dimension_transformation(projected_batch_layer)

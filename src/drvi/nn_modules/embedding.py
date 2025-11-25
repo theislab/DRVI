@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import logging
 from collections import OrderedDict
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 
 class FreezableEmbedding(nn.Embedding):
@@ -251,7 +256,7 @@ class MultiEmbedding(nn.Module):
             raise NotImplementedError()
 
     @classmethod
-    def from_pretrained(cls, feature_embedding_instance: Any) -> "MultiEmbedding":
+    def from_pretrained(cls, feature_embedding_instance: Any) -> MultiEmbedding:
         """Create MultiEmbedding from a pretrained feature embedding.
 
         Parameters
@@ -271,7 +276,7 @@ class MultiEmbedding(nn.Module):
         """
         raise NotImplementedError()
 
-    def load_weights_from_trained_module(self, other: "MultiEmbedding", freeze_old: bool = False) -> None:
+    def load_weights_from_trained_module(self, other: MultiEmbedding, freeze_old: bool = False) -> None:
         """Load weights from another MultiEmbedding module.
 
         Parameters
@@ -326,6 +331,9 @@ class MultiEmbedding(nn.Module):
         table, which is useful for transfer learning scenarios.
         """
         for emb, n_freeze in zip(self.emb_list, n_freeze_list, strict=False):
+            # If that specific category has no change in size, skip.
+            if not emb.weight.requires_grad:
+                continue
             emb.freeze(n_freeze, emb.embedding_dim)
 
     @property
@@ -551,7 +559,7 @@ class FeatureEmbedding(nn.Module):
     @classmethod
     def from_numpy_array(
         cls, sentences_array: np.ndarray, embedding_dims: list[int], **kwargs: Any
-    ) -> "FeatureEmbedding":
+    ) -> FeatureEmbedding:
         """Create FeatureEmbedding from a numpy array.
 
         Parameters
@@ -580,7 +588,7 @@ class FeatureEmbedding(nn.Module):
     @classmethod
     def from_pandas_dataframe(
         cls, sentences_df: pd.DataFrame, embedding_dims: list[int], **kwargs: Any
-    ) -> "FeatureEmbedding":
+    ) -> FeatureEmbedding:
         """Create FeatureEmbedding from a pandas DataFrame.
 
         Parameters
@@ -604,7 +612,7 @@ class FeatureEmbedding(nn.Module):
         return cls.from_numpy_array(sentences_df.values, embedding_dims, **kwargs)
 
     @classmethod
-    def from_pretrained(cls, feature_embedding_instance: "FeatureEmbedding") -> "FeatureEmbedding":
+    def from_pretrained(cls, feature_embedding_instance: FeatureEmbedding) -> FeatureEmbedding:
         """Create FeatureEmbedding from a pretrained instance.
 
         Parameters
@@ -624,7 +632,7 @@ class FeatureEmbedding(nn.Module):
         """
         raise NotImplementedError()
 
-    def load_weights_from_trained_module(self, other: "FeatureEmbedding", freeze_old: bool = False) -> None:
+    def load_weights_from_trained_module(self, other: FeatureEmbedding, freeze_old: bool = False) -> None:
         """Load weights from another FeatureEmbedding module.
 
         Parameters

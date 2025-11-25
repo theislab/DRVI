@@ -1,16 +1,22 @@
+from __future__ import annotations
+
 import itertools
-from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from anndata import AnnData
 from matplotlib import pyplot as plt
 
 from drvi.utils.plotting import cmap
 from drvi.utils.tools import iterate_on_top_differential_vars
 from drvi.utils.tools.interpretability._latent_traverse import get_dimensions_of_traverse_data
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Any
+
+    from anndata import AnnData
 
 
 def make_heatmap_groups(ordered_list: list) -> tuple[list[tuple[int, int]], list[Any]]:

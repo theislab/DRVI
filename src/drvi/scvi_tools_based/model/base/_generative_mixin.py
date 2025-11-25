@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import logging
-from collections.abc import Callable, Sequence
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import scvi
 import torch
-from anndata import AnnData
 from scvi import REGISTRY_KEYS
 from torch.nn import functional as F
+
+from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from typing import Any
+
+    from anndata import AnnData
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +48,7 @@ class GenerativeMixin:
         step_func: Callable,
         aggregation_func: Callable,
         lib: np.ndarray | None = None,
+        batch_values: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
         batch_size: int = scvi.settings.batch_size,
@@ -63,6 +72,9 @@ class GenerativeMixin:
         lib
             Library size array with shape (n_samples,).
             If None, defaults to 1e4 for all samples.
+        batch_values
+            Batch values with shape (n_samples,).
+            If None, defaults to 0 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
             Required if model has categorical covariates.
@@ -108,16 +120,26 @@ class GenerativeMixin:
         self.module.eval()
         self.module.inspect_mode = True
 
-        if cat_values is not None and map_cat_values:
+        if cat_values is not None:
             if cat_values.ndim == 1:  # For a user not noticing cat_values should be 2d!
                 cat_values = cat_values.reshape(-1, 1)
-            mapped_values = np.zeros_like(cat_values)
-            for i, (_label, map_keys) in enumerate(
-                self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)["mappings"].items()
-            ):
-                cat_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
-                mapped_values[:, i] = np.vectorize(cat_mapping.get)(cat_values[:, i])
-            cat_values = mapped_values.astype(np.int32)
+            if map_cat_values:
+                mapped_values = np.zeros_like(cat_values)
+                for i, (_label, map_keys) in enumerate(
+                    self.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY)["mappings"].items()
+                ):
+                    cat_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
+                    mapped_values[:, i] = np.vectorize(cat_mapping.get)(cat_values[:, i])
+                cat_values = mapped_values.astype(np.int32)
+
+        if batch_values is not None:
+            batch_values = batch_values.flatten()
+            if map_cat_values:
+                map_keys = self.adata_manager.get_state_registry(REGISTRY_KEYS.BATCH_KEY)["categorical_mapping"]
+                batch_mapping = dict(zip(map_keys, range(len(map_keys)), strict=False))
+                batch_values = np.vectorize(batch_mapping.get)(batch_values)
+                batch_values = batch_values.astype(np.int32)
+            batch_values = batch_values.reshape(-1, 1)
 
         with torch.no_grad():
             for i in np.arange(0, z.shape[0], batch_size):
@@ -129,11 +151,15 @@ class GenerativeMixin:
                     lib_tensor = torch.tensor(lib[slice])
                 cat_tensor = torch.tensor(cat_values[slice]) if cat_values is not None else None
                 cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
-                batch_tensor = None
+                batch_tensor = (
+                    torch.tensor(batch_values[slice])
+                    if batch_values is not None
+                    else torch.zeros((slice.shape[0], 1), dtype=torch.int32)
+                )
 
                 if self.module.__class__.__name__ == "DRVIModule":
                     inference_outputs = {
-                        "z": z_tensor,
+                        MODULE_KEYS.Z_KEY: z_tensor,
                     }
                     library_to_inject = lib_tensor
                 else:
@@ -160,16 +186,21 @@ class GenerativeMixin:
         self,
         z: np.ndarray,
         lib: np.ndarray | None = None,
+        batch_values: np.ndarray | None = None,
         cat_values: np.ndarray | None = None,
         cont_values: np.ndarray | None = None,
         batch_size: int = scvi.settings.batch_size,
         map_cat_values: bool = False,
+        return_in_log_space: bool = True,
     ) -> np.ndarray:
         r"""Return the distribution produced by the decoder for the given latent samples.
 
         This method computes :math:`p(x \mid z)`, the reconstruction distribution
         for given latent samples. It returns the mean of the reconstruction
         distribution for each sample.
+
+        A user may use `model.get_normalized_expression` to get the normalized expression
+        within distribution in count space in a more probabilistic way.
 
         Parameters
         ----------
@@ -178,6 +209,9 @@ class GenerativeMixin:
         lib
             Library size array with shape (n_samples,).
             If None, defaults to 1e4 for all samples.
+        batch_values
+            Batch values with shape (n_samples,).
+            If None, defaults to 0 for all samples.
         cat_values
             Categorical covariates with shape (n_samples, n_cat_covs).
             Required if model has categorical covariates.
@@ -188,6 +222,8 @@ class GenerativeMixin:
         map_cat_values
             Whether to map categorical covariates to integers based on
             the AnnData manager pipeline.
+        return_in_log_space
+            Whether to return the means in log space.
 
         Returns
         -------
@@ -216,7 +252,10 @@ class GenerativeMixin:
         """
 
         def step_func(gen_output: dict[str, Any], store: list[Any]) -> None:
-            store.append(gen_output["params"]["mean"].detach().cpu())
+            if return_in_log_space:
+                store.append(torch.log(gen_output[MODULE_KEYS.PX_KEY].mean).detach().cpu())
+            else:
+                store.append(gen_output[MODULE_KEYS.PX_KEY].mean.detach().cpu())
 
         def aggregation_func(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)
@@ -226,6 +265,7 @@ class GenerativeMixin:
             step_func=step_func,
             aggregation_func=aggregation_func,
             lib=lib,
+            batch_values=batch_values,
             cat_values=cat_values,
             cont_values=cont_values,
             batch_size=batch_size,
@@ -289,7 +329,7 @@ class GenerativeMixin:
         >>> import anndata as ad
         >>> # Define function to extract latent means
         >>> def extract_latent_means(inference_outputs, generative_outputs, losses, store):
-        ...     store.append(inference_outputs["qz_m"].detach().cpu())
+        ...     store.append(inference_outputs["qzm"].detach().cpu())
         >>> # Define aggregation function
         >>> def concatenate_latents(store):
         ...     return torch.cat(store, dim=0).numpy()
@@ -383,7 +423,9 @@ class GenerativeMixin:
             inference_outputs: dict[str, Any], generative_outputs: dict[str, Any], losses: Any, store: list[Any]
         ) -> None:
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
+                    "mean"
+                ]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
                     log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
                 )  # n_samples x (n_splits + 1) x n_genes
@@ -391,7 +433,7 @@ class GenerativeMixin:
                     dim=-1
                 )  # n_samples x n_splits
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs["original_params"]["mean"]).sum(
+                effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"]).sum(
                     dim=-1
                 )  # n_samples x n_splits
             else:
@@ -482,13 +524,15 @@ class GenerativeMixin:
             inference_outputs: dict[str, Any], generative_outputs: dict[str, Any], losses: Any, store: list[Any]
         ) -> None:
             if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs["original_params"]["mean"]  # n_samples x n_splits x n_genes
+                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
+                    "mean"
+                ]  # n_samples x n_splits x n_genes
                 log_mean_params = F.pad(
                     log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
                 )  # n_samples x (n_splits + 1) x n_genes
                 effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs["original_params"]["mean"])
+                effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
             effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)

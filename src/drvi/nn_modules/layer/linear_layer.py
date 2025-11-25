@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import math
-from typing import Any
+from typing import TYPE_CHECKING
 
 import torch
 from torch import nn
@@ -31,6 +33,9 @@ class LinearLayer(nn.Linear):
             return output
         else:
             raise NotImplementedError()
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 class StackedLinearLayer(nn.Module):

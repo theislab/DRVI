@@ -5,21 +5,23 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Path setup --------------------------------------------------------------
+import shutil
 import sys
 from datetime import datetime
 from importlib.metadata import metadata
 from pathlib import Path
 
+from sphinxcontrib import katex
+
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
-
 
 # -- Project information -----------------------------------------------------
 
 # NOTE: If you installed your project in editable mode, this might be stale.
 #       If this is the case, reinstall it to refresh the metadata
 info = metadata("drvi-py")
-project_name = info["Name"]
+project = info["Name"]
 author = info["Author"]
 copyright = f"{datetime.now():%Y}, {author}."
 version = info["Version"]
@@ -37,7 +39,7 @@ needs_sphinx = "4.0"
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
-    "github_repo": "drvi",
+    "github_repo": project,
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
@@ -55,6 +57,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
+    "sphinxcontrib.katex",
     "sphinx_autodoc_typehints",
     "sphinx_tabs.tabs",
     "sphinx.ext.mathjax",
@@ -66,7 +69,7 @@ extensions = [
 autosummary_generate = True
 autodoc_member_order = "groupwise"
 default_role = "literal"
-napoleon_google_docstring = True
+napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = True  # having a separate entry generally helps readability
@@ -93,18 +96,20 @@ source_suffix = {
 }
 
 intersphinx_mapping = {
-    # General
-    "python": ("https://docs.python.org/3", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    # Numerical
+    # TODO: replace `3.13` with `3` once ReadTheDocs supports building with Python 3.14
+    "python": ("https://docs.python.org/3.13", None),
+    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    # DRVI related stuff
+    ## General
+    "matplotlib": ("https://matplotlib.org/stable/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
-    # Deep learning
+    ## Deep learning
     "torch": ("https://docs.pytorch.org/docs/stable", None),
     "lightning": ("https://lightning.ai/docs/pytorch/stable/", None),
-    # Special
-    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    ## Special
     "mudata": ("https://mudata.readthedocs.io/en/stable/", None),
     "scvi-tools": ("https://docs.scvi-tools.org/en/stable/", None),
 }
@@ -124,7 +129,7 @@ html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 
-html_title = project_name
+html_title = project
 
 html_theme_options = {
     "repository_url": repository_url,
@@ -135,6 +140,7 @@ html_theme_options = {
 }
 
 pygments_style = "default"
+katex_prerender = shutil.which(katex.NODEJS_BINARY) is not None
 
 nitpick_ignore = [
     # If building the documentation fails because of a missing link that is outside your control,
@@ -167,6 +173,5 @@ nitpick_ignore = [
     ("py:func", "register_module_full_backward_hook"),
     ("py:func", "register_module_full_backward_pre_hook"),
     # DRVI internal references
-    ("py:class", "drvi.scvi_tools_based.merlin_data._data.MerlinData"),
     ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

@@ -1,16 +1,24 @@
-import logging
-from collections.abc import Sequence
+from __future__ import annotations
 
+import logging
+from typing import TYPE_CHECKING
+
+import scvi
 import torch
-from anndata import AnnData
+from lightning import LightningDataModule
 from scvi import REGISTRY_KEYS
-from scvi.data._constants import _MODEL_NAME_KEY, _SETUP_ARGS_KEY
+from scvi.data._constants import _MODEL_NAME_KEY, _SETUP_ARGS_KEY, _SETUP_METHOD_NAME
 from scvi.model._utils import parse_device_args
 from scvi.model.base import BaseModelClass
 from scvi.model.base._archesmixin import ArchesMixin, _get_loaded_data, _initialize_model, _validate_var_names
 from torch import nn
 
 from drvi.scvi_tools_based.nn import FCLayers
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +29,9 @@ class DRVIArchesMixin(ArchesMixin):
     @classmethod
     def load_query_data(
         cls,
-        adata: AnnData,
-        reference_model: str | BaseModelClass,
+        adata: AnnData = None,
+        reference_model: str | BaseModelClass = None,
+        registry: dict = None,
         inplace_subset_query_vars: bool = False,
         accelerator: str = "auto",
         device: int | str = "auto",
@@ -35,6 +44,7 @@ class DRVIArchesMixin(ArchesMixin):
         reset_decoder: bool = False,
         freeze_batchnorm_encoder: bool = True,
         freeze_batchnorm_decoder: bool = False,
+        datamodule: LightningDataModule | None = None,
     ):
         """Online update of a reference model with scArches algorithm :cite:p:`Lotfollahi21`.
 
@@ -67,6 +77,11 @@ class DRVIArchesMixin(ArchesMixin):
         freeze_batchnorm_decoder
             Whether to freeze decoder batchnorms' weight and bias during transfer
         """
+        if reference_model is None:
+            raise ValueError("Please provide a reference model as string or loaded model.")
+        if adata is None and registry is None:
+            raise ValueError("Please provide either an AnnData or a registry dictionary.")
+
         _, _, device = parse_device_args(
             accelerator=accelerator,
             devices=device,
@@ -74,39 +89,58 @@ class DRVIArchesMixin(ArchesMixin):
             validate_single_device=True,
         )
 
-        attr_dict, var_names, load_state_dict = _get_loaded_data(reference_model, device=device)
+        # We limit to [:3] as from scvi version 1.1.5 additional output (pyro_param_store) is returned
+        attr_dict, var_names, load_state_dict = _get_loaded_data(reference_model, device=device)[:3]
 
-        if inplace_subset_query_vars:
-            logger.debug("Subsetting query vars to reference vars.")
-            adata._inplace_subset_var(var_names)
-        _validate_var_names(adata, var_names)
+        if adata:
+            if inplace_subset_query_vars:
+                logger.debug("Subsetting query vars to reference vars.")
+                adata._inplace_subset_var(var_names)
+            _validate_var_names(adata, var_names)
 
-        registry = attr_dict.pop("registry_")
-        if _MODEL_NAME_KEY in registry and registry[_MODEL_NAME_KEY] != cls.__name__:
-            raise ValueError("It appears you are loading a model from a different class.")
+            registry = attr_dict.pop("registry_")
+            if _MODEL_NAME_KEY in registry and registry[_MODEL_NAME_KEY] != cls.__name__:
+                raise ValueError("It appears you are loading a model from a different class.")
 
-        if _SETUP_ARGS_KEY not in registry:
-            raise ValueError("Saved model does not contain original setup inputs. Cannot load the original setup.")
+            if _SETUP_ARGS_KEY not in registry:
+                raise ValueError("Saved model does not contain original setup inputs. Cannot load the original setup.")
 
-        cls.setup_anndata(
-            adata,
-            source_registry=registry,
-            extend_categories=True,
-            allow_missing_labels=True,
-            **registry[_SETUP_ARGS_KEY],
-        )
+            if registry[_SETUP_METHOD_NAME] != "setup_datamodule":
+                setup_method = getattr(cls, registry[_SETUP_METHOD_NAME])
+                setup_method(
+                    adata,
+                    source_registry=registry,
+                    extend_categories=True,
+                    allow_missing_labels=True,
+                    **registry[_SETUP_ARGS_KEY],
+                )
 
-        model = _initialize_model(cls, adata, attr_dict)
+            cls.setup_anndata(
+                adata,
+                source_registry=registry,
+                extend_categories=True,
+                allow_missing_labels=True,
+                **registry[_SETUP_ARGS_KEY],
+            )
+
+        if scvi.__version__ >= "1.3.1":
+            model = _initialize_model(cls, adata, registry, attr_dict, datamodule)
+        else:
+            model = _initialize_model(cls, adata, attr_dict)
         adata_manager = model.get_anndata_manager(adata, required=True)
 
+        previous_n_batch = registry["field_registries"][REGISTRY_KEYS.BATCH_KEY]["summary_stats"]["n_batch"]
+        n_batch = model.summary_stats.n_batch
         if REGISTRY_KEYS.CAT_COVS_KEY in adata_manager.data_registry:
-            previous_n_cats_per_cov = registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"][
-                "n_cats_per_key"
-            ]
-            n_cats_per_cov = model.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
+            previous_n_cats_per_cov = [previous_n_batch] + list(
+                registry["field_registries"][REGISTRY_KEYS.CAT_COVS_KEY]["state_registry"]["n_cats_per_key"]
+            )
+            n_cats_per_cov = [n_batch] + list(
+                model.adata_manager.get_state_registry(REGISTRY_KEYS.CAT_COVS_KEY).n_cats_per_key
+            )
         else:
-            previous_n_cats_per_cov = None
-            n_cats_per_cov = None
+            previous_n_cats_per_cov = [previous_n_batch]
+            n_cats_per_cov = [n_batch]
 
         model.to_device(device)
 
