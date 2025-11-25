@@ -67,7 +67,7 @@ class StackedLinearLayer(nn.Module):
     - Bias shape: (n_channels, out_features) if bias=True, None otherwise
 
     The forward pass applies the transformation to each channel independently:
-    output[b, c, o] = sum_i(input[b, c, i] * weight[c, i, o]) + bias[c, o]
+    output[b, c, o] = sum_i(x[b, c, i] * weight[c, i, o]) + bias[c, o]
 
     This is equivalent to applying n_channels separate linear layers in parallel,
     which is more efficient than using separate nn.Linear layers.
@@ -165,12 +165,12 @@ class StackedLinearLayer(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, input: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
         r"""Forward pass through the stacked linear layer.
 
         Parameters
         ----------
-        input
+        x
             Input tensor with shape (batch_size, n_channels, in_features).
         output_subset
             Subset of outputs to provide in the output.
@@ -210,16 +210,16 @@ class StackedLinearLayer(nn.Module):
         """
         if output_subset is None or output_subset.dim() == 1:
             weight = self.weight if output_subset is None else self.weight[:, :, output_subset]
-            # slower: mm = torch.einsum("bci,cio->bco", input, weight)
-            mm = torch.bmm(input.transpose(0, 1), weight).transpose(0, 1)
+            # slower: mm = torch.einsum("bci,cio->bco", x, weight)
+            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1)
             if self.bias is not None:
                 bias = self.bias if output_subset is None else self.bias[:, output_subset]
                 mm = mm + bias  # They (bco, co) will broadcast well
             return mm
         elif output_subset.dim() == 2:
             weight = self.weight[:, :, output_subset]
-            # slower: mm = torch.einsum("bci,cibo->bco", input, weight)
-            mm = torch.matmul(input.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)
+            # slower: mm = torch.einsum("bci,cibo->bco", x, weight)
+            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)
             if self.bias is not None:
                 bias = self.bias[:, output_subset].transpose(0, 1)  # cbo -> bco
                 mm = mm + bias
