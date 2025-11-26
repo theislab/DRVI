@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+- Allow subset reconstruction
+- Allow gradient scaling in the last layer
+
+### Changed
+
+- Minor code improvements
+
 ## [0.2.0] - 2025-11-24
 
 ### Changed
