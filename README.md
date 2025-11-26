@@ -46,7 +46,7 @@ While CPU-based systems are supported, GPU-powered systems are strongly recommen
 
 ## Installation
 
-You need to have Python 3.10, 3.11, or 3.12 installed on your system. If you don't have
+You need to have Python (versions 3.10 to 3.13 supported) installed on your system. If you don't have
 Python installed, we recommend installing [uv][].
 
 There are several alternative options to install drvi:
