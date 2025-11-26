@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+- Add support for Python 3.13
+
 ## [0.2.0] - 2025-11-24
 
 ### Changed
