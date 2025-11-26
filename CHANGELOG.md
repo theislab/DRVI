@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+- Add support for Python 3.13
 - Allow subset reconstruction
 - Allow gradient scaling in the last layer
 
