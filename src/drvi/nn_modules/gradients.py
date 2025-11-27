@@ -22,7 +22,7 @@ class GradientScaler(torch.nn.Module):
         self.register_buffer("scale", torch.tensor(scale, dtype=torch.float32))
 
     def forward(self, x):
-        return grad_scale(x, self.scale.item())
+        return grad_scale(x, self.scale)
 
     def extra_repr(self):
         return f"scale={self.scale.item()}"
