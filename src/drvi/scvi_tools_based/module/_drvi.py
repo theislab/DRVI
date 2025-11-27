@@ -79,7 +79,6 @@ class DRVIModule(BaseModuleClass):
         Policy for reconstruction.
         - "dense" : Reconstruct all features.
         - "random_batch@M" : Reconstruct M random features for each batch.
-        - "random_cell@M" : Reconstruct M random features for each cell.
     input_dropout_rate
         Dropout rate to apply to the input.
     encoder_dropout_rate
@@ -533,11 +532,6 @@ class DRVIModule(BaseModuleClass):
             n_random_features = int(self.reconstruction_policy.split("@")[1])
             random_indices = torch.randperm(x.shape[1])[:n_random_features]
             return random_indices
-        elif self.reconstruction_policy.startswith("random_cell@"):
-            x = tensors[REGISTRY_KEYS.X_KEY]
-            n_random_features = int(self.reconstruction_policy.split("@")[1])
-            random_indices = torch.argsort(torch.rand(x.shape[0], x.shape[1]), dim=-1)[:, :n_random_features]
-            return random_indices
         else:
             raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 
@@ -550,8 +544,6 @@ class DRVIModule(BaseModuleClass):
             return x_original.sum(1)
         elif reconstruction_indices.dim() == 1:
             return x_original[:, reconstruction_indices.to(x_original.device)].sum(1)
-        elif reconstruction_indices.dim() == 2:
-            return x_original.gather(dim=1, index=reconstruction_indices.to(x_original.device)).sum(1)
         else:
             raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
 
@@ -713,11 +705,6 @@ class DRVIModule(BaseModuleClass):
             x = x[:, reconstruction_indices]
             if fill_in_the_blanks:
                 x_mask = x_mask[:, reconstruction_indices]
-        elif self.reconstruction_policy.startswith("random_cell@"):
-            reconstruction_indices = reconstruction_indices.to(x.device)
-            x = x.gather(dim=1, index=reconstruction_indices)
-            if fill_in_the_blanks:
-                x_mask = x_mask.gather(dim=1, index=reconstruction_indices)
         else:
             raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
 

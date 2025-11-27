@@ -18,24 +18,6 @@ class LinearLayer(nn.Linear):
             bias = self.bias[output_subset] if self.bias is not None else None  # (o_subset)
             weight = self.weight[output_subset]  # (o_subset, i)
             return F.linear(x, weight, bias)  # (..., i) -> (..., o_subset)
-        elif output_subset.dim() == 2:
-            # x: (b, ..., i) -> output_subset: (b, o_subset)
-            bias = self.bias[output_subset] if self.bias is not None else None  # (b, o_subset)
-            weight = self.weight[output_subset]  # (b, o_subset, i)
-            if x.dim() == 2:
-                # x: (b, i) -> weight: (b, o_subset, i) -> output: (b, o_subset)
-                # slower: torch.einsum('bi,boi->bo', x, weight) + bias
-                output = torch.bmm(x.unsqueeze(1), weight.transpose(1, 2)).squeeze(1)
-            elif x.dim() == 3:
-                # x: (b, c, i) -> weight: (b, o_subset, i) -> output: (b, c, o_subset)
-                # slower: torch.einsum('bci,boi->bco', x, weight) + bias
-                output = torch.bmm(x, weight.transpose(1, 2))
-                bias = bias.unsqueeze(1) if bias is not None else None  # (b, 1, o_subset)
-            else:
-                raise NotImplementedError()
-            if bias is not None:
-                output = output + bias
-            return output
         else:
             raise NotImplementedError()
 
@@ -223,14 +205,6 @@ class StackedLinearLayer(nn.Module):
             if self.bias is not None:
                 bias = self.bias if output_subset is None else self.bias[:, output_subset]  # (c, o_subset)
                 mm = mm + bias  # They (bco, co) will broadcast well
-            return mm
-        elif output_subset.dim() == 2:
-            weight = self.weight[:, :, output_subset]  # (c, i, b, o_subset)
-            # slower: mm = torch.einsum("bci,cibo->bco", x, weight)
-            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)  # (b, c, o_subset)
-            if self.bias is not None:
-                bias = self.bias[:, output_subset].transpose(0, 1)  # (b, c, o_subset)
-                mm = mm + bias
             return mm
         else:
             raise NotImplementedError()

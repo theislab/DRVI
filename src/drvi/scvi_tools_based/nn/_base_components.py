@@ -809,8 +809,6 @@ class DecoderDRVI(nn.Module):
                     params[param_name] = param_net.reshape(1, 1).expand(batch_size, self.n_output)
                 elif reconstruction_indices.dim() == 1:
                     params[param_name] = param_net.reshape(1, 1).expand(batch_size, reconstruction_indices.shape[0])
-                elif reconstruction_indices.dim() == 2:
-                    params[param_name] = param_net.reshape(1, 1).expand(batch_size, reconstruction_indices.shape[1])
                 else:
                     raise NotImplementedError()
                 original_params[param_name] = params[param_name]
@@ -838,8 +836,6 @@ class DecoderDRVI(nn.Module):
                 if reconstruction_indices is None:
                     pass
                 elif reconstruction_indices.dim() == 1:
-                    param_value = param_value[reconstruction_indices]
-                elif reconstruction_indices.dim() == 2:
                     param_value = param_value[reconstruction_indices]
                 else:
                     raise NotImplementedError()

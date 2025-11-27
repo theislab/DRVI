@@ -379,19 +379,19 @@ class TestDRVIModel:
 
     def test_no_split_model_with_random_reconstructions(self):
         adata = self.make_test_adata()
-        for reconstruction_policy in ["random_batch@20", "random_cell@20"]:
+        for reconstruction_policy in ["random_batch@20"]:
             self._general_integration_test(adata, n_split_latent=1, reconstruction_policy=reconstruction_policy)
 
     def test_fill_in_the_blanks_training_with_random_reconstructions(self):
         adata = self.make_test_adata()
-        for reconstruction_policy in ["random_batch@20", "random_cell@20"]:
+        for reconstruction_policy in ["random_batch@20"]:
             self._general_integration_test(
                 adata, n_split_latent=1, reconstruction_policy=reconstruction_policy, fill_in_the_blanks_ratio=0.5
             )
 
     def test_split_model_with_random_reconstructions(self):
         adata = self.make_test_adata()
-        for reconstruction_policy in ["random_batch@20", "random_cell@20"]:
+        for reconstruction_policy in ["random_batch@20"]:
             for reuse_strategy in ["nowhere", "everywhere"]:
                 self._general_integration_test(
                     adata,
