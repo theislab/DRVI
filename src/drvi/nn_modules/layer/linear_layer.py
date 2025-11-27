@@ -11,21 +11,26 @@ from torch.nn import functional as F
 class LinearLayer(nn.Linear):
     def forward(self, x: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
         if output_subset is None:
+            # x: (..., i) -> output: (..., o)
             return super().forward(x)
         elif output_subset.dim() == 1:
-            bias = self.bias[output_subset] if self.bias is not None else None
-            weight = self.weight[output_subset]
-            return F.linear(x, weight, bias)
+            # x: (..., i) -> output_subset: (o_subset)
+            bias = self.bias[output_subset] if self.bias is not None else None  # (o_subset)
+            weight = self.weight[output_subset]  # (o_subset, i)
+            return F.linear(x, weight, bias)  # (..., i) -> (..., o_subset)
         elif output_subset.dim() == 2:
-            bias = self.bias[output_subset] if self.bias is not None else None
-            weight = self.weight[output_subset]
-            # x is of size (b,i) and weight is of size (b,o,i) -> output is of size (b,o)
-            # slower: torch.einsum('bi,boi->bo', x, weight) + bias
+            # x: (b, ..., i) -> output_subset: (b, o_subset)
+            bias = self.bias[output_subset] if self.bias is not None else None  # (b, o_subset)
+            weight = self.weight[output_subset]  # (b, o_subset, i)
             if x.dim() == 2:
+                # x: (b, i) -> weight: (b, o_subset, i) -> output: (b, o_subset)
+                # slower: torch.einsum('bi,boi->bo', x, weight) + bias
                 output = torch.bmm(x.unsqueeze(1), weight.transpose(1, 2)).squeeze(1)
             elif x.dim() == 3:
-                output = torch.bmm(x, weight.transpose(1, 2))  # bci x bio -> bco
-                bias = bias.unsqueeze(1) if bias is not None else None  # b1o
+                # x: (b, c, i) -> weight: (b, o_subset, i) -> output: (b, c, o_subset)
+                # slower: torch.einsum('bci,boi->bco', x, weight) + bias
+                output = torch.bmm(x, weight.transpose(1, 2))
+                bias = bias.unsqueeze(1) if bias is not None else None  # (b, 1, o_subset)
             else:
                 raise NotImplementedError()
             if bias is not None:
@@ -210,19 +215,21 @@ class StackedLinearLayer(nn.Module):
         >>> print(output.shape)  # torch.Size([2, 3, 5])
         """
         if output_subset is None or output_subset.dim() == 1:
-            weight = self.weight if output_subset is None else self.weight[:, :, output_subset]
+            # weight: (c, i, o), bias: (c, o)
+            # x: (b, c, i), output_subset: (o_subset) -> output: (b, c, o_subset)
+            weight = self.weight if output_subset is None else self.weight[:, :, output_subset]  # (c, i, o_subset)
             # slower: mm = torch.einsum("bci,cio->bco", x, weight)
-            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1)
+            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1) # (b, c, o_subset)
             if self.bias is not None:
-                bias = self.bias if output_subset is None else self.bias[:, output_subset]
+                bias = self.bias if output_subset is None else self.bias[:, output_subset]  # (c, o_subset)
                 mm = mm + bias  # They (bco, co) will broadcast well
             return mm
         elif output_subset.dim() == 2:
-            weight = self.weight[:, :, output_subset]
+            weight = self.weight[:, :, output_subset]  # (c, i, b, o_subset)
             # slower: mm = torch.einsum("bci,cibo->bco", x, weight)
-            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)
+            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2) # (b, c, o_subset)
             if self.bias is not None:
-                bias = self.bias[:, output_subset].transpose(0, 1)  # cbo -> bco
+                bias = self.bias[:, output_subset].transpose(0, 1)  # (b, c, o_subset)
                 mm = mm + bias
             return mm
         else:
