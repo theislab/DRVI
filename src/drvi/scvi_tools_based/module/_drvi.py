@@ -599,8 +599,8 @@ class DRVIModule(BaseModuleClass):
             assert reconstruction_indices is None
         elif reconstruction_indices is not None:  # Override library size as we do not decode everything
             library = self._get_library_size(tensors[REGISTRY_KEYS.X_KEY], reconstruction_indices)
-        elif "library" in inference_outputs:
-            library = inference_outputs["library"]
+        elif MODULE_KEYS.LIBRARY_KEY in inference_outputs:
+            library = inference_outputs[MODULE_KEYS.LIBRARY_KEY]
         else:
             raise ValueError("Library size not found in inference outputs.")
 
