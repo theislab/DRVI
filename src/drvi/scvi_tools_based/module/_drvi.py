@@ -75,8 +75,8 @@ class DRVIModule(BaseModuleClass):
         Whether to use layer norm in layers.
     fill_in_the_blanks_ratio
         Ratio for fill-in-the-blanks training.
-    reconstruction_policy
-        Policy for reconstruction.
+    reconstruction_strategy
+        Strategy for reconstruction.
         - "dense" : Reconstruct all features.
         - "random_batch@M" : Reconstruct M random features for each batch.
     input_dropout_rate
@@ -141,7 +141,7 @@ class DRVIModule(BaseModuleClass):
         affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         fill_in_the_blanks_ratio: float = 0.0,
-        reconstruction_policy: str = "dense",
+        reconstruction_strategy: str = "dense",
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
@@ -190,7 +190,7 @@ class DRVIModule(BaseModuleClass):
 
         self.gene_likelihood_module = self._construct_gene_likelihood_module(gene_likelihood)
         self.fill_in_the_blanks_ratio = fill_in_the_blanks_ratio
-        self.reconstruction_policy = reconstruction_policy
+        self.reconstruction_strategy = reconstruction_strategy
 
         use_batch_norm_encoder = use_batch_norm == "encoder" or use_batch_norm == "both"
         use_batch_norm_decoder = use_batch_norm == "decoder" or use_batch_norm == "both"
@@ -525,15 +525,15 @@ class DRVIModule(BaseModuleClass):
         # We also reconstruct a fraction in validation set
         if not self.training:
             return None
-        if self.reconstruction_policy == "dense":
+        if self.reconstruction_strategy == "dense":
             return None
-        elif self.reconstruction_policy.startswith("random_batch@"):
+        elif self.reconstruction_strategy.startswith("random_batch@"):
             x = tensors[REGISTRY_KEYS.X_KEY]
-            n_random_features = int(self.reconstruction_policy.split("@")[1])
+            n_random_features = int(self.reconstruction_strategy.split("@")[1])
             random_indices = torch.randperm(x.shape[1])[:n_random_features]
             return random_indices
         else:
-            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
+            raise NotImplementedError(f"Reconstruction strategy {self.reconstruction_strategy} not implemented.")
 
     def _get_library_size(
         self, x_original: TensorDict, reconstruction_indices: torch.Tensor | None = None
@@ -698,15 +698,15 @@ class DRVIModule(BaseModuleClass):
         """Get reconstruction loss."""
         fill_in_the_blanks = self.fill_in_the_blanks_ratio > 0.0 and self.training
 
-        if self.reconstruction_policy == "dense" or reconstruction_indices is None:
+        if self.reconstruction_strategy == "dense" or reconstruction_indices is None:
             pass
-        elif self.reconstruction_policy.startswith("random_batch@"):
+        elif self.reconstruction_strategy.startswith("random_batch@"):
             reconstruction_indices = reconstruction_indices.to(x.device)
             x = x[:, reconstruction_indices]
             if fill_in_the_blanks:
                 x_mask = x_mask[:, reconstruction_indices]
         else:
-            raise NotImplementedError(f"Reconstruction policy {self.reconstruction_policy} not implemented.")
+            raise NotImplementedError(f"Reconstruction strategy {self.reconstruction_strategy} not implemented.")
 
         if fill_in_the_blanks:
             reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
