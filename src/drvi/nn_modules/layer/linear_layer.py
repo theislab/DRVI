@@ -219,7 +219,7 @@ class StackedLinearLayer(nn.Module):
             # x: (b, c, i), output_subset: (o_subset) -> output: (b, c, o_subset)
             weight = self.weight if output_subset is None else self.weight[:, :, output_subset]  # (c, i, o_subset)
             # slower: mm = torch.einsum("bci,cio->bco", x, weight)
-            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1) # (b, c, o_subset)
+            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1)  # (b, c, o_subset)
             if self.bias is not None:
                 bias = self.bias if output_subset is None else self.bias[:, output_subset]  # (c, o_subset)
                 mm = mm + bias  # They (bco, co) will broadcast well
@@ -227,7 +227,7 @@ class StackedLinearLayer(nn.Module):
         elif output_subset.dim() == 2:
             weight = self.weight[:, :, output_subset]  # (c, i, b, o_subset)
             # slower: mm = torch.einsum("bci,cibo->bco", x, weight)
-            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2) # (b, c, o_subset)
+            mm = torch.matmul(x.unsqueeze(2), weight.movedim(2, 0)).squeeze(2)  # (b, c, o_subset)
             if self.bias is not None:
                 bias = self.bias[:, output_subset].transpose(0, 1)  # (b, c, o_subset)
                 mm = mm + bias
