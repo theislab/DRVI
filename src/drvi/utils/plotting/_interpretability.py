@@ -596,6 +596,7 @@ def _umap_of_relevant_genes(
     dim_subset: Sequence[str] | None = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
+    show: bool = True,
     **kwargs,
 ):
     """Plot UMAP embeddings for specific latent dimensions together with UMAP embeddings of relevant genes.
@@ -631,13 +632,15 @@ def _umap_of_relevant_genes(
     max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
         Useful for large datasets to improve performance.
+    show
+        Whether to display the plot. If False, returns a generator of Ax or Axes objects.
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 
     Returns
     -------
-    None
-        Displays the plots directly.
+    None or a generator yielding Ax or Axes objects.
+    Displays the plots directly if show=True, otherwise iteratively yields Ax or Axes objects.
 
     Notes
     -----
@@ -697,7 +700,10 @@ def _umap_of_relevant_genes(
         )
         ax.text(0.92, 0.05, ax.get_title(), size=15, ha="left", color="black", rotation=90, transform=ax.transAxes)
         ax.set_title("")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            yield ax
 
         axes = sc.pl.embedding(
             adata,
@@ -715,7 +721,10 @@ def _umap_of_relevant_genes(
         for ax in axes:
             ax.text(0.92, 0.05, ax.get_title(), size=15, ha="left", color="black", rotation=90, transform=ax.transAxes)
             ax.set_title("")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            yield axes
 
 
 def plot_relevant_genes_on_umap(
@@ -731,6 +740,7 @@ def plot_relevant_genes_on_umap(
     dim_subset: Sequence[str] | None = None,
     n_top_genes: int = 10,
     max_cells_to_plot: int | None = None,
+    show: bool = True,
     **kwargs,
 ):
     """Plot relevant genes on UMAP embedding.
@@ -780,13 +790,15 @@ def plot_relevant_genes_on_umap(
     max_cells_to_plot
         Maximum number of cells to include in the plot. If None, all cells are plotted.
         Useful for large datasets to improve performance and reduce memory usage.
+    show
+        Whether to display the plot. If False, returns a generator of Ax or Axes objects.
     **kwargs
         Additional keyword arguments passed to `sc.pl.embedding`.
 
     Returns
     -------
-    None
-        Displays the plots directly.
+    None or a generator yielding Ax or Axes objects if show=False, otherwise None.
+    Displays the plots directly if show=True, otherwise iteratively yields Ax or Axes objects.
 
     Raises
     ------
@@ -849,5 +861,6 @@ def plot_relevant_genes_on_umap(
         dim_subset,
         n_top_genes,
         max_cells_to_plot,
+        show,
         **kwargs,
     )
