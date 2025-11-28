@@ -75,6 +75,10 @@ class DRVIModule(BaseModuleClass):
         Whether to use layer norm in layers.
     fill_in_the_blanks_ratio
         Ratio for fill-in-the-blanks training.
+    reconstruction_strategy
+        Strategy for reconstruction.
+        - "dense" : Reconstruct all features.
+        - "random_batch@M" : Reconstruct M random features for each batch.
     input_dropout_rate
         Dropout rate to apply to the input.
     encoder_dropout_rate
@@ -102,6 +106,8 @@ class DRVIModule(BaseModuleClass):
         A layer Factory instance for building encoder layers.
     decoder_layer_factory
         A layer Factory instance for building decoder layers.
+    last_layer_gradient_scale
+        Gradient scale for the last layer of the decoder.
     extra_encoder_kwargs
         Extra keyword arguments passed into encoder.
     extra_decoder_kwargs
@@ -135,6 +141,7 @@ class DRVIModule(BaseModuleClass):
         affine_batch_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         use_layer_norm: Literal["encoder", "decoder", "none", "both"] = "both",
         fill_in_the_blanks_ratio: float = 0.0,
+        reconstruction_strategy: str = "dense",
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
@@ -165,6 +172,7 @@ class DRVIModule(BaseModuleClass):
         mean_activation: Callable | str = "identity",
         encoder_layer_factory: LayerFactory | None = None,
         decoder_layer_factory: LayerFactory | None = None,
+        last_layer_gradient_scale: float = 1.0,
         extra_encoder_kwargs: dict[str, Any] | None = None,
         extra_decoder_kwargs: dict[str, Any] | None = None,
     ) -> None:
@@ -182,6 +190,7 @@ class DRVIModule(BaseModuleClass):
 
         self.gene_likelihood_module = self._construct_gene_likelihood_module(gene_likelihood)
         self.fill_in_the_blanks_ratio = fill_in_the_blanks_ratio
+        self.reconstruction_strategy = reconstruction_strategy
 
         use_batch_norm_encoder = use_batch_norm == "encoder" or use_batch_norm == "both"
         use_batch_norm_decoder = use_batch_norm == "decoder" or use_batch_norm == "both"
@@ -243,10 +252,12 @@ class DRVIModule(BaseModuleClass):
             layer_factory=decoder_layer_factory,
             covariate_modeling_strategy=covariate_modeling_strategy,
             categorical_covariate_dims=categorical_covariate_dims,
+            last_layer_gradient_scale=last_layer_gradient_scale,
             **(extra_decoder_kwargs or {}),
         )
 
         self.prior = self._construct_prior(prior, prior_init_dataloader)
+        self.inspect_mode = False
         self.fully_deterministic = False
 
     def _construct_gene_likelihood_module(self, gene_likelihood: str) -> Any:
@@ -417,10 +428,7 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing pre-processed input data.
         """
         # log the input to the variational distribution for numerical stability
-        x_, gene_likelihood_additional_info = self.gene_likelihood_module.initial_transformation(x)
-        # Note: this is different from scvi implementation of library size that is log transformed
-        # All our noise models accept non-normalized library to work
-        library = x.sum(1)
+        x_ = self.gene_likelihood_module.initial_transformation(x)
 
         encoder_input = x_
 
@@ -428,8 +436,6 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.X_KEY: encoder_input,
             MODULE_KEYS.CAT_COVS_KEY: cat_covs if self.encode_covariates else None,
             MODULE_KEYS.CONT_COVS_KEY: cont_covs if self.encode_covariates else None,
-            MODULE_KEYS.LIBRARY_KEY: library,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: gene_likelihood_additional_info,
         }
 
     @auto_move_data
@@ -462,6 +468,7 @@ class DRVIModule(BaseModuleClass):
         """
         pre_processed_input = self._input_pre_processing(x, cont_covs, cat_covs).copy()
         x_ = pre_processed_input[MODULE_KEYS.X_KEY]
+        library = self._get_library_size(x_original=x, reconstruction_indices=None)
 
         # Mask if needed
         if self.fill_in_the_blanks_ratio > 0.0 and self.training:
@@ -491,11 +498,8 @@ class DRVIModule(BaseModuleClass):
             MODULE_KEYS.QZM_KEY: qz_m,
             MODULE_KEYS.QZV_KEY: qz_v,
             MODULE_KEYS.QL_KEY: None,  # We do not model library size
-            MODULE_KEYS.LIBRARY_KEY: pre_processed_input[MODULE_KEYS.LIBRARY_KEY],
+            MODULE_KEYS.LIBRARY_KEY: library,
             MODULE_KEYS.X_MASK_KEY: x_mask,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: pre_processed_input[
-                MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY
-            ],
             MODULE_KEYS.N_SAMPLES_KEY: n_samples,
         }
 
@@ -517,11 +521,38 @@ class DRVIModule(BaseModuleClass):
 
         return outputs
 
+    def _get_reconstruction_indices(self, tensors: TensorDict) -> None | torch.Tensor:
+        # We also reconstruct a fraction in validation set
+        if not self.training:
+            return None
+        if self.reconstruction_strategy == "dense":
+            return None
+        elif self.reconstruction_strategy.startswith("random_batch@"):
+            x = tensors[REGISTRY_KEYS.X_KEY]
+            n_random_features = int(self.reconstruction_strategy.split("@")[1])
+            random_indices = torch.randperm(x.shape[1])[:n_random_features]
+            return random_indices
+        else:
+            raise NotImplementedError(f"Reconstruction strategy {self.reconstruction_strategy} not implemented.")
+
+    def _get_library_size(
+        self, x_original: TensorDict, reconstruction_indices: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        # Note: this is different from scvi implementation of library size that is log transformed
+        # All our noise models accept non-normalized library to work
+        if reconstruction_indices is None:
+            return x_original.sum(1)
+        elif reconstruction_indices.dim() == 1:
+            return x_original[:, reconstruction_indices.to(x_original.device)].sum(1)
+        else:
+            raise NotImplementedError(f"Reconstruction indices {reconstruction_indices} not implemented.")
+
     def _get_generative_input(
         self,
         tensors: TensorDict,
         inference_outputs: dict[str, Any],
         transform_batch: int | None = None,
+        library_to_inject: torch.Tensor | None = None,
     ) -> dict[str, Any]:
         """Prepare input for the generative model.
 
@@ -531,6 +562,8 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing tensor data.
         inference_outputs
             Outputs from the inference step.
+        library_to_inject
+            Library size to inject (it should not be log transformed. Just x.sum(1)).
         transform_batch
             Batch to condition on.
 
@@ -542,8 +575,6 @@ class DRVIModule(BaseModuleClass):
         z = inference_outputs[MODULE_KEYS.Z_KEY]
         if self.fully_deterministic:
             z = inference_outputs[MODULE_KEYS.QZM_KEY]
-        library = inference_outputs[MODULE_KEYS.LIBRARY_KEY]
-        gene_likelihood_additional_info = inference_outputs[MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY]
 
         batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
@@ -560,13 +591,26 @@ class DRVIModule(BaseModuleClass):
 
         n_samples = inference_outputs.get(MODULE_KEYS.N_SAMPLES_KEY, 1)
 
+        reconstruction_indices = self._get_reconstruction_indices(tensors)
+
+        # Set library size
+        if library_to_inject is not None:
+            library = library_to_inject
+            assert reconstruction_indices is None
+        elif reconstruction_indices is not None:  # Override library size as we do not decode everything
+            library = self._get_library_size(tensors[REGISTRY_KEYS.X_KEY], reconstruction_indices)
+        elif MODULE_KEYS.LIBRARY_KEY in inference_outputs:
+            library = inference_outputs[MODULE_KEYS.LIBRARY_KEY]
+        else:
+            raise ValueError("Library size not found in inference outputs.")
+
         input_dict = {
             MODULE_KEYS.Z_KEY: z,
             MODULE_KEYS.LIBRARY_KEY: library,
-            MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: gene_likelihood_additional_info,
             MODULE_KEYS.CONT_COVS_KEY: cont_covs,
             MODULE_KEYS.CAT_COVS_KEY: cat_covs,
             MODULE_KEYS.N_SAMPLES_KEY: n_samples,
+            MODULE_KEYS.RECONSTRUCTION_INDICES: reconstruction_indices,
         }
 
         if n_samples > 1:
@@ -585,10 +629,10 @@ class DRVIModule(BaseModuleClass):
         self,
         z: torch.Tensor,
         library: torch.Tensor,
-        gene_likelihood_additional_info: Any,
         cat_covs: torch.Tensor | None = None,
         cont_covs: torch.Tensor | None = None,
         transform_batch: torch.Tensor | None = None,
+        reconstruction_indices: torch.Tensor | None = None,
         n_samples: int = 1,
     ) -> dict[str, Any]:
         """Runs the generative model.
@@ -599,14 +643,14 @@ class DRVIModule(BaseModuleClass):
             Latent variables.
         library
             Library size information.
-        gene_likelihood_additional_info
-            Additional information for gene likelihood computation.
         cont_covs
             Continuous covariates.
         cat_covs
             Categorical covariates.
         transform_batch
             Batch to condition on. Currently not used but required for RNASeqMixin compatibility.
+        reconstruction_indices
+            Indices of features to reconstruct.
 
         Returns
         -------
@@ -624,7 +668,8 @@ class DRVIModule(BaseModuleClass):
             cat_full_tensor=cat_covs,
             cont_full_tensor=cont_covs,
             library=library,
-            gene_likelihood_additional_info=gene_likelihood_additional_info,
+            reconstruction_indices=reconstruction_indices,
+            return_original_params=self.inspect_mode,
         )
 
         if n_samples > 1:
@@ -634,15 +679,50 @@ class DRVIModule(BaseModuleClass):
                 params[key] = value
 
             library = library.reshape(n_samples, n_batch, *library.shape[1:])
-            px = self.gene_likelihood_module.dist(
-                aux_info=gene_likelihood_additional_info, parameters=params, lib_y=library
-            )
+            px = self.gene_likelihood_module.dist(parameters=params, lib_y=library)
 
         return {
             MODULE_KEYS.PX_KEY: px,
             MODULE_KEYS.PX_PARAMS_KEY: params,
             MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY: original_params,
+            MODULE_KEYS.RECONSTRUCTION_INDICES: reconstruction_indices,
         }
+
+    def _get_reconstruction_loss(
+        self,
+        px: torch.distributions.Distribution,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        reconstruction_indices: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        """Get reconstruction loss."""
+        fill_in_the_blanks = self.fill_in_the_blanks_ratio > 0.0 and self.training
+
+        if self.reconstruction_strategy == "dense" or reconstruction_indices is None:
+            pass
+        elif self.reconstruction_strategy.startswith("random_batch@"):
+            reconstruction_indices = reconstruction_indices.to(x.device)
+            x = x[:, reconstruction_indices]
+            if fill_in_the_blanks:
+                x_mask = x_mask[:, reconstruction_indices]
+        else:
+            raise NotImplementedError(f"Reconstruction strategy {self.reconstruction_strategy} not implemented.")
+
+        if fill_in_the_blanks:
+            reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
+            mse = torch.nn.functional.mse_loss(x * x_mask, px.mean * x_mask, reduction="none").sum(dim=1).mean(dim=0)
+        else:
+            reconst_loss = -px.log_prob(x).sum(dim=-1)
+            mse = torch.nn.functional.mse_loss(x, px.mean, reduction="none").sum(dim=1).mean(dim=0)
+
+        return {
+            MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss,
+            MODULE_KEYS.MSE_LOSS_KEY: mse,
+        }
+
+    def _get_kl_divergence_z(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> torch.Tensor:
+        """Get KL divergence term for z."""
+        return self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=-1)
 
     def loss(
         self,
@@ -674,14 +754,11 @@ class DRVIModule(BaseModuleClass):
         qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
         qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
         px = generative_outputs[MODULE_KEYS.PX_KEY]
+        reconstruction_indices = generative_outputs[MODULE_KEYS.RECONSTRUCTION_INDICES]
 
-        kl_divergence_z = self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=1)
-        if self.fill_in_the_blanks_ratio > 0.0 and self.training:
-            reconst_loss = -(px.log_prob(x) * (1 - x_mask)).sum(dim=-1)
-        else:
-            reconst_loss = -px.log_prob(x).sum(dim=-1)
-        # For MSE this should be equivalent (in terms of backward gradients) to:
-        # reconst_loss = torch.nn.GaussianNLLLoss(reduction='none')(x, px.loc, px.scale ** 2).sum(dim=-1)
+        kl_divergence_z = self._get_kl_divergence_z(qz_m, qz_v)
+        reconst_losses = self._get_reconstruction_loss(px, x, x_mask, reconstruction_indices)
+        reconst_loss = reconst_losses[MODULE_KEYS.RECONSTRUCTION_LOSS_KEY]
         assert kl_divergence_z.shape == reconst_loss.shape
 
         kl_local_for_warmup = kl_divergence_z
@@ -691,15 +768,14 @@ class DRVIModule(BaseModuleClass):
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
 
-        kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z.sum()}
+        kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z}
+        reconstruction_loss = {MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss}
         return LossOutput(
             loss=loss,
-            reconstruction_loss=reconst_loss,
+            reconstruction_loss=reconstruction_loss,
             kl_local=kl_local,
             extra_metrics={
-                MODULE_KEYS.MSE_LOSS_KEY: torch.nn.functional.mse_loss(x, px.mean, reduction="none")
-                .sum(dim=1)
-                .mean(dim=0),
+                MODULE_KEYS.MSE_LOSS_KEY: reconst_losses[MODULE_KEYS.MSE_LOSS_KEY],
             },
         )
 

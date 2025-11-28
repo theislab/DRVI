@@ -376,3 +376,28 @@ class TestDRVIModel:
             latent, batch_values=batch_values, cat_values=cat_values, map_cat_values=True
         )
         assert reconstruction.shape == adata.X.shape
+
+    def test_no_split_model_with_random_reconstructions(self):
+        adata = self.make_test_adata()
+        for reconstruction_strategy in ["random_batch@20"]:
+            self._general_integration_test(adata, n_split_latent=1, reconstruction_strategy=reconstruction_strategy)
+
+    def test_fill_in_the_blanks_training_with_random_reconstructions(self):
+        adata = self.make_test_adata()
+        for reconstruction_strategy in ["random_batch@20"]:
+            self._general_integration_test(
+                adata, n_split_latent=1, reconstruction_strategy=reconstruction_strategy, fill_in_the_blanks_ratio=0.5
+            )
+
+    def test_split_model_with_random_reconstructions(self):
+        adata = self.make_test_adata()
+        for reconstruction_strategy in ["random_batch@20"]:
+            for reuse_strategy in ["nowhere", "everywhere"]:
+                self._general_integration_test(
+                    adata,
+                    n_split_latent=8,
+                    split_method="split",
+                    split_aggregation="logsumexp",
+                    decoder_reuse_weights=reuse_strategy,
+                    reconstruction_strategy=reconstruction_strategy,
+                )
