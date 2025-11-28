@@ -2,9 +2,8 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from scipy import sparse
-
 from matplotlib import pyplot as plt
+from scipy import sparse
 
 import drvi
 
@@ -99,7 +98,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
     def test_whole_integration_and_interpretability_pipeline(self):
         self._whole_integration_and_interpretability_pipeline()
-    
+
     def test_plotting_functions(self):
         train_results = self._whole_integration_and_interpretability_pipeline()
         adata = train_results["adata"]
@@ -111,13 +110,18 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         sc.tl.umap(embed)
         sc.pp.pca(embed)
 
-        drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, show=False) ; plt.close()
-        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False) ; plt.close()
+        drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, show=False)
+        plt.close()
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False) ; plt.close()
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False) ; plt.close()
-        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0, show=False) ; plt.close()
+        drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False)
+        plt.close()
+        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0, show=False)
+        plt.close()
 
         dimensions_interpretability = drvi.utils.tools.iterate_on_top_differential_vars(
             traverse_adata, key="combined_score", score_threshold=0.0
@@ -132,7 +136,8 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             dim_subset=[sample_dim],
             score_threshold=0.0,
             show=False,
-        ) ; plt.close()
+        )
+        plt.close()
         ax_generator = drvi.utils.pl.plot_relevant_genes_on_umap(
             adata,
             embed,
@@ -145,4 +150,3 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         for ax_obj in ax_generator:
             assert isinstance(ax_obj, plt.Axes) or isinstance(ax_obj[0], plt.Axes)
         plt.close()
-
