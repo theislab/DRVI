@@ -17,14 +17,14 @@ def _sparse_std(X: sparse.csr_matrix, axis: int = 0, ddof: int = 0) -> np.ndarra
     """
     mean_sq = np.asarray(X.power(2).mean(axis=axis)).squeeze(axis=axis)
     sq_mean = np.asarray(np.power(X.mean(axis=axis), 2)).squeeze(axis=axis)
-    
+
     # Calculate Variance: E[X^2] - (E[X])^2
     var = mean_sq - sq_mean
-    
+
     if ddof > 0:
         n = X.shape[axis]
         var = var * (n / (n - ddof))
-        
+
     return np.sqrt(np.maximum(var, 0))
 
 
