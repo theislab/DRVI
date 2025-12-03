@@ -12,9 +12,7 @@ if TYPE_CHECKING:
 
 
 def _sparse_std(X: sparse.csr_matrix, axis: int = 0, ddof: int = 0) -> np.ndarray:
-    """
-    Calculates standard deviation of a sparse matrix without densifying.
-    """
+    """Calculates standard deviation of a sparse matrix without densifying."""
     mean_sq = np.asarray(X.power(2).mean(axis=axis)).squeeze(axis=axis)
     sq_mean = np.asarray(np.power(X.mean(axis=axis), 2)).squeeze(axis=axis)
 
