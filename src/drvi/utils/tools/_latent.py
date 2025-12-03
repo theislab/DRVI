@@ -3,11 +3,27 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scipy import sparse
 
 from drvi.model import DRVI
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
+
+def _sparse_std(X: sparse.csr_matrix, axis: int = 0, ddof: int = 0) -> np.ndarray:
+    """Calculates standard deviation of a sparse matrix without densifying."""
+    mean_sq = np.asarray(X.power(2).mean(axis=axis)).squeeze(axis=axis)
+    sq_mean = np.asarray(np.power(X.mean(axis=axis), 2)).squeeze(axis=axis)
+
+    # Calculate Variance: E[X^2] - (E[X])^2
+    var = mean_sq - sq_mean
+
+    if ddof > 0:
+        n = X.shape[axis]
+        var = var * (n / (n - ddof))
+
+    return np.sqrt(np.maximum(var, 0))
 
 
 def set_latent_dimension_stats(
@@ -80,7 +96,12 @@ def set_latent_dimension_stats(
     embed.var["mean"] = embed.X.mean(axis=0)
     embed.var["min"] = embed.X.min(axis=0)
     embed.var["max"] = embed.X.max(axis=0)
-    embed.var["std"] = np.abs(embed.X).std(axis=0)
+    if sparse.issparse(embed.X):
+        embed.var["std"] = _sparse_std(embed.X, axis=0)
+        embed.var["std_abs"] = _sparse_std(np.abs(embed.X), axis=0)
+    else:
+        embed.var["std"] = embed.X.std(axis=0)
+        embed.var["std_abs"] = np.abs(embed.X).std(axis=0)
 
     embed.var["title"] = "DR " + (1 + embed.var["order"]).astype(str)
     embed.var["vanished"] = embed.var["max_value"] < vanished_threshold

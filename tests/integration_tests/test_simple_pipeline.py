@@ -2,6 +2,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from matplotlib import pyplot as plt
 from scipy import sparse
 
 import drvi
@@ -60,7 +61,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
         return adata
 
-    def test_whole_integration_and_interpretability(self):
+    def _whole_integration_and_interpretability_pipeline(self, model_kwargs=None):
         adata = self.make_test_adata()
 
         drvi.model.DRVI.setup_anndata(
@@ -69,8 +70,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             layer="counts",
             is_count_data=True,
         )
-        model = drvi.model.DRVI(
-            adata,
+        _model_kwargs = dict(  # noqa: C408
             n_latent=8,
             encoder_dims=[128],
             decoder_dims=[128],
@@ -78,7 +78,9 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             categorical_covariates=["batch"],
             decoder_reuse_weights="everywhere",
         )
-        print(model.module)
+        if model_kwargs is not None:
+            _model_kwargs.update(model_kwargs)
+        model = drvi.model.DRVI(adata, **_model_kwargs)
         model.train(accelerator="cpu", max_epochs=100)
         embed = ad.AnnData(model.get_latent_representation(), obs=adata.obs)
 
@@ -94,8 +96,11 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             "traverse_adata": traverse_adata,
         }
 
+    def test_whole_integration_and_interpretability_pipeline(self):
+        self._whole_integration_and_interpretability_pipeline()
+
     def test_plotting_functions(self):
-        train_results = self.test_whole_integration_and_interpretability()
+        train_results = self._whole_integration_and_interpretability_pipeline()
         adata = train_results["adata"]
         embed = train_results["embed"]
         traverse_adata = train_results["traverse_adata"]
@@ -105,13 +110,18 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         sc.tl.umap(embed)
         sc.pp.pca(embed)
 
-        drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
-        drvi.utils.pl.plot_latent_dims_in_umap(embed)
+        drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, show=False)
+        plt.close()
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_umap(embed)
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title")
-        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0)
+        drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False)
+        plt.close()
+        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0, show=False)
+        plt.close()
 
         dimensions_interpretability = drvi.utils.tools.iterate_on_top_differential_vars(
             traverse_adata, key="combined_score", score_threshold=0.0
@@ -125,12 +135,18 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             key_combined="combined_score",
             dim_subset=[sample_dim],
             score_threshold=0.0,
+            show=False,
         )
-        drvi.utils.pl.plot_relevant_genes_on_umap(
+        plt.close()
+        ax_generator = drvi.utils.pl.plot_relevant_genes_on_umap(
             adata,
             embed,
             traverse_adata,
             traverse_adata_key="combined_score",
             dim_subset=[sample_dim],
             score_threshold=0.0,
+            show=False,
         )
+        for ax_obj in ax_generator:
+            assert isinstance(ax_obj, plt.Axes) or isinstance(ax_obj[0], plt.Axes)
+        plt.close()
