@@ -38,11 +38,11 @@ class FCLayers(nn.Module):
         included using a one-hot encoding.
     dropout_rate
         Dropout rate to apply to each of the hidden layers.
-    split_size
-        The size of split if input is a 3d tensor otherwise -1.
+    n_split
+        The size of split if input is a 3d tensor otherwise 1.
         This parameter is required to handle batch normalization.
     reuse_weights
-        Whether to reuse weights when having multiple splits.
+        Whether to reuse weights when having multiple splits (defined per layer). None if no reuse / split.
     use_batch_norm
         Whether to have `BatchNorm` layers or not.
     affine_batch_norm
@@ -72,8 +72,8 @@ class FCLayers(nn.Module):
         layers_dim: Sequence[int],
         n_cat_list: Iterable[int] | None = None,
         dropout_rate: float = 0.1,
-        split_size: int = -1,
-        reuse_weights: bool = True,
+        n_split: int = 1,
+        reuse_weights: Sequence[bool] | None = None,
         use_batch_norm: bool = True,
         affine_batch_norm: bool = True,
         use_layer_norm: bool = False,
@@ -94,6 +94,8 @@ class FCLayers(nn.Module):
         covariate_embs_dim: Iterable[int] = (),
     ) -> None:
         super().__init__()
+        assert n_split > 0
+
         self.inject_covariates = inject_covariates
         if covariate_modeling_strategy.endswith("_linear"):
             self.covariate_projection_modeling = "linear"
@@ -112,6 +114,7 @@ class FCLayers(nn.Module):
 
         self.injectable_layers = []
         self.linear_projections = []
+        self.stacked_layers = []
         self.linear_batch_projections = []
 
         def is_intermediate(i: int) -> bool:
@@ -129,8 +132,8 @@ class FCLayers(nn.Module):
         def get_projection_layer(n_in: int, n_out: int, i: int) -> list[nn.Module]:
             output = []
             layer_needs_injection = False
-            if not reuse_weights:
-                assert split_size > 1
+            if (reuse_weights is not None) and (not all(reuse_weights)):
+                assert n_split > 1
                 if self.covariate_projection_modeling not in ["cat", "linear"]:
                     raise NotImplementedError()
 
@@ -143,15 +146,15 @@ class FCLayers(nn.Module):
                 if self.covariate_projection_modeling == "cat":
                     n_in += cat_dim
                 elif self.covariate_projection_modeling == "linear":
-                    if reuse_weights:
+                    if (reuse_weights is None) or reuse_weights[i]:
                         linear_batch_projection = nn.Linear(cat_dim, n_out, bias=False)
                     else:
-                        linear_batch_projection = StackedLinearLayer(split_size, cat_dim, n_out, bias=False)
+                        linear_batch_projection = StackedLinearLayer(n_split, cat_dim, n_out, bias=False)
                     output.append(linear_batch_projection)
                     self.linear_batch_projections.append(linear_batch_projection)
                 else:
                     raise NotImplementedError()
-            if reuse_weights:
+            if (reuse_weights is None) or reuse_weights[i]:
                 layer = layer_factory.get_normal_layer(
                     n_in,
                     n_out,
@@ -160,12 +163,13 @@ class FCLayers(nn.Module):
                 )
             else:
                 layer = layer_factory.get_stacked_layer(
-                    split_size,
+                    n_split,
                     n_in,
                     n_out,
                     bias=bias,
                     intermediate_layer=is_intermediate(i),
                 )
+                self.stacked_layers.append(layer)
             self.linear_projections.append(layer)
             if layer_needs_injection:
                 self.injectable_layers.append(layer)
@@ -174,7 +178,7 @@ class FCLayers(nn.Module):
 
         def get_normalization_layers(n_out: int) -> list[nn.Module]:
             output = []
-            if split_size == -1:
+            if n_split == 1:
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
                     output.append(FreezableBatchNorm1d(n_out, momentum=0.01, eps=0.001, affine=affine_batch_norm))
@@ -184,12 +188,12 @@ class FCLayers(nn.Module):
                 if use_batch_norm:
                     # non-default params come from defaults in original Tensorflow implementation
                     output.append(
-                        FreezableBatchNorm1d(n_out * split_size, momentum=0.01, eps=0.001, affine=affine_batch_norm)
+                        FreezableBatchNorm1d(n_out * n_split, momentum=0.01, eps=0.001, affine=affine_batch_norm)
                     )
                 if use_layer_norm:
                     output.append(FreezableLayerNorm(n_out, elementwise_affine=False))
                     # The following logic is wrong
-                    # output.append(FreezableLayerNorm([split_size, n_out], elementwise_affine=False))
+                    # output.append(FreezableLayerNorm([n_split, n_out], elementwise_affine=False))
             return output
 
         self.fc_layers = nn.Sequential(
@@ -303,7 +307,10 @@ class FCLayers(nn.Module):
                     raise NotImplementedError()
 
     def forward(
-        self, x: torch.Tensor, cat_full_tensor: torch.Tensor | None, output_subset_indices: torch.Tensor | None = None
+        self,
+        x: torch.Tensor,
+        cat_full_tensor: torch.Tensor | None,
+        output_subset_indices: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Forward computation on ``x``.
 
@@ -313,6 +320,8 @@ class FCLayers(nn.Module):
             Tensor of values with shape ``(batch_size, n_in,)`` or ``(batch_size, n_split, n_in)``.
         cat_full_tensor
             Tensor of category membership(s) for this sample.
+        output_subset_indices
+            The subset of output dims.
 
         Returns
         -------
@@ -363,22 +372,22 @@ class FCLayers(nn.Module):
                         assert self.covariate_projection_modeling == "linear"
                         projected_batch_layer = layer(torch.cat(concat_list_layer, dim=-1))
                     else:
+                        kwargs = {}
                         if layer == self.linear_projections[-1]:
-                            kwargs = {"output_subset": output_subset_indices}
-                        else:
-                            kwargs = {}
+                            kwargs["output_subset"] = output_subset_indices
+                        to_be_added = None
                         if layer in self.injectable_layers:
                             if self.covariate_projection_modeling == "cat":
                                 if len(concat_list_layer) > 0:
                                     current_cat_tensor = dimension_transformation(torch.cat(concat_list_layer, dim=-1))
                                     x = torch.cat((x, current_cat_tensor), dim=-1)
-                                x = layer(x, **kwargs)
                             elif self.covariate_projection_modeling in ["linear"]:
-                                x = layer(x, **kwargs) + dimension_transformation(projected_batch_layer)
+                                to_be_added = dimension_transformation(projected_batch_layer)
                             else:
                                 raise NotImplementedError()
-                        else:
-                            x = layer(x, **kwargs)
+                        x = layer(x, **kwargs)
+                        if to_be_added is not None:
+                            x = x + to_be_added
         return x
 
 
@@ -468,6 +477,7 @@ class Encoder(nn.Module):
         self.distribution = distribution
         self.var_eps = var_eps
         self.input_dropout = nn.Dropout(p=input_dropout_rate)
+        self.fully_deterministic = False
 
         all_layers_dim = [n_input + n_continuous_cov] + list(layers_dim) + [n_output]
         if len(layers_dim) >= 1:
@@ -555,6 +565,42 @@ class Encoder(nn.Module):
             assert callable(mean_activation)
             self.mean_activation = mean_activation
 
+    def _generate_variational_distribution(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> Normal:
+        """Generate the variational distribution.
+
+        Parameters
+        ----------
+        qz_m
+            Mean of the variational distribution with shape ``(batch_size, n_latent)``.
+        qz_v
+            Variance of the variational distribution with shape ``(batch_size, n_latent)``.
+
+        Returns
+        -------
+        Normal
+            Variational distribution.
+        """
+        return Normal(qz_m, qz_v.sqrt())
+
+    def _sample_from_variational(self, dist: Normal) -> torch.Tensor:
+        """Sample from the variational distribution.
+
+        Parameters
+        ----------
+        dist
+            Variational distribution.
+
+        Returns
+        -------
+        torch.Tensor
+            Sampled latent tensor with shape ``(batch_size, n_latent)``.
+        """
+        if self.fully_deterministic:
+            z = dist.mean
+        else:
+            z = dist.rsample()
+        return self.z_transformation(z)
+
     def forward(
         self,
         x: torch.Tensor,
@@ -585,14 +631,17 @@ class Encoder(nn.Module):
         """
         if cont_full_tensor is not None:
             x = torch.cat((x, cont_full_tensor), dim=-1)
+
         # Parameters for latent distribution
         q = self.encoder(self.input_dropout(x), cat_full_tensor) if self.encoder is not None else x
         q_m = self.mean_activation(self.mean_encoder(q, cat_full_tensor))
         q_v = self.var_activation(self.var_encoder(q, cat_full_tensor)) + self.var_eps
-        dist = Normal(q_m, q_v.sqrt())
-        latent = self.z_transformation(dist.rsample())
+
+        dist = self._generate_variational_distribution(q_m, q_v)
         if self.return_dist:
-            return dist, latent
+            return dist
+
+        latent = self._sample_from_variational(dist)
         return q_m, q_v, latent
 
 
@@ -660,8 +709,8 @@ class DecoderDRVI(nn.Module):
         n_continuous_cov: int = 0,
         n_split: int = 1,
         split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
-        split_method: Literal["split", "power", "split_map"] = "split",
-        reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
+        split_method: Literal["split", "power", "split_map", "split_diag"] | str = "split",
+        reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere", "not_first"] = "everywhere",
         layers_dim: Sequence[int] = (128,),
         dropout_rate: float = 0.1,
         inject_covariates: bool = True,
@@ -684,40 +733,31 @@ class DecoderDRVI(nn.Module):
         super().__init__()
         self.n_output = n_output
         self.gene_likelihood_module = gene_likelihood_module
-
-        self.split_method = split_method
         self.n_split = n_split
-
-        if n_split == -1 or n_split == 1:
-            assert reuse_weights
-            effective_dim = n_input
-            self.n_split = n_split = -1
-        elif self.split_method == "split":
-            assert n_input % n_split == 0
-            effective_dim = n_input // n_split
-        elif self.split_method == "split_map":
-            assert n_input % n_split == 0
-            effective_dim = n_input
-            self.split_transformation_weight = nn.Parameter(torch.randn(n_split, n_input // n_split, n_input))
-            self.split_transformation_weight.data /= float(n_input // n_split) ** 0.5
-        elif self.split_method == "power":
-            effective_dim = n_input
-            self.split_transformation = nn.Sequential(nn.Linear(n_input, n_input * n_split), nn.ReLU())
-        else:
-            raise NotImplementedError()
-
-        self.effect_dim = effective_dim
         self.split_aggregation = split_aggregation
+        self.split_method = split_method
 
-        assert reuse_weights in ["everywhere", "last", "intermediate", "nowhere"]
-        intermediate_layers_reuse_weights = reuse_weights in ["everywhere", "intermediate"]
-        last_layers_reuse_weights = reuse_weights in ["everywhere", "last"]
+        if self.n_split == -1 or self.n_split == 1:
+            assert reuse_weights
+            self.n_split = n_split = 1
 
-        all_layers_dim = [effective_dim + n_continuous_cov] + list(layers_dim) + [n_output]
+        self.effective_dim = self._initialize_splitting(n_input)
+
+        assert reuse_weights in ["everywhere", "last", "intermediate", "nowhere", "not_first"]
+        if reuse_weights in ["everywhere", "intermediate"]:
+            intermediate_layers_reuse_weights = [True] * len(layers_dim)
+        elif reuse_weights == "not_first":
+            intermediate_layers_reuse_weights = [True] * len(layers_dim)
+            intermediate_layers_reuse_weights[0] = False
+        else:  # last, nowhere
+            intermediate_layers_reuse_weights = None
+        last_layers_reuse_weights = reuse_weights in ["everywhere", "last", "not_first"]
+
+        all_layers_dim = [self.effective_dim + n_continuous_cov] + list(layers_dim) + [n_output]
         if len(layers_dim) >= 1:
             self.px_shared_decoder = FCLayers(
                 layers_dim=all_layers_dim[:-1],
-                split_size=n_split,
+                n_split=self.n_split,
                 reuse_weights=intermediate_layers_reuse_weights,
                 n_cat_list=n_cat_list,
                 dropout_rate=dropout_rate,
@@ -732,6 +772,7 @@ class DecoderDRVI(nn.Module):
                 **kwargs,
             )
         else:
+            assert reuse_weights == "nowhere"
             self.register_parameter("px_shared_decoder", None)
             inject_covariates = True
 
@@ -750,8 +791,8 @@ class DecoderDRVI(nn.Module):
             elif param_info == "no_transformation":
                 params_nets[param_name] = FCLayers(
                     layers_dim=all_layers_dim[-2:],
-                    split_size=n_split,
-                    reuse_weights=last_layers_reuse_weights,
+                    n_split=self.n_split,
+                    reuse_weights=[last_layers_reuse_weights],
                     n_cat_list=n_cat_list if inject_covariates else [],
                     use_activation=False,
                     use_batch_norm=False,
@@ -769,6 +810,92 @@ class DecoderDRVI(nn.Module):
             else:
                 raise NotImplementedError()
         self.params_nets = nn.ParameterDict(params_nets)
+
+    def _initialize_splitting(self, n_input: int) -> None:
+        """Initialize the splitting.
+        """
+        effective_dim = n_input
+        if self.n_split == 1:
+            pass
+        elif self.split_method == "split":
+            assert n_input % self.n_split == 0
+            effective_dim = n_input // self.n_split
+        elif self.split_method.startswith("split_map"):
+            assert n_input % self.n_split == 0
+            if "@" in self.split_method:
+                effective_dim = int(self.split_method.split("@")[-1])
+            effective_split_size = n_input // self.n_split
+            self.split_transformation_weight = nn.Parameter(torch.randn(self.n_split, effective_split_size, effective_dim))
+            self.split_transformation_weight.data /= float(effective_split_size) ** 0.5
+        elif self.split_method == "split_diag":
+            assert n_input == self.n_split
+        elif self.split_method.startswith("power"):
+            if "@" in self.split_method:
+                effective_dim = int(self.split_method.split("@")[-1])
+            self.split_transformation = nn.Sequential(nn.Linear(n_input, effective_dim * self.n_split), nn.ReLU())
+        else:
+            raise NotImplementedError()
+        return effective_dim
+
+    def _apply_split_transformation(self, z: torch.Tensor) -> torch.Tensor:
+        """Apply split transformation to the latent tensor according to split method.
+
+        Parameters
+        ----------
+        z
+            Sampled latent tensor with shape ``(batch_size, n_latent)``.
+
+        Returns
+        -------
+        torch.Tensor
+            Transformed latent tensor with shape ``(batch_size, n_split, effective_dim)`` or ``(batch_size, effective_dim)``
+        """
+        batch_size = z.shape[0]
+
+        if self.n_split > 1:
+            if self.split_method == "split":
+                z = torch.reshape(z, (batch_size, self.n_split, -1))
+            elif self.split_method == "split_diag":
+                z = torch.diag_embed(z)  # (batch_size, n_latent) -> (batch_size, n_latent, n_latent)
+            elif self.split_method.startswith("power"):
+                z = self.split_transformation(z)
+                z = torch.reshape(z, (batch_size, self.n_split, -1))
+            elif self.split_method.startswith("split_map"):
+                z = torch.reshape(z, (batch_size, self.n_split, -1))
+                z = torch.einsum("bsd,sdn->bsn", z, self.split_transformation_weight)
+
+        return z
+
+    def _aggregate_split(self, x: torch.Tensor, dim: int = -2) -> torch.Tensor:
+        """Aggregate the split.
+
+        Parameters
+        ----------
+        x
+            Tensor with shape ``(batch_size, n_split, n_features)``.
+        dim
+            Dimension to aggregate over.
+
+        Returns
+        -------
+        torch.Tensor
+            Aggregated tensor with shape ``(batch_size, n_features)``.
+        """
+        effective_split_size = x.shape[dim]
+        if self.split_aggregation == "sum":
+            # to get average
+            return x.sum(dim=dim) / effective_split_size
+        elif self.split_aggregation == "sum_plus":
+            # to get average after softplus
+            return F.softplus(x).sum(dim=dim) / effective_split_size
+        elif self.split_aggregation == "logsumexp":
+            # to cancel the effect of n_splits
+            return torch.logsumexp(x, dim=dim) - math.log(effective_split_size)
+        elif self.split_aggregation == "max":
+            return torch.amax(x, dim=dim)
+        else:
+            raise NotImplementedError()
+
 
     def _apply_last_layer(
         self,
@@ -813,22 +940,11 @@ class DecoderDRVI(nn.Module):
                     raise NotImplementedError()
                 original_params[param_name] = params[param_name]
             elif param_info == "no_transformation":
-                param_value = param_net(last_tensor, cat_full_tensor, output_subset_indices=reconstruction_indices)
+                param_value = param_net(last_tensor, cat_full_tensor,
+                                        output_subset_indices=reconstruction_indices)
                 original_params[param_name] = param_value
                 if self.n_split > 1:
-                    if self.split_aggregation == "sum":
-                        # to get average
-                        params[param_name] = param_value.sum(dim=-2) / self.n_split
-                    elif self.split_aggregation == "sum_plus":
-                        # to get average after softplus
-                        params[param_name] = F.softplus(param_value).sum(dim=-2) / self.n_split
-                    elif self.split_aggregation == "logsumexp":
-                        # to cancel the effect of n_splits
-                        params[param_name] = torch.logsumexp(param_value, dim=-2) - math.log(self.n_split)
-                    elif self.split_aggregation == "max":
-                        params[param_name] = torch.amax(param_value, dim=-2)
-                    else:
-                        raise NotImplementedError()
+                    params[param_name] = self._aggregate_split(param_value, dim=-2)
                 else:
                     params[param_name] = param_value
             elif param_info == "per_feature":
@@ -883,26 +999,23 @@ class DecoderDRVI(nn.Module):
             - parameters: Processed parameters for the distribution
             - original_parameters: Raw parameters before processing (for example pooling)
         """
-        batch_size = z.shape[0]
-        if self.n_split > 1:
-            if self.split_method == "power":
-                z = self.split_transformation(z)
-            z = torch.reshape(z, (batch_size, self.n_split, -1))
-            if self.split_method == "split_map":
-                z = torch.einsum("bsd,sdn->bsn", z, self.split_transformation_weight)
+        # Apply split transformation
+        z = self._apply_split_transformation(z)
 
         if cont_full_tensor is not None:
             if self.n_split > 1:
-                cont_full_tensor = cont_full_tensor.unsqueeze(1).expand(-1, self.n_split, -1)
+                cont_full_tensor = cont_full_tensor.unsqueeze(1).expand(-1, z.shape[1], -1)
             z = torch.cat((z, cont_full_tensor), dim=-1)
 
-        last_tensor = self.px_shared_decoder(z, cat_full_tensor) if self.px_shared_decoder is not None else z
-
+        last_tensor = z
+        if self.px_shared_decoder is not None:
+            last_tensor = self.px_shared_decoder(last_tensor, cat_full_tensor)
         if self.last_layer_gradient_scaler is not None:
             last_tensor = self.last_layer_gradient_scaler(last_tensor)
 
         params, original_params = self._apply_last_layer(
-            last_tensor, cat_full_tensor, cont_full_tensor, reconstruction_indices
+            last_tensor, cat_full_tensor, cont_full_tensor,
+            reconstruction_indices=reconstruction_indices,
         )
 
         # Note this logic:

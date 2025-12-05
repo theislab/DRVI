@@ -26,6 +26,14 @@ def _sparse_std(X: sparse.csr_matrix, axis: int = 0, ddof: int = 0) -> np.ndarra
     return np.sqrt(np.maximum(var, 0))
 
 
+def _densify_arr(arr: np.ndarray | sparse.csr_matrix) -> np.ndarray:
+    """Densify a sparse array to a dense array."""
+    return arr.todense() if sparse.issparse(arr) else arr
+
+def _fix_arr(arr: np.ndarray | sparse.csr_matrix) -> np.ndarray:
+    """Fix a dense or sparse array to a 1D array."""
+    return np.asarray(_densify_arr(arr)).flatten()
+
 def set_latent_dimension_stats(
     model: DRVI,
     embed: AnnData,
@@ -92,10 +100,10 @@ def set_latent_dimension_stats(
     )
     embed.var["order"] = (-embed.var["reconstruction_effect"]).argsort().argsort()
 
-    embed.var["max_value"] = np.abs(embed.X).max(axis=0)
-    embed.var["mean"] = embed.X.mean(axis=0)
-    embed.var["min"] = embed.X.min(axis=0)
-    embed.var["max"] = embed.X.max(axis=0)
+    embed.var["max_value"] = _fix_arr(np.abs(embed.X).max(axis=0))
+    embed.var["mean"] = _fix_arr(embed.X.mean(axis=0))
+    embed.var["min"] = _fix_arr(embed.X.min(axis=0))
+    embed.var["max"] = _fix_arr(embed.X.max(axis=0))
     if sparse.issparse(embed.X):
         embed.var["std"] = _sparse_std(embed.X, axis=0)
         embed.var["std_abs"] = _sparse_std(np.abs(embed.X), axis=0)

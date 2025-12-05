@@ -8,6 +8,7 @@ import scvi
 import torch
 from scvi import REGISTRY_KEYS
 from torch.nn import functional as F
+from scipy import sparse
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 
@@ -438,7 +439,8 @@ class GenerativeMixin:
                 )  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            store.append(effect_share.detach().cpu())
+            effect_share = effect_share.detach().cpu()
+            store.append(effect_share)
 
         def aggregate_effects(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)

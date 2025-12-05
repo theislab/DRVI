@@ -7,6 +7,9 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+if TYPE_CHECKING:
+    from typing import Any
+
 
 class LinearLayer(nn.Linear):
     def forward(self, x: torch.Tensor, output_subset: torch.Tensor | None = None) -> torch.Tensor:
@@ -20,10 +23,6 @@ class LinearLayer(nn.Linear):
             return F.linear(x, weight, bias)  # (..., i) -> (..., o_subset)
         else:
             raise NotImplementedError()
-
-
-if TYPE_CHECKING:
-    from typing import Any
 
 
 class StackedLinearLayer(nn.Module):
@@ -196,18 +195,19 @@ class StackedLinearLayer(nn.Module):
         >>> output = layer(x)
         >>> print(output.shape)  # torch.Size([2, 3, 5])
         """
-        if output_subset is None or output_subset.dim() == 1:
-            # weight: (c, i, o), bias: (c, o)
-            # x: (b, c, i), output_subset: (o_subset) -> output: (b, c, o_subset)
-            weight = self.weight if output_subset is None else self.weight[:, :, output_subset]  # (c, i, o_subset)
-            # slower: mm = torch.einsum("bci,cio->bco", x, weight)
-            mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1)  # (b, c, o_subset)
-            if self.bias is not None:
-                bias = self.bias if output_subset is None else self.bias[:, output_subset]  # (c, o_subset)
-                mm = mm + bias  # They (bco, co) will broadcast well
-            return mm
-        else:
-            raise NotImplementedError()
+        if True:
+            if output_subset is None or output_subset.dim() == 1:
+                # weight: (c, i, o), bias: (c, o)
+                # x: (b, c, i), output_subset: (o_subset) -> output: (b, c, o_subset)
+                weight = self.weight if output_subset is None else self.weight[:, :, output_subset]  # (c, i, o_subset)
+                # slower: mm = torch.einsum("bci,cio->bco", x, weight)
+                mm = torch.bmm(x.transpose(0, 1), weight).transpose(0, 1)  # (b, c, o_subset)
+                if self.bias is not None:
+                    bias = self.bias if output_subset is None else self.bias[:, output_subset]  # (c, o_subset)
+                    mm = mm + bias  # They (bco, co) will broadcast well
+                return mm
+            else:
+                raise NotImplementedError()
 
     def extra_repr(self) -> str:
         """String representation for printing the layer.

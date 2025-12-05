@@ -46,9 +46,13 @@ class DRVIModule(BaseModuleClass):
         How to make splits:
         - "split" : Split the latent space
         - "power" : Transform the latent space to n_split vectors of size n_latent
+        - "power@Z" : Transform the latent space to n_split vectors of size n_latent Z
         - "split_map" : Split the latent space then map each to latent space using unique transformations
+        - "split_map@Z" : Split the latent space then map each to vector of size Z using unique transformations
+        - "split_diag" : Simple diagonal splitting
     decoder_reuse_weights
-        Where to reuse the weights of the decoder layers when using splitting.
+        Where to reuse the weights of the decoder layers when using splitting
+        Possible values are 'everywhere', 'last', 'intermediate', 'nowhere', 'not_first'. Defaults to "everywhere"/
     encoder_dims
         Number of nodes in hidden layers of the encoder.
     decoder_dims
@@ -120,8 +124,8 @@ class DRVIModule(BaseModuleClass):
         n_latent: int = 32,
         n_split_latent: int | None = -1,
         split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
-        split_method: Literal["split", "power", "split_map"] = "split_map",
-        decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere"] = "everywhere",
+        split_method: Literal["split", "power", "split_map", "split_diag"] | str = "split_map",
+        decoder_reuse_weights: Literal["everywhere", "last", "intermediate", "nowhere", "not_first"] = "everywhere",
         encoder_dims: Sequence[int] = (128, 128),
         decoder_dims: Sequence[int] = (128, 128),
         n_cats_per_cov: Iterable[int] | None = (),
@@ -178,7 +182,7 @@ class DRVIModule(BaseModuleClass):
     ) -> None:
         super().__init__()
         self.n_latent = n_latent
-        if n_split_latent == -1:
+        if n_split_latent is None or n_split_latent == -1:
             n_split_latent = n_latent
         self.n_split_latent = n_split_latent
         self.split_aggregation = split_aggregation
@@ -233,6 +237,7 @@ class DRVIModule(BaseModuleClass):
             categorical_covariate_dims=categorical_covariate_dims if self.encode_covariates else [],
             **(extra_encoder_kwargs or {}),
         )
+
         self.decoder = DecoderDRVI(
             n_latent,
             n_input,
@@ -258,7 +263,14 @@ class DRVIModule(BaseModuleClass):
 
         self.prior = self._construct_prior(prior, prior_init_dataloader)
         self.inspect_mode = False
-        self.fully_deterministic = False
+
+    @property
+    def fully_deterministic(self) -> bool:
+        return self.z_encoder.fully_deterministic
+
+    @fully_deterministic.setter
+    def fully_deterministic(self, value: bool) -> None:
+        self.z_encoder.fully_deterministic = value
 
     def _construct_gene_likelihood_module(self, gene_likelihood: str) -> Any:
         """Construct the gene likelihood module based on the specified type.
@@ -573,8 +585,6 @@ class DRVIModule(BaseModuleClass):
             Dictionary containing input for generative model.
         """
         z = inference_outputs[MODULE_KEYS.Z_KEY]
-        if self.fully_deterministic:
-            z = inference_outputs[MODULE_KEYS.QZM_KEY]
 
         batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)
         cat_covs = tensors.get(REGISTRY_KEYS.CAT_COVS_KEY)
@@ -621,7 +631,8 @@ class DRVIModule(BaseModuleClass):
                 input_dict[key] = input_dict[key].repeat(n_samples, *([1] * (input_dict[key].ndim - 1)))
             # Combine samples and batch dimensions into the first dimension
             for key in [MODULE_KEYS.Z_KEY, MODULE_KEYS.LIBRARY_KEY]:
-                input_dict[key] = input_dict[key].flatten(0, 1)
+                if input_dict[key] is not None:
+                    input_dict[key] = input_dict[key].flatten(0, 1)
         return input_dict
 
     @auto_move_data
