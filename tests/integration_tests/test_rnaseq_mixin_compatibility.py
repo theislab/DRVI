@@ -63,7 +63,7 @@ class TestRNASeqMixinCompatibility:
 
         return adata
 
-    def _setup_and_train_model(self, adata, n_latent=8, max_epochs=10, gene_likelihood="nb"):
+    def _setup_and_train_model(self, adata, n_latent=8, max_epochs=10, gene_likelihood="nb", model_kwargs=None):
         """Setup and train a DRVI model for testing."""
         # Setup model
         drvi.model.DRVI.setup_anndata(
@@ -73,14 +73,16 @@ class TestRNASeqMixinCompatibility:
             is_count_data=False if gene_likelihood.startswith("normal") else True,
         )
 
-        model = drvi.model.DRVI(
-            adata,
+        _model_kwargs = dict(  # noqa: C408
             n_latent=n_latent,
             encoder_dims=[64],
             decoder_dims=[64],
             gene_likelihood=gene_likelihood,
             categorical_covariates=["batch"],
         )
+        if model_kwargs is not None:
+            _model_kwargs.update(model_kwargs)
+        model = drvi.model.DRVI(adata, **_model_kwargs)
 
         # Train briefly
         model.train(accelerator="cpu", max_epochs=max_epochs)
@@ -298,50 +300,52 @@ class TestRNASeqMixinCompatibility:
         print(f"  - Library size: {library_size.shape}")
         print(f"  - Likelihood parameters: {list(likelihood_params.keys())}")
 
+    def _end_to_end_rnaseq_workflow(self, **kwargs):
+        """Test a complete RNA-seq analysis workflow using RNASeqMixin methods."""
+        adata = self._make_test_adata()
+        model = self._setup_and_train_model(adata, **kwargs)
+
+        # Get latent representation
+        latent = model.get_latent_representation(adata)
+        assert latent.shape == (adata.n_obs, 8), f"Expected latent shape {(adata.n_obs, 8)}, got {latent.shape}"
+
+        # Get normalized expression
+        normalized_expr = model.get_normalized_expression(adata=adata, n_samples=1, return_mean=True, return_numpy=True)
+
+        # Perform differential expression analysis
+        de_results = model.differential_expression(
+            adata=adata,
+            groupby="cell_type",
+            group1="ct_0",
+            group2="ct_1",
+        )
+
+        # Get likelihood parameters
+        likelihood_params = model.get_likelihood_parameters(adata=adata, n_samples=1, give_mean=True)
+
+        # Get latent library size
+        # Note: DRVI doesn't compute posterior distribution for library size (ql),
+        # so we use give_mean=False to use the observed library size instead
+        library_size = model.get_latent_library_size(adata=adata, give_mean=False)
+
+        # Verify all results are consistent
+        assert latent.shape[0] == normalized_expr.shape[0] == library_size.shape[0], (
+            "All results should have same number of cells"
+        )
+        assert normalized_expr.shape[1] == likelihood_params["mean"].shape[1] == adata.n_vars, (
+            "All results should have same number of genes"
+        )
+        assert len(de_results) == adata.n_vars, "DE results should have one row per gene"
+
+        print("✓ End-to-end RNA-seq workflow completed successfully!")
+        print(f"  - Latent representation: {latent.shape}")
+        print(f"  - Normalized expression: {normalized_expr.shape}")
+        print(f"  - DE results: {len(de_results)} genes")
+        print(f"  - Library size: {library_size.shape}")
+        print(f"  - Likelihood parameters: {list(likelihood_params.keys())}")
+
     def test_end_to_end_rnaseq_workflow_for_different_gene_likelihoods(self):
         """Test a complete RNA-seq analysis workflow using RNASeqMixin methods."""
         for gene_likelihood in ["nb", "nb_orig", "poisson_orig", "pnb_softmax", "normal_sv"]:
             print(f"Testing gene likelihood: {gene_likelihood}")
-            adata = self._make_test_adata()
-            model = self._setup_and_train_model(adata, max_epochs=2, gene_likelihood=gene_likelihood)
-
-            # Get latent representation
-            latent = model.get_latent_representation(adata)
-            assert latent.shape == (adata.n_obs, 8), f"Expected latent shape {(adata.n_obs, 8)}, got {latent.shape}"
-
-            # Get normalized expression
-            normalized_expr = model.get_normalized_expression(
-                adata=adata, n_samples=1, return_mean=True, return_numpy=True
-            )
-
-            # Perform differential expression analysis
-            de_results = model.differential_expression(
-                adata=adata,
-                groupby="cell_type",
-                group1="ct_0",
-                group2="ct_1",
-            )
-
-            # Get likelihood parameters
-            likelihood_params = model.get_likelihood_parameters(adata=adata, n_samples=1, give_mean=True)
-
-            # Get latent library size
-            # Note: DRVI doesn't compute posterior distribution for library size (ql),
-            # so we use give_mean=False to use the observed library size instead
-            library_size = model.get_latent_library_size(adata=adata, give_mean=False)
-
-            # Verify all results are consistent
-            assert latent.shape[0] == normalized_expr.shape[0] == library_size.shape[0], (
-                "All results should have same number of cells"
-            )
-            assert normalized_expr.shape[1] == likelihood_params["mean"].shape[1] == adata.n_vars, (
-                "All results should have same number of genes"
-            )
-            assert len(de_results) == adata.n_vars, "DE results should have one row per gene"
-
-            print("✓ End-to-end RNA-seq workflow completed successfully!")
-            print(f"  - Latent representation: {latent.shape}")
-            print(f"  - Normalized expression: {normalized_expr.shape}")
-            print(f"  - DE results: {len(de_results)} genes")
-            print(f"  - Library size: {library_size.shape}")
-            print(f"  - Likelihood parameters: {list(likelihood_params.keys())}")
+            self._end_to_end_rnaseq_workflow(max_epochs=2, gene_likelihood=gene_likelihood)

@@ -57,7 +57,7 @@ class TestDRVIModel:
 
         return adata
 
-    def _general_integration_test(self, adata, layer="lognorm", data_kwargs=None, **kwargs):
+    def _general_integration_test(self, adata, max_epochs=10, layer="lognorm", data_kwargs=None, **kwargs):
         is_count_data = layer == "counts"
         setup_anndata_default_params = dict(  # noqa: C408
             categorical_covariate_keys=["batch"],
@@ -75,7 +75,7 @@ class TestDRVIModel:
         DRVI.setup_anndata(adata, **{**setup_anndata_default_params, **(data_kwargs or {})})
         model = DRVI(adata, **{**default_args, **kwargs})
         print(model.module)
-        model.train(accelerator="cpu", max_epochs=10)
+        model.train(accelerator="cpu", max_epochs=max_epochs)
         latent = model.get_latent_representation(adata)
         assert latent.shape[0] == adata.n_obs
         return {"model": model}
@@ -98,13 +98,21 @@ class TestDRVIModel:
 
     def test_simple_integration_latent_splitting(self):
         adata = self.make_test_adata()
-        self._general_integration_test(adata, n_latent=32, n_split_latent=-1)
-        self._general_integration_test(adata, n_latent=32, n_split_latent=8)
-        self._general_integration_test(adata, n_latent=32, n_split_latent=8, split_method="power")
-        self._general_integration_test(adata, n_latent=32, n_split_latent=8, split_method="split_map")
-        self._general_integration_test(
-            adata, n_latent=32, n_split_latent=8, split_method="split", split_aggregation="max"
-        )
+        shared_kwargs = dict(n_latent=32, max_epochs=1)  # noqa: C408
+        for test_kwargs in [
+            dict(n_split_latent=-1),  # noqa: C408
+            dict(n_split_latent=1),  # noqa: C408
+            dict(n_split_latent=8),  # noqa: C408
+            dict(n_split_latent=8, split_method="power"),  # noqa: C408
+            dict(n_split_latent=8, split_method="power@2"),  # noqa: C408
+            dict(n_split_latent=8, split_method="split_map"),  # noqa: C408
+            dict(n_split_latent=8, split_method="split_map@2"),  # noqa: C408
+            dict(n_split_latent=32, split_method="split_diag"),  # noqa: C408
+            dict(n_split_latent=8, split_method="split", split_aggregation="max"),  # noqa: C408
+        ]:
+            print(f"Testing latent splitting with {test_kwargs}")
+            test_kwargs = {**shared_kwargs, **test_kwargs}
+            self._general_integration_test(adata, **test_kwargs)
 
     def test_simple_integration_mean_activation(self):
         adata = self.make_test_adata()
