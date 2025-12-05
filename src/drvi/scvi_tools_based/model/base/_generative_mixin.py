@@ -8,7 +8,6 @@ import scvi
 import torch
 from scvi import REGISTRY_KEYS
 from torch.nn import functional as F
-from scipy import sparse
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 

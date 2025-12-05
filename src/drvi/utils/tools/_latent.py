@@ -30,9 +30,11 @@ def _densify_arr(arr: np.ndarray | sparse.csr_matrix) -> np.ndarray:
     """Densify a sparse array to a dense array."""
     return arr.todense() if sparse.issparse(arr) else arr
 
+
 def _fix_arr(arr: np.ndarray | sparse.csr_matrix) -> np.ndarray:
     """Fix a dense or sparse array to a 1D array."""
     return np.asarray(_densify_arr(arr)).flatten()
+
 
 def set_latent_dimension_stats(
     model: DRVI,

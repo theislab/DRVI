@@ -812,8 +812,7 @@ class DecoderDRVI(nn.Module):
         self.params_nets = nn.ParameterDict(params_nets)
 
     def _initialize_splitting(self, n_input: int) -> None:
-        """Initialize the splitting.
-        """
+        """Initialize the splitting."""
         effective_dim = n_input
         if self.n_split == 1:
             pass
@@ -825,7 +824,9 @@ class DecoderDRVI(nn.Module):
             if "@" in self.split_method:
                 effective_dim = int(self.split_method.split("@")[-1])
             effective_split_size = n_input // self.n_split
-            self.split_transformation_weight = nn.Parameter(torch.randn(self.n_split, effective_split_size, effective_dim))
+            self.split_transformation_weight = nn.Parameter(
+                torch.randn(self.n_split, effective_split_size, effective_dim)
+            )
             self.split_transformation_weight.data /= float(effective_split_size) ** 0.5
         elif self.split_method == "split_diag":
             assert n_input == self.n_split
@@ -896,7 +897,6 @@ class DecoderDRVI(nn.Module):
         else:
             raise NotImplementedError()
 
-
     def _apply_last_layer(
         self,
         last_tensor: torch.Tensor,
@@ -940,8 +940,7 @@ class DecoderDRVI(nn.Module):
                     raise NotImplementedError()
                 original_params[param_name] = params[param_name]
             elif param_info == "no_transformation":
-                param_value = param_net(last_tensor, cat_full_tensor,
-                                        output_subset_indices=reconstruction_indices)
+                param_value = param_net(last_tensor, cat_full_tensor, output_subset_indices=reconstruction_indices)
                 original_params[param_name] = param_value
                 if self.n_split > 1:
                     params[param_name] = self._aggregate_split(param_value, dim=-2)
@@ -1014,7 +1013,9 @@ class DecoderDRVI(nn.Module):
             last_tensor = self.last_layer_gradient_scaler(last_tensor)
 
         params, original_params = self._apply_last_layer(
-            last_tensor, cat_full_tensor, cont_full_tensor,
+            last_tensor,
+            cat_full_tensor,
+            cont_full_tensor,
             reconstruction_indices=reconstruction_indices,
         )
 

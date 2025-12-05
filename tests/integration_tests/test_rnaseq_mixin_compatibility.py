@@ -310,9 +310,7 @@ class TestRNASeqMixinCompatibility:
         assert latent.shape == (adata.n_obs, 8), f"Expected latent shape {(adata.n_obs, 8)}, got {latent.shape}"
 
         # Get normalized expression
-        normalized_expr = model.get_normalized_expression(
-            adata=adata, n_samples=1, return_mean=True, return_numpy=True
-        )
+        normalized_expr = model.get_normalized_expression(adata=adata, n_samples=1, return_mean=True, return_numpy=True)
 
         # Perform differential expression analysis
         de_results = model.differential_expression(

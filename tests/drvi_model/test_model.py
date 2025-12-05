@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-import drvi
 from drvi.model import DRVI
 
 
