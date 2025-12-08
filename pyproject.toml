@@ -80,7 +80,7 @@ optional-dependencies.restrict = [
   "scvi-tools==1.0.4",
   "session-info2",
   "torch>=2.1,<2.4",
-  "urllib3<2",
+  "urllib3<3",
 ]
 optional-dependencies.test = [
   "coverage>=7.10",
