@@ -44,7 +44,7 @@ dependencies = [
   "scipy>=1.11.3,<1.17",
   "scvi-tools>=1.0.4,<1.4.1",
   "session-info2",
-  "torch>=2.1,<2.10",
+  "torch<2.10,>=2.1",
 ]
 optional-dependencies.dev = [
   "pre-commit",
@@ -79,7 +79,7 @@ optional-dependencies.restrict = [
   "scipy>=1.11.3,<1.13",
   "scvi-tools==1.0.4",
   "session-info2",
-  "torch>=2.1,<2.4",
+  "torch>=2.1,<2.10",
   "urllib3<2",
 ]
 optional-dependencies.test = [
