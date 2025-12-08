@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning][].
 - Allow subset reconstruction
 - Allow gradient scaling in the last layer
 
+### Removed
+- Remove restrict dependencies. To ensure compatibility with old packages run for example: `uvx --exclude-newer 2024-01-01 hatch run pytest`
+
 ### Changed
 
 - Minor code improvements
