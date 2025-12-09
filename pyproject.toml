@@ -67,21 +67,6 @@ optional-dependencies.doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
-optional-dependencies.restrict = [
-  "anndata>=0.10.2,<0.11",
-  "jax<=0.4.20",
-  "jaxlib<=0.4.20",
-  "lightning>=2,<2.1",
-  "numpy>=1.16.1,<2",      # for np.linspace
-  "pandas>=1.2",
-  "scanpy==1.9.5",
-  "scikit-learn>=1.5.1",
-  "scipy>=1.11.3,<1.13",
-  "scvi-tools==1.0.4",
-  "session-info2",
-  "torch>=2.1,<2.4",
-  "urllib3<2",
-]
 optional-dependencies.test = [
   "coverage>=7.10",
   "pytest",
@@ -119,11 +104,6 @@ python = [ "3.10", "3.13" ]
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "pre" ]
 python = [ "3.13" ]
-
-# Test with restricted dependencies (older versions for compatibility)
-[[tool.hatch.envs.hatch-test.matrix]]
-features = [ "test", "restrict" ]
-python = [ "3.10" ]
 
 [tool.hatch.envs.hatch-test]
 features = [ "dev", "test" ]
