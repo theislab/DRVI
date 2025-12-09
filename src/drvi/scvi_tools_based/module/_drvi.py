@@ -51,8 +51,8 @@ class DRVIModule(BaseModuleClass):
         - "split_map@Z" : Split the latent space then map each to vector of size Z using unique transformations
         - "split_diag" : Simple diagonal splitting
     decoder_reuse_weights
-        Where to reuse the weights of the decoder layers when using splitting
-        Possible values are 'everywhere', 'last', 'intermediate', 'nowhere', 'not_first'. Defaults to "everywhere"/
+        Where to reuse the weights of the decoder layers when using splitting.
+        Possible values are 'everywhere', 'last', 'intermediate', 'nowhere', 'not_first'. Defaults to "everywhere".
     encoder_dims
         Number of nodes in hidden layers of the encoder.
     decoder_dims
