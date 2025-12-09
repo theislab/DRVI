@@ -36,7 +36,7 @@ classifiers = [
 # Please make an issue if you need wider range of versions
 dependencies = [
   "anndata>=0.10.2,<0.13",
-  "lightning>=2,<2.6",
+  "lightning>=2,<2.7",
   "numpy>=1.16.1,<2.4",
   "pandas>=1.2,<2.4",
   "scanpy>=1.9.5,<1.12",
