@@ -438,7 +438,8 @@ class GenerativeMixin:
                 )  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            store.append(effect_share.detach().cpu())
+            effect_share = effect_share.detach().cpu()
+            store.append(effect_share)
 
         def aggregate_effects(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)

@@ -210,7 +210,7 @@ class VampPrior(Prior):
             if self.preparation_function is None:
                 raise ValueError("preparation_function must be provided for scvi input type")
             x, args, kwargs = self.preparation_function({**self.pi_aux_data, **self.pi_tensor_data})
-            q_m, q_v, latent = self.encoder(x, *args, **kwargs)
+            q_m, q_v, *_ = self.encoder(x, *args, **kwargs)
             output = q_m, q_v
         else:
             self.encoder.train(original_mode)
