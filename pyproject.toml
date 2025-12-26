@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "drvi-py"
-version = "0.0.1"
+version = "0.2.0"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -14,21 +14,36 @@ maintainers = [
 authors = [
   { name = "Amir Ali Moinfar" },
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.10,<3.14"
 classifiers = [
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-  "anndata",
-  # for debug logging (referenced from the issue template)
+  "anndata>=0.10.2,<0.13",
+  "lightning>=2,<2.7",
+  "numpy>=1.16.1,<2.4",
+  "pandas>=1.2,<2.4",
+  "scanpy>=1.9.5,<1.12",
+  "scikit-learn>=1.5.1,<1.8",
+  "scipy>=1.11.3,<1.17",
+  "scvi-tools>=1.0.4,<1.4.1",
   "session-info2",
+  "torch>=2.1,<2.10",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://drvi-py.readthedocs.io/"
+urls.Documentation = "https://drvi.readthedocs.io/"
 urls.Homepage = "https://github.com/theislab/drvi"
 urls.Source = "https://github.com/theislab/drvi"
 
@@ -37,11 +52,8 @@ dev = [
   "pre-commit",
   "twine>=4.0.2",
 ]
-test = [
-  "coverage>=7.10",
-  "pytest",
-]
 doc = [
+  "docutils>=0.8,!=0.18.*,!=0.19.*",
   "ipykernel",
   "ipython",
   "myst-nb>=1.1",
@@ -55,6 +67,15 @@ doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
+test = [
+  "coverage>=7.10",
+  "pytest",
+  "pytest-cov",     # For VS Code’s coverage functionality
+]
+tutorials = [
+  "gprofiler-official>=0.3.5,<1.1",
+  "leidenalg",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/drvi" ]
@@ -65,19 +86,19 @@ dependency-groups = [ "dev" ]
 
 [tool.hatch.envs.docs]
 dependency-groups = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
+scripts.build = "sphinx-build -M html docs docs/_build --keep-going {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
 # Test the lowest and highest supported Python versions with normal deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "stable" ]
-python = [ "3.11", "3.14" ]
+python = [ "3.10", "3.13" ]
 
 # Test the newest supported Python version also with pre-release deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "pre" ]
-python = [ "3.14" ]
+python = [ "3.13" ]
 
 [tool.hatch.envs.hatch-test]
 dependency-groups = [ "dev", "test" ]
@@ -112,6 +133,9 @@ lint.select = [
 lint.ignore = [
   "B008", # Errors from function calls in argument defaults. These are fine when the result is immutable.
   "D100", # Missing docstring in public module
+  "D101", # For now skip missing docstrings. Not in template. TODO: remove this
+  "D102", # For now skip missing docstrings. Not in template. TODO: remove this
+  "D103", # For now skip missing docstrings. Not in template. TODO: remove this
   "D104", # Missing docstring in public package
   "D105", # __magic__ methods are often self-explanatory, allow missing docstrings
   "D107", # Missing docstring in __init__

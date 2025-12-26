@@ -4,8 +4,8 @@
   "checkout": "v0.7.0",
   "context": {
     "cookiecutter": {
-      "project_name": "drvi-py",
-      "package_name": "drvi",
+      "project_name": "drvi",
+      "package_name": "drvi-py",
       "project_description": "Unsupervised Deep Disentangled Representation of Single-Cell Omics",
       "author_full_name": "Amir Ali Moinfar",
       "author_email": "moinfar.amirali@gmail.com",

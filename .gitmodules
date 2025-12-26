@@ -1,0 +1,3 @@
+[submodule "docs/tutorials/external"]
+	path = docs/tutorials/external
+	url = https://github.com/theislab/DRVI_tutorials.git
