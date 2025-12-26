@@ -52,6 +52,11 @@ dev = [
   "pre-commit",
   "twine>=4.0.2",
 ]
+test = [
+  "coverage>=7.10",
+  "pytest",
+  "pytest-cov",     # For VS Code’s coverage functionality
+]
 doc = [
   "docutils>=0.8,!=0.18.*,!=0.19.*",
   "ipykernel",
@@ -66,11 +71,6 @@ doc = [
   "sphinxcontrib-bibtex>=1",
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
-]
-test = [
-  "coverage>=7.10",
-  "pytest",
-  "pytest-cov",     # For VS Code’s coverage functionality
 ]
 tutorials = [
   "gprofiler-official>=0.3.5,<1.1",
