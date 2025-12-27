@@ -16,6 +16,7 @@ from sphinxcontrib import katex
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "extensions"))
 
+
 # -- Project information -----------------------------------------------------
 
 # NOTE: If you installed your project in editable mode, this might be stale.
@@ -39,7 +40,7 @@ needs_sphinx = "4.0"
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "theislab",
-    "github_repo": project,
+    "github_repo": "drvi",
     "github_version": "main",
     "conf_py_path": "/docs/",
 }

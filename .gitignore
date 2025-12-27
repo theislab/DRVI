@@ -3,6 +3,10 @@
 *~
 buck-out/
 
+# IDEs
+/.idea/
+/.vscode/
+
 # Compiled files
 .venv/
 __pycache__/
@@ -17,9 +21,5 @@ __pycache__/
 /.coverage*
 
 # docs
-/docs/**/generated/
+/docs/generated/
 /docs/_build/
-
-# IDEs
-/.idea/
-/.vscode/

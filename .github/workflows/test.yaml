@@ -46,6 +46,8 @@ jobs:
   # Run tests through hatch. Spawns a separate runner for each environment defined in the hatch matrix obtained above.
   test:
     needs: get-environments
+    permissions:
+       id-token: write  # for codecov OIDC
 
     strategy:
       fail-fast: false
@@ -55,6 +57,7 @@ jobs:
 
     name: ${{ matrix.env.label }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ contains(matrix.env.name, 'pre') }}  # make "all-green" pass even if pre-release job fails
 
     steps:
       - uses: actions/checkout@v5
@@ -83,7 +86,8 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          use_oidc: true
 
   # Check that all tests defined above pass. This makes it easy to set a single "required" test in branch
   # protection instead of having to update it frequently. See https://github.com/re-actors/alls-green#why.
@@ -95,6 +99,6 @@ jobs:
       - test
     runs-on: ubuntu-latest
     steps:
-      - uses: re-actors/alls-green@release/v1
-        with:
-          jobs: ${{ toJSON(needs) }}
+        - uses: re-actors/alls-green@release/v1
+          with:
+            jobs: ${{ toJSON(needs) }}
