@@ -14,7 +14,7 @@ maintainers = [
 authors = [
   { name = "Amir Ali Moinfar" },
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 classifiers = [
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
@@ -27,6 +27,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -93,12 +94,12 @@ scripts.clean = "git clean -fdX -- {args:docs}"
 # Test the lowest and highest supported Python versions with normal deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "stable" ]
-python = [ "3.10", "3.13" ]
+python = [ "3.10", "3.14" ]
 
 # Test the newest supported Python version also with pre-release deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "pre" ]
-python = [ "3.13" ]
+python = [ "3.14" ]
 
 [tool.hatch.envs.hatch-test]
 dependency-groups = [ "dev", "test" ]
