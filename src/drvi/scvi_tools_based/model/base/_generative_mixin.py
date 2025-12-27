@@ -118,6 +118,7 @@ class GenerativeMixin:
         """
         store: list[Any] = []
         self.module.eval()
+        self.module.inspect_mode = True
 
         if cat_values is not None:
             if cat_values.ndim == 1:  # For a user not noticing cat_values should be 2d!
@@ -156,6 +157,14 @@ class GenerativeMixin:
                     else torch.zeros((slice.shape[0], 1), dtype=torch.int32)
                 )
 
+                if self.module.__class__.__name__ == "DRVIModule":
+                    inference_outputs = {
+                        MODULE_KEYS.Z_KEY: z_tensor,
+                    }
+                    library_to_inject = lib_tensor
+                else:
+                    raise NotImplementedError(f"Module {self.module.__class__.__name__} not supported.")
+
                 gen_input = self.module._get_generative_input(
                     tensors={
                         REGISTRY_KEYS.BATCH_KEY: batch_tensor,
@@ -163,15 +172,13 @@ class GenerativeMixin:
                         REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
                         REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
                     },
-                    inference_outputs={
-                        MODULE_KEYS.Z_KEY: z_tensor,
-                        MODULE_KEYS.LIBRARY_KEY: lib_tensor,
-                        MODULE_KEYS.LIKELIHOOD_ADDITIONAL_PARAMS_KEY: {},
-                    },
+                    inference_outputs=inference_outputs,
+                    library_to_inject=library_to_inject,
                 )
                 gen_output = self.module.generative(**gen_input)
                 step_func(gen_output, store)
         result = aggregation_func(store)
+        self.module.inspect_mode = False
         return result
 
     @torch.inference_mode()
@@ -334,6 +341,7 @@ class GenerativeMixin:
         """
         adata = self._validate_anndata(adata)
         data_loader = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
+        self.module.inspect_mode = True
 
         store: list[Any] = []
         try:
@@ -348,7 +356,7 @@ class GenerativeMixin:
             raise e
         finally:
             self.module.fully_deterministic = False
-
+        self.module.inspect_mode = False
         return aggregation_func(store)
 
     @torch.inference_mode()
@@ -430,7 +438,8 @@ class GenerativeMixin:
                 )  # n_samples x n_splits
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            store.append(effect_share.detach().cpu())
+            effect_share = effect_share.detach().cpu()
+            store.append(effect_share)
 
         def aggregate_effects(store: list[Any]) -> np.ndarray:
             return torch.cat(store, dim=0).numpy(force=True)

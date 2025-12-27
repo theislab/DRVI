@@ -15,8 +15,6 @@ authors = [
   { name = "Amir Ali Moinfar" },
 ]
 requires-python = ">=3.10,<3.15"
-
-# PyPI classifiers
 classifiers = [
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
@@ -33,11 +31,9 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-
-# Please make an issue if you need wider range of versions
 dependencies = [
   "anndata>=0.10.2,<0.13",
-  "lightning>=2,<2.6",
+  "lightning>=2,<2.7",
   "numpy>=1.16.1,<2.4",
   "pandas>=1.2,<2.4",
   "scanpy>=1.9.5,<1.12",
@@ -47,18 +43,27 @@ dependencies = [
   "session-info2",
   "torch>=2.1,<2.10",
 ]
-optional-dependencies.dev = [
+# https://docs.pypi.org/project_metadata/#project-urls
+urls.Documentation = "https://drvi.readthedocs.io/"
+urls.Homepage = "https://github.com/theislab/drvi"
+urls.Source = "https://github.com/theislab/drvi"
+
+[dependency-groups]
+dev = [
   "pre-commit",
   "twine>=4.0.2",
 ]
-optional-dependencies.doc = [
+test = [
+  "coverage>=7.10",
+  "pytest",
+  "pytest-cov",     # For VS Code’s coverage functionality
+]
+doc = [
   "docutils>=0.8,!=0.18.*,!=0.19.*",
   "ipykernel",
   "ipython",
   "myst-nb>=1.1",
   "pandas",
-  # Until pybtex >0.24.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
-  "setuptools",
   "sphinx>=8.1",
   "sphinx-autodoc-typehints",
   "sphinx-book-theme>=1",
@@ -68,45 +73,20 @@ optional-dependencies.doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
-optional-dependencies.restrict = [
-  "anndata>=0.10.2,<0.11",
-  "jax<=0.4.20",
-  "jaxlib<=0.4.20",
-  "lightning>=2,<2.1",
-  "numpy>=1.16.1,<2",      # for np.linspace
-  "pandas>=1.2",
-  "scanpy==1.9.5",
-  "scikit-learn>=1.5.1",
-  "scipy>=1.11.3,<1.13",
-  "scvi-tools==1.0.4",
-  "session-info2",
-  "torch>=2.1,<2.4",
-  "urllib3<2",
-]
-optional-dependencies.test = [
-  "coverage>=7.10",
-  "pytest",
-  "pytest-cov",     # For VS Code’s coverage functionality
-]
-optional-dependencies.tutorials = [
+tutorials = [
   "gprofiler-official>=0.3.5,<1.1",
   "leidenalg",
 ]
-
-# https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://drvi.readthedocs.io/"
-urls.Homepage = "https://github.com/theislab/drvi"
-urls.Source = "https://github.com/theislab/drvi"
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/drvi" ]
 
 [tool.hatch.envs.default]
 installer = "uv"
-features = [ "dev" ]
+dependency-groups = [ "dev" ]
 
 [tool.hatch.envs.docs]
-features = [ "doc" ]
+dependency-groups = [ "doc" ]
 scripts.build = "sphinx-build -M html docs docs/_build --keep-going {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -121,13 +101,8 @@ python = [ "3.10", "3.14" ]
 deps = [ "pre" ]
 python = [ "3.14" ]
 
-# Test with restricted dependencies (older versions for compatibility)
-[[tool.hatch.envs.hatch-test.matrix]]
-features = [ "test", "restrict" ]
-python = [ "3.10" ]
-
 [tool.hatch.envs.hatch-test]
-features = [ "dev", "test" ]
+dependency-groups = [ "dev", "test" ]
 
 [tool.hatch.envs.hatch-test.overrides]
 # If the matrix variable `deps` is set to "pre",
@@ -172,16 +147,16 @@ lint.ignore = [
   "D401", # First line should be in imperative mood; try rephrasing
   "E501", # line too long -> we accept long comment lines; formatter gets rid of long code lines
   "E731", # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
-  "E741", # allow I, O, l as variable names -> I is the identity matrix    "D101",
+  "E741", # allow I, O, l as variable names -> I is the identity matrix
 ]
 lint.per-file-ignores."*/__init__.py" = [ "F401" ]
 lint.per-file-ignores."docs/*" = [ "I" ]
 lint.per-file-ignores."tests/*" = [ "D" ]
 lint.pydocstyle.convention = "numpy"
 
-[tool.pytest.ini_options]
+[tool.pytest]
+strict = true
 testpaths = [ "tests" ]
-xfail_strict = true
 addopts = [
   "--import-mode=importlib", # allow using test files with same name
 ]

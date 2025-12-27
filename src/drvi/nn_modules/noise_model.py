@@ -9,7 +9,7 @@ from torch.distributions import Distribution
 from torch.nn import functional as F
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Literal
 
 
 class NoiseModel:
@@ -66,9 +66,7 @@ class NoiseModel:
         """
         return "mean"
 
-    def initial_transformation(
-        self, x: torch.Tensor, x_mask: torch.Tensor | None = None
-    ) -> tuple[torch.Tensor, dict[str, Any]]:
+    def initial_transformation(self, x: torch.Tensor, x_mask: torch.Tensor | None = None) -> torch.Tensor:
         """Apply initial transformation to input data.
 
         Parameters
@@ -80,21 +78,16 @@ class NoiseModel:
 
         Returns
         -------
-        tuple
-            (transformed_x, aux_info) where aux_info contains additional
-            information needed for the distribution.
+        torch.Tensor
+            Transformed input data.
         """
-        x = x
-        aux_info = {}
-        return x, aux_info
+        return x
 
-    def dist(self, aux_info: dict[str, Any], parameters: dict[str, torch.Tensor], lib_y: torch.Tensor) -> Distribution:
+    def dist(self, parameters: dict[str, torch.Tensor], lib_y: torch.Tensor) -> Distribution:
         """Create the output distribution.
 
         Parameters
         ----------
-        aux_info
-            Additional information from initial_transformation.
         parameters
             Parameters from the decoder network.
         lib_y
@@ -216,7 +209,7 @@ def library_size_correction(
         if not log_space:
             x = x * lib_size.unsqueeze(-1).clip(1) / 1e4
         else:
-            x = x + torch.log(lib_size.unsqueeze(-1) / 1e4).clip(0)
+            x = x + torch.log(lib_size.unsqueeze(-1).clip(1) / 1e4).clip(0)
     elif library_normalization in ["x_loglib", "div_lib_x_loglib", "x_loglib_all"]:
         if not log_space:
             x = x * torch.log(lib_size.unsqueeze(-1)) / 1e4
@@ -224,6 +217,33 @@ def library_size_correction(
             x = x + torch.log(torch.log(lib_size.unsqueeze(-1)).clip(0) / 1e4).clip(0)
     else:
         raise NotImplementedError()
+    return x
+
+
+def preprocess_count_data(
+    x: torch.Tensor,
+    x_mask: torch.Tensor | None,
+    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+) -> torch.Tensor:
+    """Preprocess count data with library size normalization and log transformation.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        Input count data tensor.
+    x_mask : torch.Tensor | None
+        Mask for the input data.
+    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+        Library size normalization method.
+
+    Returns
+    -------
+    torch.Tensor
+        Preprocessed count data with library normalization and log transformation applied.
+    """
+    library_size = calculate_library_size(x, x_mask)
+    x = library_size_normalization(x, library_size, library_normalization)
+    x = torch.log1p(x)
     return x
 
 
@@ -307,20 +327,16 @@ class NormalNoiseModel(NoiseModel):
 
         Returns
         -------
-        tuple
-            (transformed_x, aux_info) where aux_info is empty for normal model.
+        torch.Tensor
+            Transformed input data (unchanged for normal model).
         """
-        x = x
-        aux_info = {}
-        return x, aux_info
+        return x
 
-    def dist(self, aux_info, parameters, lib_y):
+    def dist(self, parameters, lib_y):
         """Create normal distribution.
 
         Parameters
         ----------
-        aux_info
-            Additional information (unused for normal model).
         parameters
             Dictionary containing 'mean' and 'var' parameters.
         lib_y
@@ -353,21 +369,13 @@ class PoissonNoiseModel(NoiseModel):
         - "softmax": Softmax transformation
     library_normalization
         Library size normalization method.
-
-    Examples
-    --------
-    >>> import torch
-    >>> # Create Poisson noise model
-    >>> model = PoissonNoiseModel(mean_transformation="exp")
-    >>> print(model.parameters)
-    {'mean': 'no_transformation'}
-    >>> # Test with sample data
-    >>> x = torch.randint(0, 100, (10, 5))
-    >>> transformed_x, aux_info = model.initial_transformation(x)
-    >>> print(transformed_x.shape)  # torch.Size([10, 5])
     """
 
-    def __init__(self, mean_transformation="exp", library_normalization="x_lib"):
+    def __init__(
+        self,
+        mean_transformation="exp",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
@@ -397,23 +405,16 @@ class PoissonNoiseModel(NoiseModel):
 
         Returns
         -------
-        tuple
-            (transformed_x, aux_info) where aux_info contains library size.
+        torch.Tensor
+            Preprocessed count data with library normalization and log transformation.
         """
-        x = x
-        aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
-        return x, aux_info
+        return preprocess_count_data(x, x_mask, self.library_normalization)
 
-    def dist(self, aux_info, parameters, lib_y):
+    def dist(self, parameters, lib_y):
         """Create Poisson distribution.
 
         Parameters
         ----------
-        aux_info : dict
-            Additional information from initial_transformation.
         parameters : dict
             Dictionary containing 'mean' parameter.
         lib_y : torch.Tensor
@@ -458,7 +459,12 @@ class NegativeBinomialNoiseModel(NoiseModel):
         Library size normalization method.
     """
 
-    def __init__(self, dispersion="feature", mean_transformation="exp", library_normalization="x_lib"):
+    def __init__(
+        self,
+        dispersion="feature",
+        mean_transformation="exp",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         assert mean_transformation in ["exp", "softmax", "softplus", "none"]
         self.dispersion = dispersion
@@ -495,23 +501,16 @@ class NegativeBinomialNoiseModel(NoiseModel):
 
         Returns
         -------
-        tuple
-            (transformed_x, aux_info) where aux_info contains library size.
+        torch.Tensor
+            Preprocessed count data with library normalization and log transformation.
         """
-        x = x
-        aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
-        return x, aux_info
+        return preprocess_count_data(x, x_mask, self.library_normalization)
 
-    def dist(self, aux_info, parameters, lib_y):
+    def dist(self, parameters, lib_y):
         """Create negative binomial distribution.
 
         Parameters
         ----------
-        aux_info : dict
-            Additional information from initial_transformation.
         parameters : dict
             Dictionary containing 'mean' and 'r' parameters.
         lib_y : torch.Tensor
@@ -704,7 +703,12 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
     with very small or large values.
     """
 
-    def __init__(self, dispersion="feature", mean_transformation="none", library_normalization="x_lib"):
+    def __init__(
+        self,
+        dispersion="feature",
+        mean_transformation="none",
+        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+    ):
         super().__init__()
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
@@ -740,23 +744,16 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
 
         Returns
         -------
-        tuple
-            (transformed_x, aux_info) where aux_info contains library size.
+        torch.Tensor
+            Preprocessed count data with library normalization and log transformation.
         """
-        x = x
-        aux_info = {}
-        aux_info["x_library_size"] = calculate_library_size(x, x_mask)
-        x = library_size_normalization(x, aux_info["x_library_size"], self.library_normalization)
-        x = torch.log1p(x)
-        return x, aux_info
+        return preprocess_count_data(x, x_mask, self.library_normalization)
 
-    def dist(self, aux_info, parameters, lib_y):
+    def dist(self, parameters, lib_y):
         """Create log-space negative binomial distribution.
 
         Parameters
         ----------
-        aux_info : dict
-            Additional information from initial_transformation.
         parameters : dict
             Dictionary containing 'mean' and 'r' parameters.
         lib_y : torch.Tensor
@@ -776,7 +773,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
             trans_mean = library_size_correction(trans_scale, library_size, self.library_normalization, log_space=True)
         elif self.mean_transformation == "softmax":
             trans_scale = mean - torch.logsumexp(mean, dim=-1, keepdim=True)
-            trans_mean = torch.log(library_size).unsqueeze(-1) + trans_scale
+            trans_mean = torch.log(library_size.clip(1)).unsqueeze(-1) + trans_scale
         else:
             raise NotImplementedError()
         trans_r = r

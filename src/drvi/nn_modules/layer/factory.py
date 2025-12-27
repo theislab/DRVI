@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from torch import nn
 
-from drvi.nn_modules.layer.linear_layer import StackedLinearLayer
+from drvi.nn_modules.layer.linear_layer import LinearLayer, StackedLinearLayer
 from drvi.nn_modules.layer.structures import SimpleResidual
 
 if TYPE_CHECKING:
@@ -145,7 +145,7 @@ class LayerFactory:
         if intermediate_layer is None:
             intermediate_layer = True
         if intermediate_layer and self.intermediate_arch == "FC":
-            layer = nn.Linear(d_in, d_out, bias)
+            layer = LinearLayer(d_in, d_out, bias)
         elif (not intermediate_layer) or self.intermediate_arch == "SAME":
             layer = self._get_normal_layer(d_in, d_out, bias=True, **kwargs)
         else:
@@ -243,7 +243,7 @@ class FCLayerFactory(LayerFactory):
     Notes
     -----
     This factory creates:
-    - Normal layers: `nn.Linear` layers
+    - Normal layers: `LinearLayer` layers
     - Stacked layers: `StackedLinearLayer` for processing multiple splits
 
     The "SAME" and "FC" architectures are equivalent for this factory since
@@ -264,7 +264,7 @@ class FCLayerFactory(LayerFactory):
     def __init__(self, intermediate_arch: Literal["SAME", "FC"] = "SAME", residual_preferred: bool = False) -> None:
         super().__init__(intermediate_arch=intermediate_arch, residual_preferred=residual_preferred)
 
-    def _get_normal_layer(self, d_in: int, d_out: int, bias: bool = True, **kwargs: Any) -> nn.Linear:
+    def _get_normal_layer(self, d_in: int, d_out: int, bias: bool = True, **kwargs: Any) -> LinearLayer:
         """Create a fully connected layer.
 
         Parameters
@@ -280,7 +280,7 @@ class FCLayerFactory(LayerFactory):
 
         Returns
         -------
-        nn.Linear
+        LinearLayer
             A fully connected linear layer.
 
         Examples
@@ -290,7 +290,7 @@ class FCLayerFactory(LayerFactory):
         >>> print(layer.weight.shape)  # torch.Size([128, 64])
         >>> print(layer.bias.shape)  # torch.Size([128])
         """
-        return nn.Linear(d_in, d_out, bias=bias)
+        return LinearLayer(d_in, d_out, bias=bias)
 
     def _get_stacked_layer(
         self, d_channel: int, d_in: int, d_out: int, bias: bool = True, **kwargs: Any
