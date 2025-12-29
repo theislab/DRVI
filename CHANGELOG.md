@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning][].
 - Allow subset reconstruction
 - Allow gradient scaling in the last layer
 - Allow setting vector size after mapping in "split_map@k" and "power@k" splitting functions.
+- Add support for Python 3.14
 
 ### Removed
 - Remove restrict dependencies. To ensure compatibility with old packages run for example: `uvx --exclude-newer 2024-01-01 hatch run pytest`
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning][].
 ### Changed
 
 - Minor code improvements
+- Update to scverse template version 0.7.0
 
 ## [0.2.0] - 2025-11-24
 
