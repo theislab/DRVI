@@ -75,7 +75,6 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             encoder_dims=[128],
             decoder_dims=[128],
             gene_likelihood="pnb_softmax",
-            categorical_covariates=["batch"],
             decoder_reuse_weights="everywhere",
         )
         if model_kwargs is not None:
