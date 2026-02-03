@@ -177,33 +177,26 @@ class TestDRVIModel:
         # Scenario 0
         self._general_integration_test(
             adata,
-            batch_key="batch",
-            categorical_covariates=[],
             data_kwargs=dict(batch_key="batch", categorical_covariate_keys=[]),  # noqa: C408
         )
         # Scenario 1
         self._general_integration_test(
             adata,
-            categorical_covariates=["batch", "batch_2"],
             data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
         )
         # Scenario 2
         self._general_integration_test(
             adata,
-            batch_key="batch",
-            categorical_covariates=["batch_2"],
             data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
         )
         # Scenario 3 (just batch key)
         self._general_integration_test(
             adata,
-            batch_key="batch",
             data_kwargs=dict(batch_key="batch"),  # noqa: C408
         )
         # Scenario 4 with VaMP prior
         self._general_integration_test(
             adata,
-            categorical_covariates=["batch", "batch_2"],
             data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
             prior="vamp_5",
             prior_init_obs=adata.obs.index.to_series().sample(5),
@@ -211,8 +204,6 @@ class TestDRVIModel:
         # Scenario 5 with VaMP prior
         self._general_integration_test(
             adata,
-            batch_key="batch",
-            categorical_covariates=["batch_2"],
             data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
             prior="vamp_5",
             prior_init_obs=adata.obs.index.to_series().sample(5),
