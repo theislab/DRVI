@@ -96,7 +96,7 @@ def set_latent_dimension_stats(
     if "original_dim_id" not in embed.var:
         embed.var["original_dim_id"] = np.arange(embed.var.shape[0])
 
-    embed.var["reconstruction_effect"] = 0.
+    embed.var["reconstruction_effect"] = 0.0
     embed.var.loc[embed.var.sort_values("original_dim_id").index, "reconstruction_effect"] = (
         model.get_reconstruction_effect_of_each_split()
     )
