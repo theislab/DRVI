@@ -75,7 +75,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         else:
             super().__init__(adata)
 
-        self._handle_backward_compatibility(registry, model_kwargs)
+        self._handle_backward_compatibility_for_model_kwargs(registry, model_kwargs)
 
         n_batch = self.summary_stats.n_batch
         n_cats_per_cov = [n_batch] + self._get_n_cats_per_cov()
@@ -110,74 +110,6 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         self.init_params_ = self._get_init_params(locals())
 
         logger.info("The model has been initialized")
-
-    def _handle_backward_compatibility(self, source_registry: dict | None, model_kwargs: dict) -> None:
-        """Handle backward compatibility for model kwargs."""
-        # TODO: Deprecate in near future
-        for key in ["categorical_covariates", "batch_key"]:
-            if key in model_kwargs:
-                model_kwargs.pop(key)
-                warnings.warn(
-                    f"Passing {key} to DRVI model is deprecated."
-                    "It is enough to pass this argument to DRVI.setup_anndata."
-                    "This will cause error in the near future.",
-                    DeprecationWarning,
-                    stacklevel=settings.warnings_stacklevel,
-                )
-
-        # This means we are loading a model from a previous version
-        if source_registry is not None:
-            from packaging.version import Version
-
-            saved_version = Version(source_registry.get("drvi_version", "0.1.0"))
-            current_version = Version(drvi.__version__)
-
-            logger.info(f"Loading model from DRVI version {saved_version}.")
-
-            # Process version transitions incrementally
-            while saved_version < current_version:
-                if saved_version <= Version("0.2.1"):  # TODO: update accordingly before merging
-                    logger.info("Modifying model args from 0.2.1 to 0.2.2 (no user action required)")
-                    # Handle gene_likelihood backward compatibility
-                    if "gene_likelihood" in model_kwargs:
-                        gl = model_kwargs["gene_likelihood"]
-                        gl_mapping = {
-                            "pnb_softmax": "pnb",
-                            "poisson_orig": "poisson",
-                            "nb_orig": "nb",
-                            "nb": "nb",
-                            "normal": "normal",
-                            "normal_v": "normal_v",
-                            "normal_sv": "normal_sv",
-                        }
-                        if gl not in gl_mapping:
-                            raise ValueError(
-                                f"Gene likelihood '{gl}' support is dropped in version 0.2.2"
-                                "Please create an issue if using this gene likelihood is still needed."
-                            )
-                        logger.info(f"Mapping gene likelihood '{gl}' to '{gl_mapping[gl]}'.")
-                        model_kwargs["gene_likelihood"] = gl_mapping[gl]
-
-                    # Handle prior backward compatibility
-                    if "prior" in model_kwargs:
-                        prior = model_kwargs["prior"]
-                        if prior != "normal":
-                            raise ValueError(
-                                f"Prior '{prior}' support is dropped in version 0.2.2"
-                                "Please create an issue if using this prior is still needed."
-                            )
-                        model_kwargs["prior"] = "normal"
-
-                    if "prior_init_obs" in model_kwargs:
-                        assert model_kwargs["prior_init_obs"] is None
-                        logger.info("Removing prior_init_obs from model args.")
-                        del model_kwargs["prior_init_obs"]
-
-                    saved_version = Version("0.2.2")
-                else:
-                    # No breaking changes for versions >= change_version
-                    saved_version = current_version
-            logger.info(f"Done updating model args. Loading in {current_version}.")
 
     def _get_n_cats_per_cov(self) -> list[int]:
         """Get the number of categories per categorical covariate."""
@@ -221,40 +153,6 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                     categorical_covariates_dims[i + 1] = categorical_embedding_dims[obs_name]
         return categorical_covariates_dims
 
-    @staticmethod
-    def _update_source_registry_for_existing_model(source_registry: dict[str, Any]) -> dict[str, Any]:
-        """Update the source registry for an existing model to the latest version if any updates are needed."""
-        from packaging.version import Version
-
-        source_registry_drvi_version = Version(
-            source_registry.get("drvi_version", "0.1.0")
-        )  # "0.1.0" for legacy code before pypi release
-        logger.info(f"The model is trained with DRVI version {source_registry_drvi_version}.")
-        logger.info("Updaging data setup config ...")
-
-        while source_registry_drvi_version < Version(drvi.__version__):
-            if source_registry_drvi_version < Version("0.1.10"):
-                # No braking change up to 0.1.10
-                source_registry_drvi_version = Version("0.1.10")
-            elif source_registry_drvi_version == Version("0.1.10"):
-                # log the transfer
-                logger.info("Modifying data args from 0.1.10 to 0.1.11 (no user action required)")
-                logger.info("Adding empty batch key ...")
-                source_registry["setup_args"]["batch_key"] = None
-                source_registry["field_registries"]["batch"] = {
-                    "data_registry": {"attr_name": "obs", "attr_key": "_scvi_batch"},
-                    "state_registry": {"categorical_mapping": np.array([0]), "original_key": "_scvi_batch"},
-                    "summary_stats": {"n_batch": 1},
-                }
-                source_registry_drvi_version = Version("0.1.11")
-                logger.info("Done updating data source registry from 0.1.10 to 0.1.11.")
-            else:
-                # No braking change yet!
-                source_registry_drvi_version = Version(drvi.__version__)
-        logger.info(f"Done updating data source registry. Loading in DRVI version {drvi.__version__}.")
-
-        return source_registry
-
     @classmethod
     @setup_anndata_dsp.dedent
     def setup_anndata(
@@ -289,7 +187,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
 
         # Manupulate kwargs in case of version updates (only when loading a model).
         if "source_registry" in kwargs:
-            kwargs["source_registry"] = cls._update_source_registry_for_existing_model(kwargs["source_registry"])
+            cls._handle_backward_compatibility_for_data_setup(kwargs["source_registry"])
 
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=is_count_data),
@@ -301,3 +199,102 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
         adata_manager = AnnDataManager(fields=anndata_fields, setup_method_args=setup_method_args)
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
+
+    @staticmethod
+    def _handle_backward_compatibility_for_data_setup(source_registry: dict[str, Any]) -> dict[str, Any]:
+        """Handle backward compatibility for data setup."""
+        from packaging.version import Version
+
+        source_registry_drvi_version = Version(
+            source_registry.get("drvi_version", "0.1.0")
+        )  # "0.1.0" for legacy code before pypi release
+        logger.info(f"The model is trained with DRVI version {source_registry_drvi_version}.")
+        logger.info(f"Updaging data setup config ...")
+
+        while source_registry_drvi_version < Version(drvi.__version__):
+            if source_registry_drvi_version < Version("0.1.10"):
+                # No braking change up to 0.1.10
+                source_registry_drvi_version = Version("0.1.10")
+            elif source_registry_drvi_version == Version("0.1.10"):
+                # log the transfer
+                logger.info("Modifying data args from 0.1.10 to 0.1.11 (no user action required)")
+                logger.info("Adding empty batch key ...")
+                source_registry["setup_args"]["batch_key"] = None
+                source_registry["field_registries"]["batch"] = {
+                    "data_registry": {"attr_name": "obs", "attr_key": "_scvi_batch"},
+                    "state_registry": {"categorical_mapping": np.array([0]), "original_key": "_scvi_batch"},
+                    "summary_stats": {"n_batch": 1},
+                }
+                source_registry_drvi_version = Version("0.1.11")
+                logger.info("Done updating data source registry from 0.1.10 to 0.1.11.")
+            else:
+                # No braking change yet!
+                source_registry_drvi_version = Version(drvi.__version__)
+        logger.info(f"Done updating data source registry. Loading in DRVI version {drvi.__version__}.")
+
+    def _handle_backward_compatibility_for_model_kwargs(self, source_registry: dict | None, model_kwargs: dict) -> None:
+        """Handle backward compatibility for model kwargs."""
+
+        # TODO: Deprecate in near future
+        for key in ["categorical_covariates", "batch_key"]:
+            if key in model_kwargs:
+                model_kwargs.pop(key)
+                warnings.warn(
+                    f"Passing {key} to DRVI model is deprecated."
+                    "It is enough to pass this argument to DRVI.setup_anndata."
+                    "This will cause error in the near future.",
+                    DeprecationWarning,
+                    stacklevel=settings.warnings_stacklevel,
+                )
+
+        # This means we are loading a model from a previous version
+        if source_registry is not None:
+            from packaging.version import Version
+
+            saved_version = Version(source_registry.get("drvi_version", "0.1.0"))
+            current_version = Version(drvi.__version__)
+
+            logger.info(f"Loading model from DRVI version {saved_version}.")
+
+            # Process version transitions incrementally
+            while saved_version < current_version:
+                if saved_version <= Version("0.2.1"):  # TODO: update accordingly before merging
+                    logger.info("Modifying model args from 0.2.1 to 0.2.2 (no user action required)")
+                    # Handle gene_likelihood backward compatibility
+                    if "gene_likelihood" in model_kwargs:
+                        gl = model_kwargs["gene_likelihood"]
+                        gl_mapping = {
+                            "pnb_softmax": "pnb",
+                            "poisson_orig": "poisson",
+                            "nb_orig": "nb",
+                            "nb": "nb",
+                            "normal": "normal",
+                            "normal_v": "normal_v",
+                            "normal_sv": "normal_sv",
+                        }
+                        if gl not in gl_mapping:
+                            raise ValueError(f"Gene likelihood '{gl}' support is dropped in version 0.2.2"
+                                "Please create an issue if using this gene likelihood is still needed."
+                            )
+                        logger.info(f"Mapping gene likelihood '{gl}' to '{gl_mapping[gl]}'.")
+                        model_kwargs["gene_likelihood"] = gl_mapping[gl]
+
+                    # Handle prior backward compatibility
+                    if "prior" in model_kwargs:
+                        prior = model_kwargs["prior"]
+                        if prior != "normal":
+                            raise ValueError(f"Prior '{prior}' support is dropped in version 0.2.2"
+                                "Please create an issue if using this prior is still needed."
+                            )
+                        model_kwargs["prior"] = "normal"
+                    
+                    if "prior_init_obs" in model_kwargs:
+                        assert model_kwargs["prior_init_obs"] is None
+                        logger.info("Removing prior_init_obs from model args.")
+                        del model_kwargs["prior_init_obs"]
+
+                    saved_version = Version("0.2.2")
+                else:
+                    # No breaking changes for versions >= change_version
+                    saved_version = current_version
+            logger.info(f"Done updating model args. Loading in {current_version}.")
