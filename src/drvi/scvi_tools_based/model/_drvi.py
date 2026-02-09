@@ -18,7 +18,7 @@ from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Literal
 
     from anndata import AnnData
 
@@ -268,9 +268,9 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                             "poisson_orig": "poisson",
                             "nb_orig": "nb",
                             "nb": "nb",
-                            "normal": "normal",
-                            "normal_v": "normal_v",
-                            "normal_sv": "normal_sv",
+                            "normal": "normal_unit_var",
+                            "normal_v": "normal",
+                            "normal_sv": "normal",
                         }
                         if gl not in gl_mapping:
                             raise ValueError(f"Gene likelihood '{gl}' support is dropped in version 0.2.2"
@@ -278,6 +278,10 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                             )
                         logger.info(f"Mapping gene likelihood '{gl}' to '{gl_mapping[gl]}'.")
                         model_kwargs["gene_likelihood"] = gl_mapping[gl]
+                        if gl == "normal_v":
+                            model_kwargs["dispersion"] = "gene-cell"
+                        elif gl == "normal_sv":
+                            model_kwargs["dispersion"] = "gene"
 
                     # Handle prior backward compatibility
                     if "prior" in model_kwargs:
@@ -287,7 +291,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                                 "Please create an issue if using this prior is still needed."
                             )
                         model_kwargs["prior"] = "normal"
-                    
+
                     if "prior_init_obs" in model_kwargs:
                         assert model_kwargs["prior_init_obs"] is None
                         logger.info("Removing prior_init_obs from model args.")
