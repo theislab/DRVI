@@ -133,7 +133,7 @@ def calculate_library_size(x: torch.Tensor, x_mask: torch.Tensor | None = None) 
 def library_size_normalization(
     x: torch.Tensor,
     lib_size: torch.Tensor,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
 ) -> torch.Tensor:
     """Normalize data by library size.
 
@@ -156,16 +156,10 @@ def library_size_normalization(
     Different normalization methods:
     - "none": No normalization
     - "x_lib": Divide by library size and scale by 1e4
-    - "x_loglib": No normalization (same as "none")
-    - "div_lib_x_loglib": Divide by library size and scale by 1e4
-    - "x_loglib_all": Divide by log of library size and scale by 1e1
     """
-    # TODO: remove any library_normalization but 'none', 'x_lib'
-    if library_normalization in ["none", "x_loglib"]:
+    if library_normalization in ["none"]:
         x = x
-    elif library_normalization in ["x_lib", "div_lib_x_loglib"]:
-        x = x / lib_size.unsqueeze(-1) * 1e4
-    elif library_normalization in ["x_loglib_all"]:
+    elif library_normalization in ["x_lib"]:
         x = x / torch.log(lib_size.unsqueeze(-1)) * 1e1
     else:
         raise NotImplementedError()
@@ -175,7 +169,7 @@ def library_size_normalization(
 def library_size_correction(
     x: torch.Tensor,
     lib_size: torch.Tensor,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
     log_space: bool = False,
 ) -> torch.Tensor:
     """Apply library size correction to data.
@@ -186,7 +180,7 @@ def library_size_correction(
         Input data tensor.
     lib_size : torch.Tensor
         Library size tensor.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+    library_normalization : {"none", "x_lib"}
         Normalization method that was applied.
     log_space : bool, default=False
         Whether the data is in log space.
@@ -202,7 +196,6 @@ def library_size_correction(
     the original scale of the data. The correction depends on whether
     the data is in log space or not.
     """
-    # TODO: remove any library_normalization but 'none', 'x_lib'
     if library_normalization in ["none"]:
         x = x
     elif library_normalization in ["x_lib"]:
@@ -210,11 +203,6 @@ def library_size_correction(
             x = x * lib_size.unsqueeze(-1).clip(1) / 1e4
         else:
             x = x + torch.log(lib_size.unsqueeze(-1).clip(1) / 1e4).clip(0)
-    elif library_normalization in ["x_loglib", "div_lib_x_loglib", "x_loglib_all"]:
-        if not log_space:
-            x = x * torch.log(lib_size.unsqueeze(-1)) / 1e4
-        else:
-            x = x + torch.log(torch.log(lib_size.unsqueeze(-1)).clip(0) / 1e4).clip(0)
     else:
         raise NotImplementedError()
     return x
@@ -223,7 +211,7 @@ def library_size_correction(
 def preprocess_count_data(
     x: torch.Tensor,
     x_mask: torch.Tensor | None,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
 ) -> torch.Tensor:
     """Preprocess count data with library size normalization and log transformation.
 
@@ -233,7 +221,7 @@ def preprocess_count_data(
         Input count data tensor.
     x_mask : torch.Tensor | None
         Mask for the input data.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+    library_normalization : {"none", "x_lib"}
         Library size normalization method.
 
     Returns
@@ -374,7 +362,7 @@ class PoissonNoiseModel(NoiseModel):
     def __init__(
         self,
         mean_transformation="exp",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
         self.mean_transformation = mean_transformation
@@ -455,7 +443,7 @@ class NegativeBinomialNoiseModel(NoiseModel):
         Dispersion parameter modeling strategy.
     mean_transformation : {"exp", "softmax", "softplus", "none"}, default="exp"
         Transformation to apply to the mean parameter.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}, default="x_lib"
+    library_normalization : {"none", "x_lib"}, default="x_lib"
         Library size normalization method.
     """
 
@@ -463,7 +451,7 @@ class NegativeBinomialNoiseModel(NoiseModel):
         self,
         dispersion="feature",
         mean_transformation="exp",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
         assert mean_transformation in ["exp", "softmax", "softplus", "none"]
@@ -693,7 +681,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         Dispersion parameter modeling strategy.
     mean_transformation : {"none"}, default="none"
         Transformation to apply to the mean parameter.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}, default="x_lib"
+    library_normalization : {"none", "x_lib"}, default="x_lib"
         Library size normalization method.
 
     Notes
@@ -707,7 +695,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         self,
         dispersion="feature",
         mean_transformation="none",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
         self.dispersion = dispersion
