@@ -135,11 +135,11 @@ class TestDRVIModel:
 
     def test_integration_with_different_likelihoods(self):
         adata = self.make_test_adata()
-        for gene_likelihood in ["nb", "normal", "pnb", "normal_sv"]:
+        for gene_likelihood in ["nb", "normal", "pnb", "poisson"]:
             self._general_integration_test(
                 adata,
                 gene_likelihood=gene_likelihood,
-                layer="counts" if gene_likelihood in ["nb", "pnb"] else "lognorm",
+                layer="counts" if gene_likelihood in ["nb", "pnb", "poisson"] else "lognorm",
             )
 
     def test_integration_with_different_covariate_modelings(self):
