@@ -18,8 +18,7 @@ from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
 from drvi.scvi_tools_based.module import DRVIModule
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from typing import Any, Literal
+    from typing import Any
 
     from anndata import AnnData
 
@@ -114,7 +113,6 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
 
     def _handle_backward_compatibility(self, source_registry: dict | None, model_kwargs: dict) -> None:
         """Handle backward compatibility for model kwargs."""
-
         # TODO: Deprecate in near future
         for key in ["categorical_covariates", "batch_key"]:
             if key in model_kwargs:
@@ -153,7 +151,8 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                             "normal_sv": "normal_sv",
                         }
                         if gl not in gl_mapping:
-                            raise ValueError(f"Gene likelihood '{gl}' support is dropped in version 0.2.2"
+                            raise ValueError(
+                                f"Gene likelihood '{gl}' support is dropped in version 0.2.2"
                                 "Please create an issue if using this gene likelihood is still needed."
                             )
                         logger.info(f"Mapping gene likelihood '{gl}' to '{gl_mapping[gl]}'.")
@@ -163,11 +162,12 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
                     if "prior" in model_kwargs:
                         prior = model_kwargs["prior"]
                         if prior != "normal":
-                            raise ValueError(f"Prior '{prior}' support is dropped in version 0.2.2"
+                            raise ValueError(
+                                f"Prior '{prior}' support is dropped in version 0.2.2"
                                 "Please create an issue if using this prior is still needed."
                             )
                         model_kwargs["prior"] = "normal"
-                    
+
                     if "prior_init_obs" in model_kwargs:
                         assert model_kwargs["prior_init_obs"] is None
                         logger.info("Removing prior_init_obs from model args.")
@@ -230,7 +230,7 @@ class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, Ba
             source_registry.get("drvi_version", "0.1.0")
         )  # "0.1.0" for legacy code before pypi release
         logger.info(f"The model is trained with DRVI version {source_registry_drvi_version}.")
-        logger.info(f"Updaging data setup config ...")
+        logger.info("Updaging data setup config ...")
 
         while source_registry_drvi_version < Version(drvi.__version__):
             if source_registry_drvi_version < Version("0.1.10"):
