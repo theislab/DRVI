@@ -395,5 +395,5 @@ class TestDRVIModel:
                             gene_likelihood=gene_likelihood,
                             dispersion=dispersion,
                             covariate_modeling_strategy=covariate_modeling_strategy,
-                            data_kwargs=dict(batch_key=batch_key),
+                            data_kwargs=dict(batch_key=batch_key),  # noqa: C408
                         )
