@@ -973,9 +973,11 @@ class DecoderDRVI(nn.Module):
                 original_params[param_name] = params[param_name]
             elif param_info == "batch_linear":
                 if self.covariate_modeling_strategy in ["one_hot", "one_hot_linear", "emb", "emb_linear"]:
-                    batch_mapping_input = F.one_hot(cat_full_tensor[:, 0].long().squeeze(-1), self.n_cat_list[0]).float()
+                    batch_mapping_input = F.one_hot(
+                        cat_full_tensor[:, 0].long().squeeze(-1), self.n_cat_list[0]
+                    ).float()
                 elif self.covariate_modeling_strategy in ["emb_shared", "emb_shared_linear"]:
-                    batch_mapping_input = cat_full_tensor[:, :self.categorical_covariate_dims[0]]
+                    batch_mapping_input = cat_full_tensor[:, : self.categorical_covariate_dims[0]]
                 else:
                     raise NotImplementedError()
                 param_value = param_net(batch_mapping_input)

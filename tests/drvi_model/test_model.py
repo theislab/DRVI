@@ -385,7 +385,7 @@ class TestDRVIModel:
     def test_integration_with_different_dispersion_models(self):
         adata = self.make_test_adata()
         for batch_key in ["batch", None]:
-            for covariate_modeling_strategy in (["one_hot", "emb", "emb_shared"] if batch_key else ["one_hot"]):
+            for covariate_modeling_strategy in ["one_hot", "emb", "emb_shared"] if batch_key else ["one_hot"]:
                 for gene_likelihood in ["nb", "pnb", "normal"]:
                     for dispersion in ["gene", "gene-batch", "gene-cell"]:
                         print(f"Testing {batch_key} {gene_likelihood} {dispersion} combination")

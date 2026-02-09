@@ -709,7 +709,7 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
-        assert dispersion in ["gene", "gene-batch",  "gene-cell"]
+        assert dispersion in ["gene", "gene-batch", "gene-cell"]
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
