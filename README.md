@@ -29,7 +29,7 @@ Please refer to the [documentation][]. In particular, the
 
 - [Tutorials][], specially
     - [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
-- [Api documentation][], specially
+- [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)

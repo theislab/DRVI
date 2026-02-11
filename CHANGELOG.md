@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
-## [0.2.2] - 2026-02-09
+## [0.2.2] - 2026-02-11
 
 ### Added
 - Added "tutorials" optional dependency that was accidentally removed.
