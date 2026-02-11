@@ -133,7 +133,7 @@ def calculate_library_size(x: torch.Tensor, x_mask: torch.Tensor | None = None) 
 def library_size_normalization(
     x: torch.Tensor,
     lib_size: torch.Tensor,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
 ) -> torch.Tensor:
     """Normalize data by library size.
 
@@ -156,16 +156,10 @@ def library_size_normalization(
     Different normalization methods:
     - "none": No normalization
     - "x_lib": Divide by library size and scale by 1e4
-    - "x_loglib": No normalization (same as "none")
-    - "div_lib_x_loglib": Divide by library size and scale by 1e4
-    - "x_loglib_all": Divide by log of library size and scale by 1e1
     """
-    # TODO: remove any library_normalization but 'none', 'x_lib'
-    if library_normalization in ["none", "x_loglib"]:
+    if library_normalization in ["none"]:
         x = x
-    elif library_normalization in ["x_lib", "div_lib_x_loglib"]:
-        x = x / lib_size.unsqueeze(-1) * 1e4
-    elif library_normalization in ["x_loglib_all"]:
+    elif library_normalization in ["x_lib"]:
         x = x / torch.log(lib_size.unsqueeze(-1)) * 1e1
     else:
         raise NotImplementedError()
@@ -175,7 +169,7 @@ def library_size_normalization(
 def library_size_correction(
     x: torch.Tensor,
     lib_size: torch.Tensor,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
     log_space: bool = False,
 ) -> torch.Tensor:
     """Apply library size correction to data.
@@ -186,7 +180,7 @@ def library_size_correction(
         Input data tensor.
     lib_size : torch.Tensor
         Library size tensor.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+    library_normalization : {"none", "x_lib"}
         Normalization method that was applied.
     log_space : bool, default=False
         Whether the data is in log space.
@@ -202,7 +196,6 @@ def library_size_correction(
     the original scale of the data. The correction depends on whether
     the data is in log space or not.
     """
-    # TODO: remove any library_normalization but 'none', 'x_lib'
     if library_normalization in ["none"]:
         x = x
     elif library_normalization in ["x_lib"]:
@@ -210,11 +203,6 @@ def library_size_correction(
             x = x * lib_size.unsqueeze(-1).clip(1) / 1e4
         else:
             x = x + torch.log(lib_size.unsqueeze(-1).clip(1) / 1e4).clip(0)
-    elif library_normalization in ["x_loglib", "div_lib_x_loglib", "x_loglib_all"]:
-        if not log_space:
-            x = x * torch.log(lib_size.unsqueeze(-1)) / 1e4
-        else:
-            x = x + torch.log(torch.log(lib_size.unsqueeze(-1)).clip(0) / 1e4).clip(0)
     else:
         raise NotImplementedError()
     return x
@@ -223,7 +211,7 @@ def library_size_correction(
 def preprocess_count_data(
     x: torch.Tensor,
     x_mask: torch.Tensor | None,
-    library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"],
+    library_normalization: Literal["none", "x_lib"],
 ) -> torch.Tensor:
     """Preprocess count data with library size normalization and log transformation.
 
@@ -233,7 +221,7 @@ def preprocess_count_data(
         Input count data tensor.
     x_mask : torch.Tensor | None
         Mask for the input data.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}
+    library_normalization : {"none", "x_lib"}
         Library size normalization method.
 
     Returns
@@ -280,8 +268,9 @@ class NormalNoiseModel(NoiseModel):
         Variance modeling strategy:
         - "fixed": Use fixed variance of 1e-2
         - "fixed=value": Use fixed variance of specified value
-        - "dynamic": Learn variance per sample
-        - "feature": Learn variance per feature
+        - "gene": Learn variance per gene
+        - "gene-batch": Learn variance per gene per batch
+        - "gene-cell": Learn variance per gene per cell
     eps
         Small constant added to variance for numerical stability.
     """
@@ -304,10 +293,12 @@ class NormalNoiseModel(NoiseModel):
             var_desc = "fixed=1e-2"
         elif self.model_var.startswith("fixed="):
             var_desc = self.model_var
-        elif self.model_var == "dynamic":
-            var_desc = "no_transformation"
-        elif self.model_var == "feature":
+        elif self.model_var == "gene":
             var_desc = "per_feature"
+        elif self.model_var == "gene-batch":
+            var_desc = "batch_linear"
+        elif self.model_var == "gene-cell":
+            var_desc = "no_transformation"
         else:
             raise NotImplementedError()
         return {
@@ -374,7 +365,7 @@ class PoissonNoiseModel(NoiseModel):
     def __init__(
         self,
         mean_transformation="exp",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
         self.mean_transformation = mean_transformation
@@ -455,18 +446,19 @@ class NegativeBinomialNoiseModel(NoiseModel):
         Dispersion parameter modeling strategy.
     mean_transformation : {"exp", "softmax", "softplus", "none"}, default="exp"
         Transformation to apply to the mean parameter.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}, default="x_lib"
+    library_normalization : {"none", "x_lib"}, default="x_lib"
         Library size normalization method.
     """
 
     def __init__(
         self,
-        dispersion="feature",
+        dispersion="gene",
         mean_transformation="exp",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
         assert mean_transformation in ["exp", "softmax", "softplus", "none"]
+        assert dispersion in ["gene", "gene-batch", "gene-cell"]
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
@@ -483,10 +475,14 @@ class NegativeBinomialNoiseModel(NoiseModel):
         params = {
             "mean": "no_transformation",
         }
-        if self.dispersion == "feature":
+        if self.dispersion == "gene":
             params["r"] = "per_feature"
+        elif self.dispersion == "gene-batch":
+            params["r"] = "batch_linear"
+        elif self.dispersion == "gene-cell":
+            params["r"] = "no_transformation"
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"Dispersion '{self.dispersion}' not implemented")
         return params
 
     def initial_transformation(self, x, x_mask=1.0):
@@ -689,11 +685,14 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
 
     Parameters
     ----------
-    dispersion : {"feature"}, default="feature"
-        Dispersion parameter modeling strategy.
+    dispersion : {"gene", "gene-batch", "gene-cell"}, default="gene"
+        Dispersion parameter modeling strategy:
+        - "gene": Dispersion parameter is constant per gene across all cells (equivalent to "feature")
+        - "gene-batch": Dispersion can differ between different batches
+        - "gene-cell": Dispersion can differ for every gene in every cell
     mean_transformation : {"none"}, default="none"
         Transformation to apply to the mean parameter.
-    library_normalization : {"none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"}, default="x_lib"
+    library_normalization : {"none", "x_lib"}, default="x_lib"
         Library size normalization method.
 
     Notes
@@ -705,11 +704,12 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
 
     def __init__(
         self,
-        dispersion="feature",
+        dispersion="gene",
         mean_transformation="none",
-        library_normalization: Literal["none", "x_lib", "x_loglib", "div_lib_x_loglib", "x_loglib_all"] = "x_lib",
+        library_normalization: Literal["none", "x_lib"] = "x_lib",
     ):
         super().__init__()
+        assert dispersion in ["gene", "gene-batch", "gene-cell"]
         self.dispersion = dispersion
         self.mean_transformation = mean_transformation
         self.library_normalization = library_normalization
@@ -726,10 +726,14 @@ class LogNegativeBinomialNoiseModel(NoiseModel):
         params = {
             "mean": "no_transformation",
         }
-        if self.dispersion == "feature":
+        if self.dispersion == "gene":
             params["r"] = "per_feature"
+        elif self.dispersion == "gene-batch":
+            params["r"] = "batch_linear"
+        elif self.dispersion == "gene-cell":
+            params["r"] = "no_transformation"
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"Dispersion '{self.dispersion}' not implemented")
         return params
 
     def initial_transformation(self, x, x_mask=1.0):

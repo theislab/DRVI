@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-02-09
+
+### Added
+- Added "tutorials" optional dependency that was accidentally removed.
+- Code to allow loading models from previous versions with no problem
+- Add dispersion parameter to allow modeling batch dependent dispersion
+
+### Removed
+- Removed "x_loglib", "div_lib_x_loglib", "x_loglib_all" library normalization techniques
+- Removed Vamp prior and GMM prior
+- Removed Legacy likelihood functions. Will raise error if used.
+
+### Changed
+- gene_likelihood parameter now accepts different values compared to before. gene_likelihood parameter from old models will be mapped properly, but new users should look into the docs.
+
 ## [0.2.1] - 2025-12-29
 
 ### Added

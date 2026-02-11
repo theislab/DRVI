@@ -78,7 +78,6 @@ class TestRNASeqMixinCompatibility:
             encoder_dims=[64],
             decoder_dims=[64],
             gene_likelihood=gene_likelihood,
-            categorical_covariates=["batch"],
         )
         if model_kwargs is not None:
             _model_kwargs.update(model_kwargs)
