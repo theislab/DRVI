@@ -1,7 +1,7 @@
 {
   "template": "https://github.com/scverse/cookiecutter-scverse",
-  "commit": "6ff5b92b5d44ea6d8a88e47538475718d467db95",
-  "checkout": "v0.7.0",
+  "commit": "cbf6b45007d28c0cf4faf528f99f46b53565a92f",
+  "checkout": null,
   "context": {
     "cookiecutter": {
       "project_name": "drvi",
@@ -36,7 +36,7 @@
         "trim_blocks": true
       },
       "_template": "https://github.com/scverse/cookiecutter-scverse",
-      "_commit": "6ff5b92b5d44ea6d8a88e47538475718d467db95"
+      "_commit": "cbf6b45007d28c0cf4faf528f99f46b53565a92f"
     }
   },
   "directory": null
