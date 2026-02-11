@@ -164,58 +164,30 @@ class TestDRVIModel:
 
     def test_integration_with_different_priors(self):
         adata = self.make_test_adata()
-        for prior, prior_init_obs in [
-            ("normal", None),
-            ("gmm_5", None),
-            ("gmm_5", adata.obs.index.to_series().sample(5)),
-            ("vamp_5", adata.obs.index.to_series().sample(5)),
-        ]:
-            self._general_integration_test(adata, prior=prior, prior_init_obs=prior_init_obs)
+        for prior in ["normal"]:
+            self._general_integration_test(adata, prior=prior)
 
     def test_multilevel_batch_integration(self):
         adata = self.make_test_adata()
         # Scenario 0
         self._general_integration_test(
             adata,
-            batch_key="batch",
-            categorical_covariates=[],
             data_kwargs=dict(batch_key="batch", categorical_covariate_keys=[]),  # noqa: C408
         )
         # Scenario 1
         self._general_integration_test(
             adata,
-            categorical_covariates=["batch", "batch_2"],
             data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
         )
         # Scenario 2
         self._general_integration_test(
             adata,
-            batch_key="batch",
-            categorical_covariates=["batch_2"],
             data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
         )
         # Scenario 3 (just batch key)
         self._general_integration_test(
             adata,
-            batch_key="batch",
             data_kwargs=dict(batch_key="batch"),  # noqa: C408
-        )
-        # Scenario 4 with VaMP prior
-        self._general_integration_test(
-            adata,
-            categorical_covariates=["batch", "batch_2"],
-            data_kwargs=dict(categorical_covariate_keys=["batch", "batch_2"]),  # noqa: C408
-            prior="vamp_5",
-            prior_init_obs=adata.obs.index.to_series().sample(5),
-        )
-        # Scenario 5 with VaMP prior
-        self._general_integration_test(
-            adata,
-            batch_key="batch",
-            categorical_covariates=["batch_2"],
-            data_kwargs=dict(batch_key="batch", categorical_covariate_keys=["batch_2"]),  # noqa: C408
-            prior="vamp_5",
-            prior_init_obs=adata.obs.index.to_series().sample(5),
         )
 
     def _general_query_to_reference(self, adata_reference, adata_query, layer="lognorm", data_kwargs=None, **kwargs):
@@ -409,3 +381,19 @@ class TestDRVIModel:
                     decoder_reuse_weights=reuse_strategy,
                     reconstruction_strategy=reconstruction_strategy,
                 )
+
+    def test_integration_with_different_dispersion_models(self):
+        adata = self.make_test_adata()
+        for batch_key in ["batch", None]:
+            for covariate_modeling_strategy in ["one_hot", "emb", "emb_shared"] if batch_key else ["one_hot"]:
+                for gene_likelihood in ["nb", "pnb", "normal"]:
+                    for dispersion in ["gene", "gene-batch", "gene-cell"]:
+                        print(f"Testing {batch_key} {gene_likelihood} {dispersion} combination")
+                        self._general_integration_test(
+                            adata,
+                            max_epochs=1,
+                            gene_likelihood=gene_likelihood,
+                            dispersion=dispersion,
+                            covariate_modeling_strategy=covariate_modeling_strategy,
+                            data_kwargs=dict(batch_key=batch_key),  # noqa: C408
+                        )

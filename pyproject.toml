@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "drvi-py"
-version = "0.2.1"
+version = "0.2.2"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -44,6 +44,10 @@ dependencies = [
   "session-info2",
   "torch>=2.1,<2.11",
 ]
+optional-dependencies.tutorials = [
+  "gprofiler-official>=0.3.5,<1.1",
+  "leidenalg",
+]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://drvi.readthedocs.io/"
 urls.Homepage = "https://github.com/theislab/drvi"
@@ -74,10 +78,6 @@ doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
-tutorials = [
-  "gprofiler-official>=0.3.5,<1.1",
-  "leidenalg",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/drvi" ]
@@ -92,6 +92,9 @@ scripts.build = "sphinx-build -M html docs docs/_build --keep-going {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
+[tool.hatch.envs.hatch-test]
+dependency-groups = [ "dev", "test" ]
+
 # Test the lowest and highest supported Python versions with normal deps
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "stable" ]
@@ -101,9 +104,6 @@ python = [ "3.10", "3.15" ]
 [[tool.hatch.envs.hatch-test.matrix]]
 deps = [ "pre" ]
 python = [ "3.15" ]
-
-[tool.hatch.envs.hatch-test]
-dependency-groups = [ "dev", "test" ]
 
 [tool.hatch.envs.hatch-test.overrides]
 # If the matrix variable `deps` is set to "pre",
@@ -171,6 +171,7 @@ omit = [
 
 [tool.cruft]
 skip = [
+  ".git",
   "tests",
   "src/**/__init__.py",
   "src/**/basic.py",
