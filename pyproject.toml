@@ -39,7 +39,7 @@ dependencies = [
   "scanpy>=1.9.5,<1.12",
   "scikit-learn>=1.5.1,<1.8",
   "scipy>=1.11.3,<1.17",
-  "scvi-tools>=1.0.4,<1.4.1",
+  "scvi-tools>=1.0.4,<1.4.2",
   "session-info2",
   "torch>=2.1,<2.11",
 ]
