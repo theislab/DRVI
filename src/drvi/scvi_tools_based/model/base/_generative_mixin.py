@@ -15,7 +15,7 @@ from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any
+    from typing import Any, Literal
 
     from anndata import AnnData
 
@@ -440,12 +440,16 @@ class GenerativeMixin:
         datamodule: LightningDataModule | None = None,
         add_to_counts: float = 1.0,
         deterministic: bool = True,
+        aggregation: Literal["max", "yield"] = "max",
+        directional: bool = True,
         **kwargs: Any,
     ) -> np.ndarray:
         """Return the maximum effect of each split on the reconstructed expression params for all genes.
 
         This method computes the maximum contribution of each split across all
         samples in the dataset, providing a global view of split importance.
+        For each latent dimension, effects are calculated independently for positive
+        and negative values of that dimension.
 
         Parameters
         ----------
@@ -465,11 +469,11 @@ class GenerativeMixin:
         Returns
         -------
         np.ndarray
-            Max effect of each split on the reconstructed expression params for all genes
-
-
             Maximum effect of each split on the reconstructed expression params.
-            Shape: (n_splits, n_genes)
+            Shape: (2, n_splits, n_genes)
+            - First dimension: 0 for positive values, 1 for negative values
+            - Second dimension: split index (n_splits == n_latent_dims)
+            - Third dimension: genes
 
         Notes
         -----
@@ -481,33 +485,38 @@ class GenerativeMixin:
 
         Examples
         --------
-        >>> import utils.plotting._interpretability
-        >>>
-        >>> # Get empirical maximum effects
+        >>> # Get empirical maximum effects (2, n_split, n_genes)
         >>> max_effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=0.1)
-        >>> print(max_effects.shape)  # (n_splits, n_genes)
+        >>>
+        >>> var_info = (
+        ...     pd.concat(
+        ...         [embed.var.assign(direction = '+'), 
+        ...          embed.var.assign(direction = '-')]
+        ...     )
+        ...     .reset_index(drop=True)
+        ...     .assign(title = lambda df: df['title'] + df['direction'])
+        ... )
         >>>
         >>> effect_data = (
         ...     pd.DataFrame(
-        ...         effects,
+        ...         np.concatenate([max_effects[0], max_effects[1]]),
         ...         columns=model.adata.var_names,
-        ...         index=embed.var["title"],
+        ...         index=var_info['title'],
         ...     )
-        ...     .loc[embed.var.query("vanished == False").sort_values("order")["title"]]
+        ...     .loc[var_info.sort_values(["order", "direction"])["title"]]
         ...     .T
         ... )
         >>> plot_info = list(effect_data.to_dict(orient="series").items())
-        >>> utils.plotting._interpretability._bar_plot_top_differential_vars(plot_info)
-        >>> utils.plotting._interpretability._umap_of_relevant_genes(adata, embed, plot_info, dim_subset=["DR 1"])
+        >>> drvi.utils.plotting._interpretability._bar_plot_top_differential_vars(plot_info)
         """
 
-        store: list[Any] = []
+        aggregated_effects = None
         for inference_outputs, generative_outputs, losses in self.iterate_on_ae_output(
             adata=adata,
             datamodule=datamodule,
             deterministic=deterministic,
             **kwargs,
-        ):
+        ):  
             if self.module.split_aggregation == "logsumexp":
                 log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
                     "mean"
@@ -520,10 +529,26 @@ class GenerativeMixin:
                 effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-            effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)
-            if len(store) == 0:
-                store.append(effect_share)
+            
+            if directional:
+                latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
+                
+                # effect_share: n_samples x n_splits x n_genes
+                effect_share = effect_share.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
+                # Create masks for positive and negative values: n_samples x 2 x n_splits
+                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                
+                effect_share = effect_share * pos_neg_mask
+            
+            if aggregation == "max":
+                effect_share = effect_share.amax(dim=0).detach().cpu().numpy(force=True)
+                if aggregated_effects is None:
+                    aggregated_effects = effect_share
+                else:
+                    aggregated_effects = np.maximum(aggregated_effects, effect_share)
+            elif aggregation == "yield":
+                yield effect_share
             else:
-                store[0] = np.maximum(store[0], effect_share)
-
-        return store[0]
+                raise NotImplementedError()
+            
+        return aggregated_effects
