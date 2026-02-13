@@ -387,14 +387,21 @@ class GenerativeMixin:
             latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
 
             if self.module.split_aggregation == "logsumexp":
+                # The formula for the effect in this case uses softmax. Note: softmax(x) == softmax(x + c) for any constant c
+                # So we can ignore library size normalization and -log(K) stablization in logsumexp aggregation.
+                # But the constant we add (add_to_counts) depends on the total decoder effects.
+                # We assume add_to_counts is added to each gene of a cell with total counts of 1e6.
                 log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
                     "mean"
                 ]  # n_samples x n_splits x n_genes
-                log_mean_params = F.pad(
-                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
-                )  # n_samples x (n_splits + 1) x n_genes
+                total_effect_per_cell = torch.logsumexp(log_mean_params, dim=[-2,-1])
+                log_add_to_counts = total_effect_per_cell + np.log(add_to_counts / 1e6)
+                log_mean_params = torch.concat([
+                    log_mean_params, log_add_to_counts.reshape(-1, 1, 1).expand(-1, -1, log_mean_params.shape[-1])
+                ], dim=-2)  # n_samples x (n_splits + 1) x n_genes
                 effect_tensor = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
+                # TODO: consider library size for the sum aggregation case.
                 effect_tensor = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
             else:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
@@ -417,6 +424,7 @@ class GenerativeMixin:
         add_to_counts: float = 1.0,
         aggregate_over_cells: bool = True,
         deterministic: bool = True,
+        directional: bool = False,
         **kwargs: Any,
     ) -> np.ndarray:
         """Return the effect of each split on the reconstructed expression per sample.
@@ -439,6 +447,8 @@ class GenerativeMixin:
             If False, returns per-cell effects.
         deterministic
             Makes model fully deterministic (e.g., no sampling in the bottleneck).
+        directional
+            Whether to consider the directional effect of each split.
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 
@@ -446,9 +456,11 @@ class GenerativeMixin:
         -------
         np.ndarray
             Effect of each split on reconstruction.
-            Shape depends on aggregate_over_cells:
-            - If True: (n_splits,) - aggregated effects per split
-            - If False: (n_cells, n_splits) - per-cell effects
+            Shape depends on aggregate_over_cells and directional:
+            - If True and directional=False: (n_splits,) - aggregated effects per split
+            - If True and directional=True: (2, n_splits) - aggregated effects per split for positive and negative values
+            - If False and directional=False: (n_cells, n_splits) - per-cell effects per split
+            - If False and directional=True: (n_cells, 2, n_splits) - per-cell effects per split for positive and negative values
 
         Notes
         -----
@@ -479,7 +491,7 @@ class GenerativeMixin:
             datamodule=datamodule,
             add_to_counts=add_to_counts,
             deterministic=deterministic,
-            directional=False,
+            directional=directional,
             **kwargs,
         ):
             # effect_tensor: n_samples x n_splits x n_genes
@@ -497,7 +509,7 @@ class GenerativeMixin:
         else:
             return torch.cat(store, dim=0).numpy(force=True)
 
-    # @torch.inference_mode()  # TODO: uncomment this
+    @torch.inference_mode()
     def get_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
