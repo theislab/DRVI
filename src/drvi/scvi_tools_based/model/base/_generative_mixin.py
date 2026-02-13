@@ -331,6 +331,85 @@ class GenerativeMixin:
             self.module.inspect_mode = False
 
     @torch.inference_mode()
+    def iterate_on_effect_of_splits_within_distribution(
+        self,
+        adata: AnnData | None = None,
+        datamodule: LightningDataModule | None = None,
+        add_to_counts: float = 1.0,
+        deterministic: bool = True,
+        directional: bool = True,
+        **kwargs: Any,
+    ):
+        """Iterate over the maximum effect of each split on the reconstructed expression params for all genes.
+
+        This method computes the maximum contribution of each split across all
+        samples in the dataset, providing a global view of split importance.
+        For each latent dimension, effects are calculated independently for positive
+        and negative values of that dimension.
+
+        Parameters
+        ----------
+        adata
+            AnnData object with equivalent structure to initial AnnData.
+            If None, defaults to the AnnData object used to initialize the model.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if datamodule is provided.
+        add_to_counts
+            Value to add to the counts before computing the logarithm.
+            Used for numerical stability in log-space calculations.
+        deterministic
+            Makes model fully deterministic (e.g., no sampling in the bottleneck).
+        directional
+            Whether to consider the directional effect of each split.
+        **kwargs
+            Additional keyword arguments for the `iterate_on_ae_output` method.
+
+        Returns
+        -------
+        Generator[np.ndarray]
+            Generator of maximum effect of each split on the reconstructed expression params.
+
+        Notes
+        -----
+        This function is experimental. Please use interpretability pipeline or DE instead.
+
+        The calculation depends on the model's split_aggregation:
+        - "logsumexp": Uses log-space softmax aggregation
+        - "sum": Uses absolute value summation
+        """
+
+        for inference_outputs, generative_outputs, losses in self.iterate_on_ae_output(
+            adata=adata,
+            datamodule=datamodule,
+            deterministic=deterministic,
+            **kwargs,
+        ):  
+            latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
+
+            if self.module.split_aggregation == "logsumexp":
+                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
+                    "mean"
+                ]  # n_samples x n_splits x n_genes
+                log_mean_params = F.pad(
+                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
+                )  # n_samples x (n_splits + 1) x n_genes
+                effect_tensor = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
+            elif self.module.split_aggregation == "sum":
+                effect_tensor = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
+            else:
+                raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
+
+            if directional:
+                # effect_tensor: n_samples x n_splits x n_genes
+                effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
+                # Create masks for positive and negative values: n_samples x 2 x n_splits
+                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                
+                effect_tensor = effect_tensor * pos_neg_mask
+            
+            yield effect_tensor, latent
+
+    @torch.inference_mode()
     def get_reconstruction_effect_of_each_split(
         self,
         adata: AnnData | None = None,
@@ -395,36 +474,21 @@ class GenerativeMixin:
 
         store = None if aggregate_over_cells else []
 
-        for inference_outputs, generative_outputs, losses in self.iterate_on_ae_output(
+        for effect_tensor, latent in self.iterate_on_effect_of_splits_within_distribution(
             adata=adata,
             datamodule=datamodule,
+            add_to_counts=add_to_counts,
             deterministic=deterministic,
+            directional=False,
             **kwargs,
         ):
-            if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
-                    "mean"
-                ]  # n_samples x n_splits x n_genes
-                log_mean_params = F.pad(
-                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
-                )  # n_samples x (n_splits + 1) x n_genes
-                effect_share = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :]).sum(
-                    dim=-1
-                )  # n_samples x n_splits
-            elif self.module.split_aggregation == "sum":
-                effect_share = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"]).sum(
-                    dim=-1
-                )  # n_samples x n_splits
-            else:
-                raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-
+            # effect_tensor: n_samples x n_splits x n_genes
+            effect_share = effect_tensor.sum(dim=-1)  # n_samples x n_splits
             effect_share = effect_share.detach().cpu()
             
             if aggregate_over_cells:
-                if store is None:
-                    store = effect_share.sum(dim=0)
-                else:
-                    store += effect_share.sum(dim=0)
+                effect_share = effect_share.sum(dim=0)
+                store = effect_share if store is None else store + effect_share
             else:
                 store.append(effect_share)
 
@@ -433,94 +497,16 @@ class GenerativeMixin:
         else:
             return torch.cat(store, dim=0).numpy(force=True)
 
-    @torch.inference_mode()
-    def iterate_on_max_effect_of_splits_within_distribution(
+    # @torch.inference_mode()  # TODO: uncomment this
+    def get_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
         datamodule: LightningDataModule | None = None,
         add_to_counts: float = 1.0,
         deterministic: bool = True,
         directional: bool = True,
-        **kwargs: Any,
-    ):
-        """Iterate over the maximum effect of each split on the reconstructed expression params for all genes.
-
-        This method computes the maximum contribution of each split across all
-        samples in the dataset, providing a global view of split importance.
-        For each latent dimension, effects are calculated independently for positive
-        and negative values of that dimension.
-
-        Parameters
-        ----------
-        adata
-            AnnData object with equivalent structure to initial AnnData.
-            If None, defaults to the AnnData object used to initialize the model.
-        datamodule
-            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if datamodule is provided.
-        add_to_counts
-            Value to add to the counts before computing the logarithm.
-            Used for numerical stability in log-space calculations.
-        deterministic
-            Makes model fully deterministic (e.g., no sampling in the bottleneck).
-        directional
-            Whether to consider the directional effect of each split.
-        **kwargs
-            Additional keyword arguments for the `iterate_on_ae_output` method.
-
-        Returns
-        -------
-        Generator[np.ndarray]
-            Generator of maximum effect of each split on the reconstructed expression params.
-
-        Notes
-        -----
-        This function is experimental. Please use interpretability pipeline or DE instead.
-
-        The calculation depends on the model's split_aggregation:
-        - "logsumexp": Uses log-space softmax aggregation
-        - "sum": Uses absolute value summation
-        """
-
-        for inference_outputs, generative_outputs, losses in self.iterate_on_ae_output(
-            adata=adata,
-            datamodule=datamodule,
-            deterministic=deterministic,
-            **kwargs,
-        ):  
-            if self.module.split_aggregation == "logsumexp":
-                log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
-                    "mean"
-                ]  # n_samples x n_splits x n_genes
-                log_mean_params = F.pad(
-                    log_mean_params, (0, 0, 0, 1), value=np.log(add_to_counts)
-                )  # n_samples x (n_splits + 1) x n_genes
-                effect_tensor = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
-            elif self.module.split_aggregation == "sum":
-                effect_tensor = torch.abs(generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])
-            else:
-                raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
-
-            if directional:
-                latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
-
-                # effect_tensor: n_samples x n_splits x n_genes
-                effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
-                # Create masks for positive and negative values: n_samples x 2 x n_splits
-                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
-                
-                effect_tensor = effect_tensor * pos_neg_mask
-            
-            yield effect_tensor
-
-    @torch.inference_mode()
-    def get_max_effect_of_splits_within_distribution(
-        self,
-        adata: AnnData | None = None,
-        datamodule: LightningDataModule | None = None,
-        add_to_counts: float = 1.0,
-        deterministic: bool = True,
-        directional: bool = True,
-        aggregation: Literal["max"] = "max",
+        aggregation: Literal["max", "linear_weighted_mean", "exp_weighted_mean"] = "max",
+        skip_threshold: float = 1.0,
         **kwargs: Any,
     ) -> np.ndarray:
         """Return the maximum effect of each split on the reconstructed expression params for all genes.
@@ -580,7 +566,7 @@ class GenerativeMixin:
         Examples
         --------
         >>> # Get empirical maximum effects (2, n_split, n_genes)
-        >>> max_effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=0.1)
+        >>> max_effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=1.0)
         >>>
         >>> var_info = (
         ...     pd.concat(
@@ -604,7 +590,8 @@ class GenerativeMixin:
         >>> drvi.utils.plotting._interpretability._bar_plot_top_differential_vars(plot_info)
         """
         aggregated_effects = None
-        for effect_tensor in self.iterate_on_max_effect_of_splits_within_distribution(
+        normalization_factor = None
+        for effect_tensor, latent in self.iterate_on_effect_of_splits_within_distribution(
             adata=adata,
             datamodule=datamodule,
             add_to_counts=add_to_counts,
@@ -618,7 +605,34 @@ class GenerativeMixin:
                     aggregated_effects = effect_tensor
                 else:
                     aggregated_effects = np.maximum(aggregated_effects, effect_tensor)
+            elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
+                if directional:
+                    weights = torch.stack(
+                        [latent.clip(min=skip_threshold) - skip_threshold, 
+                         (-latent).clip(min=skip_threshold) - skip_threshold], dim=1
+                         ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                else:
+                    weights = latent.unsqueeze(-1) # n_samples x n_latent_dims x 1
+                if aggregation == "linear_weighted_mean":
+                    pass
+                elif aggregation == "exp_weighted_mean":
+                    weights = torch.exp(weights) - 1.0
+                else:
+                    raise NotImplementedError()
+                effect_tensor = (effect_tensor * weights).sum(dim=0).detach().cpu().numpy(force=True)
+                sum_weights = weights.sum(dim=0).detach().cpu().numpy(force=True)
+                if aggregated_effects is None:
+                    aggregated_effects = effect_tensor
+                    normalization_factor = sum_weights
+                else:
+                    aggregated_effects = aggregated_effects + effect_tensor
+                    normalization_factor += sum_weights
             else:
                 raise NotImplementedError()
 
-        return aggregated_effects
+        if aggregation == "max":
+            return aggregated_effects
+        elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
+            return aggregated_effects / np.maximum(normalization_factor, 1.0)
+        else:
+            raise NotImplementedError()
