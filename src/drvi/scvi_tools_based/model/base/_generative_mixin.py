@@ -330,7 +330,7 @@ class GenerativeMixin:
             self.module.fully_deterministic = False
             self.module.inspect_mode = False
 
-    @torch.inference_mode()
+    # @torch.inference_mode()  # TODO: uncomment this
     def iterate_on_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
@@ -509,7 +509,7 @@ class GenerativeMixin:
         else:
             return torch.cat(store, dim=0).numpy(force=True)
 
-    @torch.inference_mode()
+    # @torch.inference_mode()  # TODO: uncomment this
     def get_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
@@ -649,7 +649,7 @@ class GenerativeMixin:
         else:
             raise NotImplementedError()
 
-    @torch.inference_mode()
+    # @torch.inference_mode()  # TODO: uncomment this
     def get_effect_of_splits_out_of_distribution(
         self,
         embed: AnnData,
@@ -707,12 +707,11 @@ class GenerativeMixin:
             batch_val = all_cats[0]
             cat_vals = all_cats[1:]
 
-            steps_neg = np.linspace(1, 0, num=int(n_steps / 2), endpoint=False)  # 1 to 0 (excluding 0)
-            steps_pos = np.linspace(0, 1, num=int(n_steps / 2), endpoint=False)  # 0 to 1 (excluding 0)
+            steps = np.linspace(1, 0, num=int(n_steps / 2), endpoint=False)
             span_values = np.concatenate([
-                steps_neg[:, None] * dim_mins[None, :],  # min to 0
-                steps_pos[:, None] * dim_maxs[None, :],  # 0 to max
-            ], axis=0)  # n_steps x n_latent
+                steps[:, None] * dim_maxs[None, :],  # 0 to max (increasing)
+                steps[:, None] * dim_mins[None, :],  # 0 to min (decreasing)
+            ], axis=0).astype(np.float32)  # n_steps x n_latent
 
             effect_tensors = []
             for gen_output in self.iterate_on_decoded_latent_samples(
@@ -729,11 +728,13 @@ class GenerativeMixin:
             # distinguish positive and negative directions -> 2 x (n_steps/2) x n_splits x n_genes
             effect_tensors = effect_tensors.reshape(2, int(n_steps/2), effect_tensors.shape[1], effect_tensors.shape[2])
 
-            # Next two lines are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
-            min_per_split = effect_tensors.amin(dim=[0, 1]) # n_splits x n_genes
-            max_per_split = effect_tensors.amax(dim=[0, 1]) # n_splits x n_genes
+            directional_min_per_split = effect_tensors.amin(dim=1) # 2 x n_splits x n_genes
+            directional_max_per_split = effect_tensors.amax(dim=1) # 2 x n_splits x n_genes
+            min_per_split = directional_min_per_split.amin(dim=0) # n_splits x n_genes
+            max_per_split = directional_max_per_split.amax(dim=0) # n_splits x n_genes
             # We assume to add 1 count out of 1e6 counts to max_possible effect for each gene
-            log_add_to_counts = torch.logsumexp(max_per_split, dim=[1, 2]) + np.log(add_to_counts / 1e6)
+            log_add_to_counts = torch.logsumexp(max_per_split, dim=[0, 1]) + np.log(add_to_counts / 1e6)
+            # Next two vars are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
             lse_min = torch.logsumexp(
                 torch.concat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0), 
                 dim=0, keepdim=True)  # 1 x n_genes
@@ -742,9 +743,17 @@ class GenerativeMixin:
                 dim=0, keepdim=True)  # 1 x n_genes
             # Now we calculate effects
             # max_possible LFC = log(sum_j(exp(z_j_min)) - exp(z_i_min) + exp(z_i_max)) - log(sum_j(exp(z_j_min)))
-            max_possible = torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(max_per_split)) - lse_min
+            max_possible = (
+                torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(directional_max_per_split))
+                - 
+                lse_min  # == torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(min_per_split))
+            )
             # min_possible LFC = log(sum_j(exp(z_j_max))) - log(sum_j(exp(z_j_max)) - exp(z_i_max) + exp(z_i_min))
-            min_possible = lse_max - torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
+            min_possible = (
+                lse_max  # == torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(max_per_split))
+                - 
+                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_min_per_split))
+            )
             # Add multiplicative combined effect
             combined = max_possible * min_possible
 
