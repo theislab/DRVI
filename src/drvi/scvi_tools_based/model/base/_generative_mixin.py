@@ -750,9 +750,9 @@ class GenerativeMixin:
             )
             # min_possible LFC = log(sum_j(exp(z_j_max))) - log(sum_j(exp(z_j_max)) - exp(z_i_max) + exp(z_i_min))
             min_possible = (
-                lse_max  # == torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(max_per_split))
+                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_max_per_split))
                 - 
-                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_min_per_split))
+                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
             )
             # Add multiplicative combined effect
             combined = max_possible * min_possible
