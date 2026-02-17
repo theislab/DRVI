@@ -383,7 +383,7 @@ class GenerativeMixin:
             datamodule=datamodule,
             deterministic=deterministic,
             **kwargs,
-        ):  
+        ):
             latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
 
             if self.module.split_aggregation == "logsumexp":
@@ -411,9 +411,9 @@ class GenerativeMixin:
                 effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
                 # Create masks for positive and negative values: n_samples x 2 x n_splits
                 pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
-                
+
                 effect_tensor = effect_tensor * pos_neg_mask
-            
+
             yield effect_tensor, latent
 
     @torch.inference_mode()
@@ -497,7 +497,7 @@ class GenerativeMixin:
             # effect_tensor: n_samples x n_splits x n_genes
             effect_share = effect_tensor.sum(dim=-1)  # n_samples x n_splits
             effect_share = effect_share.detach().cpu()
-            
+
             if aggregate_over_cells:
                 effect_share = effect_share.sum(dim=0)
                 store = effect_share if store is None else store + effect_share
@@ -582,7 +582,7 @@ class GenerativeMixin:
         >>>
         >>> var_info = (
         ...     pd.concat(
-        ...         [embed.var.assign(direction = '+'), 
+        ...         [embed.var.assign(direction = '+'),
         ...          embed.var.assign(direction = '-')]
         ...     )
         ...     .reset_index(drop=True)
@@ -610,7 +610,7 @@ class GenerativeMixin:
             deterministic=deterministic,
             directional=directional,
             **kwargs,
-        ):        
+        ):
             if aggregation == "max":
                 effect_tensor = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
                 if aggregated_effects is None:
@@ -620,7 +620,7 @@ class GenerativeMixin:
             elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
                 if directional:
                     weights = torch.stack(
-                        [latent.clip(min=skip_threshold) - skip_threshold, 
+                        [latent.clip(min=skip_threshold) - skip_threshold,
                          (-latent).clip(min=skip_threshold) - skip_threshold], dim=1
                          ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
                 else:
@@ -648,3 +648,123 @@ class GenerativeMixin:
             return aggregated_effects / np.maximum(normalization_factor, 1.0)
         else:
             raise NotImplementedError()
+
+    @torch.inference_mode()
+    def get_effect_of_splits_out_of_distribution(
+        self,
+        embed: AnnData,
+        n_steps: int = 20,
+        n_samples: int = 20,
+        add_to_counts: float = 1.0,
+        batch_size: int = scvi.settings.batch_size,
+    ) -> dict[str, np.ndarray]:
+        """Return the effect of each split on reconstructed expression by traversing out of distribution.
+
+        This method efficiently computes differential effects by iterating over batch/categorical
+        covariate combinations and processing each dimension separately, avoiding large sparse matrices.
+
+        Parameters
+        ----------
+        embed
+            AnnData object containing latent dimension statistics in `.var`.
+            Must have columns: `original_dim_id`, `min`, `max`.
+        n_steps
+            Number of steps in the traversal. Must be even (half negative, half positive).
+        n_samples
+            Number of samples to generate for each step.
+        add_to_counts
+            Small value added to counts to avoid log(0) issues in log-space calculations.
+        batch_size
+            Minibatch size for data loading into model.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            Dictionary containing:
+            - "min_possible": (n_splits, n_genes) min possible LFC effects
+            - "max_possible": (n_splits, n_genes) max possible LFC effects
+            - "combined": (n_splits, n_genes) combined multiplicative effects
+        """
+        assert n_steps % 2 == 0, "n_steps must be even"
+        dim_mins = np.minimum(embed.var["min"].values, 0.0)
+        dim_maxs = np.maximum(embed.var["max"].values, 0.0)
+
+        n_batch = self.summary_stats.n_batch
+        n_cat_total = [n_batch] + self._get_n_cats_per_cov()
+
+        from itertools import product
+        all_cat_combinations = list(product(*[range(n) for n in n_cat_total]))
+
+        if n_samples >= len(all_cat_combinations):
+            all_cat_combinations = all_cat_combinations
+            logger.info(f"Using all {len(all_cat_combinations)} combinations of batch and categorical covariates.")
+        else:
+            all_cat_combinations = np.random.choice(all_cat_combinations, size=n_samples, replace=False)
+
+        n_combined = 0
+        store = {'min_possible': None, 'max_possible': None, 'combined': None}
+        for all_cats in all_cat_combinations:
+            batch_val = all_cats[0]
+            cat_vals = all_cats[1:]
+
+            steps_neg = np.linspace(1, 0, num=int(n_steps / 2), endpoint=False)  # 1 to 0 (excluding 0)
+            steps_pos = np.linspace(0, 1, num=int(n_steps / 2), endpoint=False)  # 0 to 1 (excluding 0)
+            span_values = np.concatenate([
+                steps_neg[:, None] * dim_mins[None, :],  # min to 0
+                steps_pos[:, None] * dim_maxs[None, :],  # 0 to max
+            ], axis=0)  # n_steps x n_latent
+
+            effect_tensors = []
+            for gen_output in self.iterate_on_decoded_latent_samples(
+                z=span_values,
+                lib=np.ones(n_steps) * 1e4,
+                batch_values=np.full(n_steps, batch_val),
+                cat_values=np.array([cat_vals] * n_steps) if cat_vals else None,
+                cont_values=None,
+                batch_size=batch_size,
+                map_cat_values=False,
+            ):
+                effect_tensors.append(gen_output[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])  # n_batch_size x n_splits x n_genes
+            effect_tensors = torch.cat(effect_tensors, dim=0)  # n_steps x n_splits x n_genes
+            # distinguish positive and negative directions -> 2 x (n_steps/2) x n_splits x n_genes
+            effect_tensors = effect_tensors.reshape(2, int(n_steps/2), effect_tensors.shape[1], effect_tensors.shape[2])
+
+            # Next two lines are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
+            min_per_split = effect_tensors.amin(dim=[0, 1]) # n_splits x n_genes
+            max_per_split = effect_tensors.amax(dim=[0, 1]) # n_splits x n_genes
+            # We assume to add 1 count out of 1e6 counts to max_possible effect for each gene
+            log_add_to_counts = torch.logsumexp(max_per_split, dim=[1, 2]) + np.log(add_to_counts / 1e6)
+            lse_min = torch.logsumexp(
+                torch.concat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0), 
+                dim=0, keepdim=True)  # 1 x n_genes
+            lse_max = torch.logsumexp(
+                torch.concat([max_per_split, log_add_to_counts.reshape(1, 1).expand(1, max_per_split.shape[1])], dim=0),
+                dim=0, keepdim=True)  # 1 x n_genes
+            # Now we calculate effects
+            # max_possible LFC = log(sum_j(exp(z_j_min)) - exp(z_i_min) + exp(z_i_max)) - log(sum_j(exp(z_j_min)))
+            max_possible = torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(max_per_split)) - lse_min
+            # min_possible LFC = log(sum_j(exp(z_j_max))) - log(sum_j(exp(z_j_max)) - exp(z_i_max) + exp(z_i_min))
+            min_possible = lse_max - torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
+            # Add multiplicative combined effect
+            combined = max_possible * min_possible
+
+            # Aggregation: accumulate across batch/cat combinations
+            if n_combined == 0:
+                store['min_possible'] = min_possible
+                store['max_possible'] = max_possible
+                store['combined'] = combined
+            else:
+                store['min_possible'] = store['min_possible'] + min_possible
+                store['max_possible'] = store['max_possible'] + max_possible
+                store['combined'] = store['combined'] + combined
+            n_combined += 1
+        
+        # Average across combinations
+        
+        store['min_possible'] = store['min_possible'] / n_combined
+        store['max_possible'] = store['max_possible'] / n_combined
+        store['combined'] = store['combined'] / n_combined
+        # Convert to numpy
+        store = {k: v.detach().cpu().numpy() for k, v in store.items()}
+
+        return store
