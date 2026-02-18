@@ -106,7 +106,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
         model.calculate_interpretability_scores(embed, inplace=True)
         model.get_interpretability_scores(embed, adata)
-        fig = model.plot_interpretability_scores(embed, adata, show=False)
+        model.plot_interpretability_scores(embed, adata, show=False)
         plt.close()
 
     def test_plotting_functions(self):
