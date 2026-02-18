@@ -129,42 +129,41 @@ class GenerativeMixin:
             batch_values = batch_values.reshape(-1, 1)
 
         try:
-            with torch.no_grad():
-                for i in np.arange(0, z.shape[0], batch_size):
-                    slice = np.arange(i, min(i + batch_size, z.shape[0]))
-                    z_tensor = torch.tensor(z[slice])
-                    if lib is None:
-                        lib_tensor = torch.tensor([1e4] * slice.shape[0])
-                    else:
-                        lib_tensor = torch.tensor(lib[slice])
-                    cat_tensor = torch.tensor(cat_values[slice]) if cat_values is not None else None
-                    cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
-                    batch_tensor = (
-                        torch.tensor(batch_values[slice])
-                        if batch_values is not None
-                        else torch.zeros((slice.shape[0], 1), dtype=torch.int32)
-                    )
+            for i in np.arange(0, z.shape[0], batch_size):
+                slice = np.arange(i, min(i + batch_size, z.shape[0]))
+                z_tensor = torch.tensor(z[slice])
+                if lib is None:
+                    lib_tensor = torch.tensor([1e4] * slice.shape[0])
+                else:
+                    lib_tensor = torch.tensor(lib[slice])
+                cat_tensor = torch.tensor(cat_values[slice]) if cat_values is not None else None
+                cont_tensor = torch.tensor(cont_values[slice]) if cont_values is not None else None
+                batch_tensor = (
+                    torch.tensor(batch_values[slice])
+                    if batch_values is not None
+                    else torch.zeros((slice.shape[0], 1), dtype=torch.int32)
+                )
 
-                    if self.module.__class__.__name__ == "DRVIModule":
-                        inference_outputs = {
-                            MODULE_KEYS.Z_KEY: z_tensor,
-                        }
-                        library_to_inject = lib_tensor
-                    else:
-                        raise NotImplementedError(f"Module {self.module.__class__.__name__} not supported.")
+                if self.module.__class__.__name__ == "DRVIModule":
+                    inference_outputs = {
+                        MODULE_KEYS.Z_KEY: z_tensor,
+                    }
+                    library_to_inject = lib_tensor
+                else:
+                    raise NotImplementedError(f"Module {self.module.__class__.__name__} not supported.")
 
-                    gen_input = self.module._get_generative_input(
-                        tensors={
-                            REGISTRY_KEYS.BATCH_KEY: batch_tensor,
-                            REGISTRY_KEYS.LABELS_KEY: None,
-                            REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
-                            REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
-                        },
-                        inference_outputs=inference_outputs,
-                        library_to_inject=library_to_inject,
-                    )
-                    gen_output = self.module.generative(**gen_input)
-                    yield gen_output
+                gen_input = self.module._get_generative_input(
+                    tensors={
+                        REGISTRY_KEYS.BATCH_KEY: batch_tensor,
+                        REGISTRY_KEYS.LABELS_KEY: None,
+                        REGISTRY_KEYS.CONT_COVS_KEY: cont_tensor,
+                        REGISTRY_KEYS.CAT_COVS_KEY: cat_tensor,
+                    },
+                    inference_outputs=inference_outputs,
+                    library_to_inject=library_to_inject,
+                )
+                gen_output = self.module.generative(**gen_input)
+                yield gen_output
         finally:
             self.module.inspect_mode = False
 
