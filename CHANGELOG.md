@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
+### Added
+- Added within distribution interpretability
+- An efficient implementation of out-of-distribution interpretability is added
+- plotting and getting relevant genes is now possible in DRVI model interface.
+
 ## [0.2.2] - 2026-02-11
 
 ### Added
