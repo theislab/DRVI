@@ -76,7 +76,7 @@ class InterpretabilityMixin:
         - "sum": Uses absolute value summation
         """
 
-        for inference_outputs, generative_outputs, losses in self.iterate_on_ae_output(
+        for inference_outputs, generative_outputs, _losses in self.iterate_on_ae_output(
             adata=adata,
             datamodule=datamodule,
             deterministic=deterministic,
@@ -184,7 +184,7 @@ class InterpretabilityMixin:
 
         store = None if aggregate_over_cells else []
 
-        for effect_tensor, latent in self.iterate_on_effect_of_splits_within_distribution(
+        for effect_tensor, _latent in self.iterate_on_effect_of_splits_within_distribution(
             adata=adata,
             datamodule=datamodule,
             add_to_counts=add_to_counts,
@@ -438,7 +438,7 @@ class InterpretabilityMixin:
             log_add_to_counts = torch.logsumexp(max_per_split, dim=[0, 1]) + np.log(add_to_counts / 1e6)
             # Next two vars are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
             lse_min = torch.logsumexp(
-                torch.cat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0), 
+                torch.cat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0),
                 dim=0, keepdim=True)  # 1 x n_genes
             lse_max = torch.logsumexp(
                 torch.cat([max_per_split, log_add_to_counts.reshape(1, 1).expand(1, max_per_split.shape[1])], dim=0),
@@ -447,13 +447,13 @@ class InterpretabilityMixin:
             # max_possible LFC = log(sum_j(exp(z_j_min)) - exp(z_i_min) + exp(z_i_max)) - log(sum_j(exp(z_j_min)))
             max_possible = (
                 torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(directional_max_per_split))
-                - 
+                -
                 lse_min  # == torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(min_per_split))
             )
             # min_possible LFC = log(sum_j(exp(z_j_max))) - log(sum_j(exp(z_j_max)) - exp(z_i_max) + exp(z_i_min))
             min_possible = (
                 torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_max_per_split))
-                - 
+                -
                 torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
             )
             # Add multiplicative combined effect
@@ -469,9 +469,9 @@ class InterpretabilityMixin:
                 store['max_possible'] = store['max_possible'] + max_possible
                 store['combined'] = store['combined'] + combined
             n_combined += 1
-        
+
         # Average across combinations
-        
+
         store['min_possible'] = store['min_possible'] / n_combined
         store['max_possible'] = store['max_possible'] / n_combined
         store['combined'] = store['combined'] / n_combined
@@ -553,7 +553,7 @@ class InterpretabilityMixin:
                     all_results[f"OOD_{key}_negative"] = value[1]
                 else:
                     all_results[f"OOD_{key}"] = value
-        
+
         if inplace:
             for key, value in all_results.items():
                 if key in embed.varm:
@@ -608,9 +608,9 @@ class InterpretabilityMixin:
         else:
             var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction='')
             effect_data = embed.varm[key]
-        
+
         gene_names = adata.var_names if gene_symbols is None else adata.var[gene_symbols]
-            
+
         return pd.DataFrame(
             effect_data,
             columns=gene_names,
@@ -660,10 +660,10 @@ class InterpretabilityMixin:
             (k, v) for k, v in plot_df.to_dict(orient="series").items()
             if (v.max() >= score_threshold) and (dim_subset is None or k in dim_subset)
         ]
-        
+
         n_row = int(np.ceil(len(plot_info) / ncols))
         fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, int(1 + 0.2 * n_top_genes) * n_row))
-        
+
         for ax, info in zip(axes.flatten(), plot_info, strict=False):
             top_indices = info[1].sort_values(ascending=False)[:n_top_genes]
             if len(top_indices) > 0:
@@ -672,10 +672,10 @@ class InterpretabilityMixin:
                 ax.set_title(info[0])
                 ax.invert_yaxis()
             ax.grid(False)
-        
+
         for ax in axes.flatten()[len(plot_info) :]:
             fig.delaxes(ax)
-        
+
         plt.tight_layout()
         if show:
             plt.show()
