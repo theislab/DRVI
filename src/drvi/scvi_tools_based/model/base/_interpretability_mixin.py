@@ -80,7 +80,7 @@ class InterpretabilityMixin:
             deterministic=deterministic,
             **kwargs,
         ):
-            latent = inference_outputs["qzm"]  # n_samples x n_splits (n_splits == n_latent_dims)
+            latent = inference_outputs[MODULE_KEYS.QZM_KEY]  # n_samples x n_splits (n_splits == n_latent_dims)
 
             if self.module.split_aggregation == "logsumexp":
                 # The formula for the effect in this case uses softmax. Note: softmax(x) == softmax(x + c) for any constant c
