@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import itertools
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -698,18 +699,17 @@ class GenerativeMixin:
         n_batch = self.summary_stats.n_batch
         n_cat_total = [n_batch] + self._get_n_cats_per_cov()
 
-        from itertools import product
-        all_cat_combinations = list(product(*[range(n) for n in n_cat_total]))
+        all_cat_combinations = np.asarray(list(itertools.product(*[range(n) for n in n_cat_total])))
 
         if n_samples >= len(all_cat_combinations):
             logger.info(f"Using all {len(all_cat_combinations)} combinations of batch and categorical covariates.")
-        all_cat_combinations = np.random.shuffle(all_cat_combinations)[:n_samples]
+        all_cat_combinations = np.random.permutation(all_cat_combinations)[:n_samples]
 
         n_combined = 0
         store = {'min_possible': None, 'max_possible': None, 'combined': None}
         for all_cats in all_cat_combinations:
-            batch_val = all_cats[0]
-            cat_vals = all_cats[1:]
+            batch_val = all_cats[0].tolist()
+            cat_vals = all_cats[1:].tolist()
 
             steps = np.linspace(1, 0, num=int(n_steps / 2), endpoint=False)
             span_values = np.concatenate([
@@ -787,7 +787,7 @@ class GenerativeMixin:
     def calculate_interpretability_scores(
         self,
         embed: AnnData,
-        methods: Sequence[str] | str = "ALL",
+        methods: Sequence[str] | str = "OOD",
         directional: bool = True,
         add_to_counts: float = 1.0,
         inplace: bool = True,
