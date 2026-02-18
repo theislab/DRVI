@@ -108,8 +108,10 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
         model.calculate_interpretability_scores(embed, methods="ALL", inplace=True)
         model.get_interpretability_scores(embed, adata)
-        model.get_interpretability_scores(embed, adata, directional=False)
         model.plot_interpretability_scores(embed, adata, show=False)
+        model.calculate_interpretability_scores(embed, methods="ALL", directional=False, inplace=True)
+        model.get_interpretability_scores(embed, adata, directional=False)
+        model.plot_interpretability_scores(embed, adata, directional=False, show=False)
         plt.close()
 
     def test_plotting_functions(self):
