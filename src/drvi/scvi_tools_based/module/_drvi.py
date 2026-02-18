@@ -90,10 +90,11 @@ class DRVIModule(BaseModuleClass):
         Dropout rate to apply to each of the decoder hidden layers.
     gene_likelihood
         Gene likelihood model. Options include:
-        - "normal", "normal_v", "normal_sv" : Normal distributions
         - "poisson" : Poisson distributions
         - "nb" : Negative binomial distributions
         - "pnb": Log negative binomial distributions
+        - "normal" : Normal distributions
+        - "normal_unit_var" : Normal distributions with unit variance
     dispersion
         Dispersion parameter modeling strategy for negative binomial distributions.
         Options:
@@ -153,7 +154,7 @@ class DRVIModule(BaseModuleClass):
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
-        gene_likelihood: Literal["normal", "normal_v", "normal_sv", "poisson", "nb", "pnb"] = "pnb",
+        gene_likelihood: Literal["pnb", "nb", "poisson", "normal", "normal_unit_var"] = "pnb",
         dispersion: Literal["gene", "gene-batch", "gene-cell"] = "gene",
         prior: Literal["normal"] = "normal",
         var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
