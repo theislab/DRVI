@@ -2,10 +2,10 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scvi
 from matplotlib import pyplot as plt
 from scipy import sparse
 
-import scvi
 import drvi
 
 
