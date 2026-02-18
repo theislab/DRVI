@@ -104,7 +104,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         adata = train_results["adata"]
         embed = train_results["embed"]
 
-        model.calculate_interpretability_scores(embed, inplace=True)
+        model.calculate_interpretability_scores(embed, methods="ALL", inplace=True)
         model.get_interpretability_scores(embed, adata)
         model.plot_interpretability_scores(embed, adata, show=False)
         plt.close()
