@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import TYPE_CHECKING
 
@@ -101,7 +102,7 @@ class GenerativeMixin:
         >>> z = np.random.randn(50, 32)  # assuming 32 latent dimensions
         >>> store = []
         >>> for gen_output in model.iterate_on_decoded_latent_samples(z=z):
-        ...     store.append(gen_output["params"]["mean"].detach().cpu())
+        ...     store.append(gen_output["px"].mean.detach().cpu())
         >>> result = torch.cat(store, dim=0).numpy()
         >>> print(result.shape)  # (50, n_genes)
         """
@@ -330,7 +331,7 @@ class GenerativeMixin:
             self.module.fully_deterministic = False
             self.module.inspect_mode = False
 
-    # @torch.inference_mode()  # TODO: uncomment this
+    @torch.inference_mode()
     def iterate_on_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
@@ -388,15 +389,15 @@ class GenerativeMixin:
 
             if self.module.split_aggregation == "logsumexp":
                 # The formula for the effect in this case uses softmax. Note: softmax(x) == softmax(x + c) for any constant c
-                # So we can ignore library size normalization and -log(K) stablization in logsumexp aggregation.
+                # So we can ignore library size normalization and -log(K) stabilization in logsumexp aggregation.
                 # But the constant we add (add_to_counts) depends on the total decoder effects.
                 # We assume add_to_counts is added to each gene of a cell with total counts of 1e6.
                 log_mean_params = generative_outputs[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY][
                     "mean"
                 ]  # n_samples x n_splits x n_genes
-                total_effect_per_cell = torch.logsumexp(log_mean_params, dim=[-2,-1])
+                total_effect_per_cell = torch.logsumexp(log_mean_params, dim=[-2, -1])
                 log_add_to_counts = total_effect_per_cell + np.log(add_to_counts / 1e6)
-                log_mean_params = torch.concat([
+                log_mean_params = torch.cat([
                     log_mean_params, log_add_to_counts.reshape(-1, 1, 1).expand(-1, -1, log_mean_params.shape[-1])
                 ], dim=-2)  # n_samples x (n_splits + 1) x n_genes
                 effect_tensor = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
@@ -494,8 +495,8 @@ class GenerativeMixin:
             directional=directional,
             **kwargs,
         ):
-            # effect_tensor: n_samples x n_splits x n_genes
-            effect_share = effect_tensor.sum(dim=-1)  # n_samples x n_splits
+            # effect_tensor: n_samples x n_splits x n_genes or n_samples x 2 x n_splits x n_genes if directional
+            effect_share = effect_tensor.sum(dim=-1)  # n_samples x n_splits or n_samples x 2 x n_splits
             effect_share = effect_share.detach().cpu()
 
             if aggregate_over_cells:
@@ -509,7 +510,7 @@ class GenerativeMixin:
         else:
             return torch.cat(store, dim=0).numpy(force=True)
 
-    # @torch.inference_mode()  # TODO: uncomment this
+    @torch.inference_mode()
     def get_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
@@ -517,10 +518,10 @@ class GenerativeMixin:
         add_to_counts: float = 1.0,
         deterministic: bool = True,
         directional: bool = True,
-        aggregation: Literal["max", "linear_weighted_mean", "exp_weighted_mean"] = "max",
+        aggregations: Sequence[Literal["max", "linear_weighted_mean", "exp_weighted_mean"]] | str = "ALL",
         skip_threshold: float = 1.0,
         **kwargs: Any,
-    ) -> np.ndarray:
+    ) -> dict[str, np.ndarray]:
         """Return the maximum effect of each split on the reconstructed expression params for all genes.
 
         This method computes the maximum contribution of each split across all
@@ -545,40 +546,37 @@ class GenerativeMixin:
             Whether to consider the directional effect of each split.
             If True, effects are computed separately for positive and negative
             latent values. If False, effects are computed over all samples.
-        aggregation
-            Aggregation method to use across batches. Currently only "max" is supported.
+        aggregations
+            Aggregation methods to use across batches.
+            If "ALL", all methods are used.
+            If a string, only the method is used.
+            If a sequence, only the methods in the sequence are used.
+        skip_threshold
+            Minimum threshold for latent values when computing weighted means.
+            Values below this threshold are clipped before computing weights.
         **kwargs
             Additional keyword arguments for the `iterate_on_ae_output` method.
 
         Returns
         -------
-        np.ndarray
-            Maximum effect of each split on the reconstructed expression params.
-            Shape depends on `directional`:
-            - If `directional=True`: (2, n_splits, n_genes)
-              - First dimension: 0 for positive values, 1 for negative values
-              - Second dimension: split index (n_splits == n_latent_dims)
-              - Third dimension: genes
-            - If `directional=False`: (n_splits, n_genes)
-              - First dimension: split index
-              - Second dimension: genes
+        dict[str, np.ndarray]
+            Dictionary containing:
+            - "{aggregation_key}": (n_splits, n_genes) or (2, n_splits, n_genes) score for each split for each gene
 
         Notes
         -----
-        This function is experimental. Please use interpretability pipeline or DE instead.
-
         The calculation depends on the model's split_aggregation:
         - "logsumexp": Uses log-space softmax aggregation
         - "sum": Uses absolute value summation
 
-        When `directional=True`, the maximum effect is computed separately:
+        When `directional=True`, the score is computed separately:
         - Over samples where each dimension is positive (index 0 in first dimension)
         - Over samples where each dimension is negative (index 1 in first dimension)
 
         Examples
         --------
-        >>> # Get empirical maximum effects (2, n_split, n_genes)
-        >>> max_effects = model.get_max_effect_of_splits_within_distribution(add_to_counts=1.0)
+        >>> # Get empirical scores (2, n_split, n_genes)
+        >>> scores = model.get_effect_of_splits_within_distribution(add_to_counts=1.0)
         >>>
         >>> var_info = (
         ...     pd.concat(
@@ -591,7 +589,7 @@ class GenerativeMixin:
         >>>
         >>> effect_data = (
         ...     pd.DataFrame(
-        ...         np.concatenate([max_effects[0], max_effects[1]]),
+        ...         np.concatenate([scores["max_possible"][0], scores["max_possible"][1]]),
         ...         columns=model.adata.var_names,
         ...         index=var_info['title'],
         ...     )
@@ -601,61 +599,67 @@ class GenerativeMixin:
         >>> plot_info = list(effect_data.to_dict(orient="series").items())
         >>> drvi.utils.plotting._interpretability._bar_plot_top_differential_vars(plot_info)
         """
-        aggregated_effects = None
-        normalization_factor = None
-        for effect_tensor, latent in self.iterate_on_effect_of_splits_within_distribution(
+        if aggregations == "ALL":
+            aggregations = ["max", "linear_weighted_mean", "exp_weighted_mean"]
+        elif isinstance(aggregations, str):
+            aggregations = [aggregations]
+        store = {}
+        for i, (effect_tensor, latent) in enumerate(self.iterate_on_effect_of_splits_within_distribution(
             adata=adata,
             datamodule=datamodule,
             add_to_counts=add_to_counts,
             deterministic=deterministic,
             directional=directional,
             **kwargs,
-        ):
-            if aggregation == "max":
-                effect_tensor = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
-                if aggregated_effects is None:
-                    aggregated_effects = effect_tensor
-                else:
-                    aggregated_effects = np.maximum(aggregated_effects, effect_tensor)
-            elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
-                if directional:
-                    weights = torch.stack(
-                        [latent.clip(min=skip_threshold) - skip_threshold,
-                         (-latent).clip(min=skip_threshold) - skip_threshold], dim=1
-                         ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
-                else:
-                    weights = latent.unsqueeze(-1) # n_samples x n_latent_dims x 1
-                if aggregation == "linear_weighted_mean":
-                    pass
-                elif aggregation == "exp_weighted_mean":
-                    weights = torch.exp(weights) - 1.0
+        )):
+            for aggregation in aggregations:
+                if aggregation == "max":
+                    effect_tensor_agg = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
+                    if i == 0:
+                        store[aggregation] = {"result": effect_tensor_agg}
+                    else:
+                        store[aggregation]["result"] = np.maximum(store[aggregation]["result"], effect_tensor_agg)
+                elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
+                    # Calculate weights
+                    if directional:
+                        weights = torch.stack(
+                            [latent.clamp(min=skip_threshold) - skip_threshold,
+                            (-latent).clamp(min=skip_threshold) - skip_threshold], dim=1
+                            ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                    else:
+                        weights = latent.unsqueeze(-1) # n_samples x n_latent_dims x 1
+                    if aggregation == "exp_weighted_mean":
+                        weights = torch.exp(weights) - 1.0
+                    # Calculate weighted mean
+                    effect_tensor_agg = (effect_tensor * weights).sum(dim=0).detach().cpu().numpy(force=True)
+                    sum_weights = weights.sum(dim=0).detach().cpu().numpy(force=True)
+                    # Store results
+                    if i == 0:
+                        store[aggregation] = {"result": effect_tensor_agg, "sum_weights": sum_weights}
+                    else:
+                        store[aggregation]["result"] = store[aggregation]["result"] + effect_tensor_agg
+                        store[aggregation]["sum_weights"] = store[aggregation]["sum_weights"] + sum_weights
                 else:
                     raise NotImplementedError()
-                effect_tensor = (effect_tensor * weights).sum(dim=0).detach().cpu().numpy(force=True)
-                sum_weights = weights.sum(dim=0).detach().cpu().numpy(force=True)
-                if aggregated_effects is None:
-                    aggregated_effects = effect_tensor
-                    normalization_factor = sum_weights
-                else:
-                    aggregated_effects = aggregated_effects + effect_tensor
-                    normalization_factor += sum_weights
+
+        results = {}
+        for aggregation in aggregations:
+            if aggregation == "max":
+                results[aggregation] = store[aggregation]["result"]
+            elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
+                results[aggregation] = store[aggregation]["result"] / np.maximum(store[aggregation]["sum_weights"], 1.0)
             else:
                 raise NotImplementedError()
+        return results
 
-        if aggregation == "max":
-            return aggregated_effects
-        elif aggregation in ["linear_weighted_mean", "exp_weighted_mean"]:
-            return aggregated_effects / np.maximum(normalization_factor, 1.0)
-        else:
-            raise NotImplementedError()
-
-    # @torch.inference_mode()  # TODO: uncomment this
+    @torch.inference_mode()
     def get_effect_of_splits_out_of_distribution(
         self,
         embed: AnnData,
         n_steps: int = 20,
         n_samples: int = 20,
         add_to_counts: float = 1.0,
+        directional: bool = True,
         batch_size: int = scvi.settings.batch_size,
     ) -> dict[str, np.ndarray]:
         """Return the effect of each split on reconstructed expression by traversing out of distribution.
@@ -674,6 +678,8 @@ class GenerativeMixin:
             Number of samples to generate for each step.
         add_to_counts
             Small value added to counts to avoid log(0) issues in log-space calculations.
+        directional
+            Whether to consider the directional effect of each split.
         batch_size
             Minibatch size for data loading into model.
 
@@ -681,9 +687,9 @@ class GenerativeMixin:
         -------
         dict[str, np.ndarray]
             Dictionary containing:
-            - "min_possible": (n_splits, n_genes) min possible LFC effects
-            - "max_possible": (n_splits, n_genes) max possible LFC effects
-            - "combined": (n_splits, n_genes) combined multiplicative effects
+            - "min_possible": (n_splits, n_genes) or (2, n_splits, n_genes) min possible LFC effects
+            - "max_possible": (n_splits, n_genes) or (2, n_splits, n_genes) max possible LFC effects
+            - "combined": (n_splits, n_genes) or (2, n_splits, n_genes) combined multiplicative effects
         """
         assert n_steps % 2 == 0, "n_steps must be even"
         dim_mins = np.minimum(embed.var["min"].values, 0.0)
@@ -696,10 +702,8 @@ class GenerativeMixin:
         all_cat_combinations = list(product(*[range(n) for n in n_cat_total]))
 
         if n_samples >= len(all_cat_combinations):
-            all_cat_combinations = all_cat_combinations
             logger.info(f"Using all {len(all_cat_combinations)} combinations of batch and categorical covariates.")
-        else:
-            all_cat_combinations = np.random.choice(all_cat_combinations, size=n_samples, replace=False)
+        all_cat_combinations = np.random.shuffle(all_cat_combinations)[:n_samples]
 
         n_combined = 0
         store = {'min_possible': None, 'max_possible': None, 'combined': None}
@@ -728,18 +732,20 @@ class GenerativeMixin:
             # distinguish positive and negative directions -> 2 x (n_steps/2) x n_splits x n_genes
             effect_tensors = effect_tensors.reshape(2, int(n_steps/2), effect_tensors.shape[1], effect_tensors.shape[2])
 
-            directional_min_per_split = effect_tensors.amin(dim=1) # 2 x n_splits x n_genes
-            directional_max_per_split = effect_tensors.amax(dim=1) # 2 x n_splits x n_genes
-            min_per_split = directional_min_per_split.amin(dim=0) # n_splits x n_genes
-            max_per_split = directional_max_per_split.amax(dim=0) # n_splits x n_genes
-            # We assume to add 1 count out of 1e6 counts to max_possible effect for each gene
+            min_per_split = effect_tensors.amin(dim=[0, 1]) # n_splits x n_genes
+            max_per_split = effect_tensors.amax(dim=[0, 1]) # n_splits x n_genes
+            if directional:
+                directional_max_per_split = effect_tensors.amax(dim=1) # 2 x n_splits x n_genes
+            else:
+                directional_max_per_split = max_per_split # n_splits x n_genes
+            # We assume to add add_to_counts counts out of 1e6 counts to max_possible effect for each gene
             log_add_to_counts = torch.logsumexp(max_per_split, dim=[0, 1]) + np.log(add_to_counts / 1e6)
             # Next two vars are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
             lse_min = torch.logsumexp(
-                torch.concat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0), 
+                torch.cat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0), 
                 dim=0, keepdim=True)  # 1 x n_genes
             lse_max = torch.logsumexp(
-                torch.concat([max_per_split, log_add_to_counts.reshape(1, 1).expand(1, max_per_split.shape[1])], dim=0),
+                torch.cat([max_per_split, log_add_to_counts.reshape(1, 1).expand(1, max_per_split.shape[1])], dim=0),
                 dim=0, keepdim=True)  # 1 x n_genes
             # Now we calculate effects
             # max_possible LFC = log(sum_j(exp(z_j_min)) - exp(z_i_min) + exp(z_i_max)) - log(sum_j(exp(z_j_min)))
@@ -777,3 +783,85 @@ class GenerativeMixin:
         store = {k: v.detach().cpu().numpy() for k, v in store.items()}
 
         return store
+
+    def calculate_interpretability_scores(
+        self,
+        embed: AnnData,
+        methods: Sequence[str] | str = "ALL",
+        directional: bool = True,
+        add_to_counts: float = 1.0,
+        inplace: bool = True,
+        **kwargs: Any,
+    ) -> dict[str, np.ndarray] | None:
+        """Calculate interpretability scores for each split.
+
+        Parameters
+        ----------
+        embed : AnnData
+            AnnData object containing latent dimension statistics in `.var`.
+            Must have columns: `original_dim_id`, `min`, `max`.
+        methods : str or Sequence[str], optional
+            Options are:
+            - "ALL": all methods are used
+            - "IND": in-distribution interpretability methods are used
+            - "OOD": out-of-distribution interpretability methods are used
+            - A sequence of specific method names
+        directional : bool, optional
+            Whether to consider the directional effect of each split.
+        add_to_counts : float, optional
+            Value to add to the counts before computing the logarithm.
+            Used for numerical stability in log-space calculations.
+        inplace : bool, optional
+            Whether to add the results to the embed.varm in place.
+            If False, returns a dictionary instead.
+        **kwargs: Any
+            Additional keyword arguments for the `get_effect_of_splits_within_distribution` or `get_effect_of_splits_out_of_distribution` methods.
+
+        Returns
+        -------
+        dict[str, np.ndarray] | None
+            If `inplace=False`, returns a dictionary containing interpretability scores for each method.
+            Keys are formatted as "{method}_{aggregation}_{direction}" where direction
+            is "positive" or "negative" if directional=True, otherwise omitted.
+            If `inplace=True`, returns None and stores results in `embed.varm`.
+        """
+        if methods == "ALL":
+            methods = ["IND", "OOD"]
+        elif isinstance(methods, str):
+            methods = [methods]
+        calculate_ind = any(method.startswith("IND") for method in methods)
+        calculate_ood = any(method.startswith("OOD") for method in methods)
+
+        all_results = {}
+        if calculate_ind:
+            sig = inspect.signature(self.get_effect_of_splits_within_distribution)
+            valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+            result_dict = self.get_effect_of_splits_within_distribution(directional=directional, add_to_counts=add_to_counts, aggregations="ALL",**valid_kwargs)
+            for key, value in result_dict.items():
+                if key not in methods and "IND" not in methods:
+                    continue
+                if directional:
+                    all_results[f"IND_{key}_positive"] = value[0]
+                    all_results[f"IND_{key}_negative"] = value[1]
+                else:
+                    all_results[f"IND_{key}"] = value
+        if calculate_ood:
+            sig = inspect.signature(self.get_effect_of_splits_out_of_distribution)
+            valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+            result_dict = self.get_effect_of_splits_out_of_distribution(embed=embed, directional=directional, add_to_counts=add_to_counts, **valid_kwargs)
+            for key, value in result_dict.items():
+                if key not in methods and "OOD" not in methods:
+                    continue
+                if directional:
+                    all_results[f"OOD_{key}_positive"] = value[0]
+                    all_results[f"OOD_{key}_negative"] = value[1]
+                else:
+                    all_results[f"OOD_{key}"] = value
+        
+        if inplace:
+            for key, value in all_results.items():
+                if key in embed.varm:
+                    logger.warning(f"Key {key} already exists in embed.varm, overwriting.")
+                embed.varm[key] = value
+        else:
+            return all_results
