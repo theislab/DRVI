@@ -5,6 +5,7 @@ import scanpy as sc
 from matplotlib import pyplot as plt
 from scipy import sparse
 
+import scvi
 import drvi
 
 
@@ -99,6 +100,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         self._whole_integration_and_interpretability_pipeline()
 
     def test_whole_pipeline_with_interpretability_mixin(self):
+        scvi.settings.batch_size = 32
         train_results = self._whole_integration_and_interpretability_pipeline()
         model = train_results["model"]
         adata = train_results["adata"]
@@ -106,6 +108,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
         model.calculate_interpretability_scores(embed, methods="ALL", inplace=True)
         model.get_interpretability_scores(embed, adata)
+        model.get_interpretability_scores(embed, adata, directional=True)
         model.plot_interpretability_scores(embed, adata, show=False)
         plt.close()
 
