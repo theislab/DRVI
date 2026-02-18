@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import scvi
 import torch
-from scvi import REGISTRY_KEYS
 from lightning import LightningDataModule
+from scvi import REGISTRY_KEYS
 from tqdm import tqdm
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS

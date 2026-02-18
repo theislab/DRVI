@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import inspect
-import logging
 import itertools
+import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scvi
 import torch
+from lightning import LightningDataModule
 from matplotlib import pyplot as plt
 from torch.nn import functional as F
-from lightning import LightningDataModule
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 
@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class InterpretabilityMixin:
-    """Mixin class for interpretability in DRVI model.
-    """
+    """Mixin class for interpretability in DRVI model."""
 
     @torch.inference_mode()
     def iterate_on_effect_of_splits_within_distribution(
@@ -75,7 +74,6 @@ class InterpretabilityMixin:
         - "logsumexp": Uses log-space softmax aggregation
         - "sum": Uses absolute value summation
         """
-
         for inference_outputs, generative_outputs, _losses in self.iterate_on_ae_output(
             adata=adata,
             datamodule=datamodule,
@@ -94,9 +92,10 @@ class InterpretabilityMixin:
                 ]  # n_samples x n_splits x n_genes
                 total_effect_per_cell = torch.logsumexp(log_mean_params, dim=[-2, -1])
                 log_add_to_counts = total_effect_per_cell + np.log(add_to_counts / 1e6)
-                log_mean_params = torch.cat([
-                    log_mean_params, log_add_to_counts.reshape(-1, 1, 1).expand(-1, -1, log_mean_params.shape[-1])
-                ], dim=-2)  # n_samples x (n_splits + 1) x n_genes
+                log_mean_params = torch.cat(
+                    [log_mean_params, log_add_to_counts.reshape(-1, 1, 1).expand(-1, -1, log_mean_params.shape[-1])],
+                    dim=-2,
+                )  # n_samples x (n_splits + 1) x n_genes
                 effect_tensor = -torch.log(1 - F.softmax(log_mean_params, dim=-2)[:, :-1, :])
             elif self.module.split_aggregation == "sum":
                 # TODO: consider library size for the sum aggregation case.
@@ -108,7 +107,9 @@ class InterpretabilityMixin:
                 # effect_tensor: n_samples x n_splits x n_genes
                 effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
                 # Create masks for positive and negative values: n_samples x 2 x n_splits
-                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(
+                    -1
+                )  # n_samples x 2 x n_latent_dims x 1
 
                 effect_tensor = effect_tensor * pos_neg_mask
 
@@ -181,7 +182,6 @@ class InterpretabilityMixin:
         >>> cell_effects = model.get_reconstruction_effect_of_each_split(aggregate_over_cells=False)
         >>> print(cell_effects.shape)  # (n_cells, n_splits)
         """
-
         store = None if aggregate_over_cells else []
 
         for effect_tensor, _latent in self.iterate_on_effect_of_splits_within_distribution(
@@ -276,19 +276,16 @@ class InterpretabilityMixin:
         >>> scores = model.get_effect_of_splits_within_distribution(add_to_counts=1.0)
         >>>
         >>> var_info = (
-        ...     pd.concat(
-        ...         [embed.var.assign(direction = '+'),
-        ...          embed.var.assign(direction = '-')]
-        ...     )
+        ...     pd.concat([embed.var.assign(direction="+"), embed.var.assign(direction="-")])
         ...     .reset_index(drop=True)
-        ...     .assign(title = lambda df: df['title'] + df['direction'])
+        ...     .assign(title=lambda df: df["title"] + df["direction"])
         ... )
         >>>
         >>> effect_data = (
         ...     pd.DataFrame(
         ...         np.concatenate([scores["max_possible"][0], scores["max_possible"][1]]),
         ...         columns=model.adata.var_names,
-        ...         index=var_info['title'],
+        ...         index=var_info["title"],
         ...     )
         ...     .loc[var_info.sort_values(["order", "direction"])["title"]]
         ...     .T
@@ -301,14 +298,16 @@ class InterpretabilityMixin:
         elif isinstance(aggregations, str):
             aggregations = [aggregations]
         store = {}
-        for i, (effect_tensor, latent) in enumerate(self.iterate_on_effect_of_splits_within_distribution(
-            adata=adata,
-            datamodule=datamodule,
-            add_to_counts=add_to_counts,
-            deterministic=deterministic,
-            directional=directional,
-            **kwargs,
-        )):
+        for i, (effect_tensor, latent) in enumerate(
+            self.iterate_on_effect_of_splits_within_distribution(
+                adata=adata,
+                datamodule=datamodule,
+                add_to_counts=add_to_counts,
+                deterministic=deterministic,
+                directional=directional,
+                **kwargs,
+            )
+        ):
             for aggregation in aggregations:
                 if aggregation == "max":
                     effect_tensor_agg = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
@@ -320,11 +319,14 @@ class InterpretabilityMixin:
                     # Calculate weights
                     if directional:
                         weights = torch.stack(
-                            [latent.clamp(min=skip_threshold) - skip_threshold,
-                            (-latent).clamp(min=skip_threshold) - skip_threshold], dim=1
-                            ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
+                            [
+                                latent.clamp(min=skip_threshold) - skip_threshold,
+                                (-latent).clamp(min=skip_threshold) - skip_threshold,
+                            ],
+                            dim=1,
+                        ).unsqueeze(-1)  # n_samples x 2 x n_latent_dims x 1
                     else:
-                        weights = latent.unsqueeze(-1) # n_samples x n_latent_dims x 1
+                        weights = latent.unsqueeze(-1)  # n_samples x n_latent_dims x 1
                     if aggregation == "exp_weighted_mean":
                         weights = torch.exp(weights) - 1.0
                     # Calculate weighted mean
@@ -402,16 +404,19 @@ class InterpretabilityMixin:
         all_cat_combinations = np.random.permutation(all_cat_combinations)[:n_samples]
 
         n_combined = 0
-        store = {'min_possible': None, 'max_possible': None, 'combined': None}
+        store = {"min_possible": None, "max_possible": None, "combined": None}
         for all_cats in all_cat_combinations:
             batch_val = all_cats[0].tolist()
             cat_vals = all_cats[1:].tolist()
 
             steps = np.linspace(1, 0, num=int(n_steps / 2), endpoint=False)
-            span_values = np.concatenate([
-                steps[:, None] * dim_maxs[None, :],  # 0 to max (increasing)
-                steps[:, None] * dim_mins[None, :],  # 0 to min (decreasing)
-            ], axis=0).astype(np.float32)  # n_steps x n_latent
+            span_values = np.concatenate(
+                [
+                    steps[:, None] * dim_maxs[None, :],  # 0 to max (increasing)
+                    steps[:, None] * dim_mins[None, :],  # 0 to min (decreasing)
+                ],
+                axis=0,
+            ).astype(np.float32)  # n_steps x n_latent
 
             effect_tensors = []
             for gen_output in self.iterate_on_decoded_latent_samples(
@@ -423,58 +428,63 @@ class InterpretabilityMixin:
                 batch_size=batch_size,
                 map_cat_values=False,
             ):
-                effect_tensors.append(gen_output[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"])  # n_batch_size x n_splits x n_genes
+                effect_tensors.append(
+                    gen_output[MODULE_KEYS.PX_UNAGGREGATED_PARAMS_KEY]["mean"]
+                )  # n_batch_size x n_splits x n_genes
             effect_tensors = torch.cat(effect_tensors, dim=0)  # n_steps x n_splits x n_genes
             # distinguish positive and negative directions -> 2 x (n_steps/2) x n_splits x n_genes
-            effect_tensors = effect_tensors.reshape(2, int(n_steps/2), effect_tensors.shape[1], effect_tensors.shape[2])
+            effect_tensors = effect_tensors.reshape(
+                2, int(n_steps / 2), effect_tensors.shape[1], effect_tensors.shape[2]
+            )
 
-            min_per_split = effect_tensors.amin(dim=[0, 1]) # n_splits x n_genes
-            max_per_split = effect_tensors.amax(dim=[0, 1]) # n_splits x n_genes
+            min_per_split = effect_tensors.amin(dim=[0, 1])  # n_splits x n_genes
+            max_per_split = effect_tensors.amax(dim=[0, 1])  # n_splits x n_genes
             if directional:
-                directional_max_per_split = effect_tensors.amax(dim=1) # 2 x n_splits x n_genes
+                directional_max_per_split = effect_tensors.amax(dim=1)  # 2 x n_splits x n_genes
             else:
-                directional_max_per_split = max_per_split # n_splits x n_genes
+                directional_max_per_split = max_per_split  # n_splits x n_genes
             # We assume to add add_to_counts counts out of 1e6 counts to max_possible effect for each gene
             log_add_to_counts = torch.logsumexp(max_per_split, dim=[0, 1]) + np.log(add_to_counts / 1e6)
             # Next two vars are log(sum_j(exp(z_j_min))) and log(sum_j(exp(z_j_max)))
             lse_min = torch.logsumexp(
                 torch.cat([min_per_split, log_add_to_counts.reshape(1, 1).expand(1, min_per_split.shape[1])], dim=0),
-                dim=0, keepdim=True)  # 1 x n_genes
+                dim=0,
+                keepdim=True,
+            )  # 1 x n_genes
             lse_max = torch.logsumexp(
                 torch.cat([max_per_split, log_add_to_counts.reshape(1, 1).expand(1, max_per_split.shape[1])], dim=0),
-                dim=0, keepdim=True)  # 1 x n_genes
+                dim=0,
+                keepdim=True,
+            )  # 1 x n_genes
             # Now we calculate effects
             # max_possible LFC = log(sum_j(exp(z_j_min)) - exp(z_i_min) + exp(z_i_max)) - log(sum_j(exp(z_j_min)))
             max_possible = (
                 torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(directional_max_per_split))
-                -
-                lse_min  # == torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(min_per_split))
+                - lse_min  # == torch.log(torch.exp(lse_min) - torch.exp(min_per_split) + torch.exp(min_per_split))
             )
             # min_possible LFC = log(sum_j(exp(z_j_max))) - log(sum_j(exp(z_j_max)) - exp(z_i_max) + exp(z_i_min))
-            min_possible = (
-                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_max_per_split))
-                -
-                torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
-            )
+            min_possible = torch.log(
+                torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(directional_max_per_split)
+            ) - torch.log(torch.exp(lse_max) - torch.exp(max_per_split) + torch.exp(min_per_split))
             # Add multiplicative combined effect
             combined = max_possible * min_possible
 
             # Aggregation: accumulate across batch/cat combinations
             if n_combined == 0:
-                store['min_possible'] = min_possible
-                store['max_possible'] = max_possible
-                store['combined'] = combined
+                store["min_possible"] = min_possible
+                store["max_possible"] = max_possible
+                store["combined"] = combined
             else:
-                store['min_possible'] = store['min_possible'] + min_possible
-                store['max_possible'] = store['max_possible'] + max_possible
-                store['combined'] = store['combined'] + combined
+                store["min_possible"] = store["min_possible"] + min_possible
+                store["max_possible"] = store["max_possible"] + max_possible
+                store["combined"] = store["combined"] + combined
             n_combined += 1
 
         # Average across combinations
 
-        store['min_possible'] = store['min_possible'] / n_combined
-        store['max_possible'] = store['max_possible'] / n_combined
-        store['combined'] = store['combined'] / n_combined
+        store["min_possible"] = store["min_possible"] / n_combined
+        store["max_possible"] = store["max_possible"] / n_combined
+        store["combined"] = store["combined"] / n_combined
         # Convert to numpy
         store = {k: v.detach().cpu().numpy() for k, v in store.items()}
 
@@ -532,7 +542,9 @@ class InterpretabilityMixin:
         if calculate_ind:
             sig = inspect.signature(self.get_effect_of_splits_within_distribution)
             valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
-            result_dict = self.get_effect_of_splits_within_distribution(directional=directional, add_to_counts=add_to_counts, aggregations="ALL",**valid_kwargs)
+            result_dict = self.get_effect_of_splits_within_distribution(
+                directional=directional, add_to_counts=add_to_counts, aggregations="ALL", **valid_kwargs
+            )
             for key, value in result_dict.items():
                 if key not in methods and "IND" not in methods:
                     continue
@@ -544,7 +556,9 @@ class InterpretabilityMixin:
         if calculate_ood:
             sig = inspect.signature(self.get_effect_of_splits_out_of_distribution)
             valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
-            result_dict = self.get_effect_of_splits_out_of_distribution(embed=embed, directional=directional, add_to_counts=add_to_counts, **valid_kwargs)
+            result_dict = self.get_effect_of_splits_out_of_distribution(
+                embed=embed, directional=directional, add_to_counts=add_to_counts, **valid_kwargs
+            )
             for key, value in result_dict.items():
                 if key not in methods and "OOD" not in methods:
                     continue
@@ -600,22 +614,26 @@ class InterpretabilityMixin:
         """
         if directional:
             var_info = (
-                pd.concat([embed.var.assign(direction='+'), embed.var.assign(direction='-')])
-                .assign(title=lambda df: df[title_col] + df['direction'])
+                pd.concat([embed.var.assign(direction="+"), embed.var.assign(direction="-")])
+                .assign(title=lambda df: df[title_col] + df["direction"])
                 .reset_index(drop=True)
             )
-            effect_data = np.concatenate([embed.varm[key + '_positive'], embed.varm[key + '_negative']])
+            effect_data = np.concatenate([embed.varm[key + "_positive"], embed.varm[key + "_negative"]])
         else:
-            var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction='')
+            var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction="")
             effect_data = embed.varm[key]
 
         gene_names = adata.var_names if gene_symbols is None else adata.var[gene_symbols]
 
-        return pd.DataFrame(
-            effect_data,
-            columns=gene_names,
-            index=var_info['title'],
-        ).loc[var_info.sort_values(["order", "direction"])["title"]].T
+        return (
+            pd.DataFrame(
+                effect_data,
+                columns=gene_names,
+                index=var_info["title"],
+            )
+            .loc[var_info.sort_values(["order", "direction"])["title"]]
+            .T
+        )
 
     def plot_interpretability_scores(
         self,
@@ -657,7 +675,8 @@ class InterpretabilityMixin:
         """
         plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
         plot_info = [
-            (k, v) for k, v in plot_df.to_dict(orient="series").items()
+            (k, v)
+            for k, v in plot_df.to_dict(orient="series").items()
             if (v.max() >= score_threshold) and (dim_subset is None or k in dim_subset)
         ]
 

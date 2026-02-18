@@ -31,7 +31,15 @@ _DRVI_OBSERVED_LIB_SIZE = "_drvi_observed_lib_size"
 logger = logging.getLogger(__name__)
 
 
-class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin, InterpretabilityMixin):
+class DRVI(
+    RNASeqMixin,
+    VAEMixin,
+    DRVIArchesMixin,
+    UnsupervisedTrainingMixin,
+    BaseModelClass,
+    GenerativeMixin,
+    InterpretabilityMixin,
+):
     """DRVI model based on scvi-tools framework for disentangled representation learning.
 
     Parameters
