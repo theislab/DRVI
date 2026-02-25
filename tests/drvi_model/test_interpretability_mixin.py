@@ -81,7 +81,7 @@ class TestInterpretabilityMixin:
         latent = model.get_latent_representation(adata)
         embed = ad.AnnData(latent, obs=adata.obs.copy())
         return adata, model, embed
-    
+
     def test_get_reconstruction_effect_of_each_split(self, trained_model_outputs):
         adata, model, _embed = trained_model_outputs
         n_splits = model.module.n_split_latent
@@ -90,11 +90,9 @@ class TestInterpretabilityMixin:
         assert effects.shape == (n_splits,)
         assert np.all(effects >= 0)
 
-        cell_effects = model.get_reconstruction_effect_of_each_split(
-            adata=adata, aggregate_over_cells=False
-        )
+        cell_effects = model.get_reconstruction_effect_of_each_split(adata=adata, aggregate_over_cells=False)
         assert cell_effects.shape == (adata.n_obs, n_splits)
-    
+
     def test_get_reconstruction_effect_directional(self, trained_model_outputs):
         adata, model, _embed = trained_model_outputs
         n_splits = model.module.n_split_latent
@@ -123,22 +121,16 @@ class TestInterpretabilityMixin:
         n_splits = model.module.n_split_latent
         n_genes = adata.n_vars
 
-        result = model.get_effect_of_splits_within_distribution(
-            adata=adata, aggregations="max", directional=True
-        )
+        result = model.get_effect_of_splits_within_distribution(adata=adata, aggregations="max", directional=True)
         assert "max" in result
         assert result["max"].shape == (2, n_splits, n_genes)
 
-        result_nd = model.get_effect_of_splits_within_distribution(
-            adata=adata, aggregations="max", directional=False
-        )
+        result_nd = model.get_effect_of_splits_within_distribution(adata=adata, aggregations="max", directional=False)
         assert result_nd["max"].shape == (n_splits, n_genes)
 
     def test_get_effect_of_splits_out_of_distribution(self, trained_model_outputs_with_stats):
         adata, model, embed = trained_model_outputs_with_stats
-        result = model.get_effect_of_splits_out_of_distribution(
-            embed, n_steps=4, n_samples=2, directional=True
-        )
+        result = model.get_effect_of_splits_out_of_distribution(embed, n_steps=4, n_samples=2, directional=True)
         for key in ["min_possible", "max_possible", "combined"]:
             assert key in result
             assert result[key].shape == (2, embed.n_vars, adata.n_vars)
@@ -146,18 +138,14 @@ class TestInterpretabilityMixin:
     def test_calculate_interpretability_scores_inplace(self, trained_model_outputs_with_stats):
         adata, model, embed = trained_model_outputs_with_stats
         embed_copy = embed.copy()
-        out = model.calculate_interpretability_scores(
-            embed_copy, methods="OOD", directional=True, inplace=True
-        )
+        out = model.calculate_interpretability_scores(embed_copy, methods="OOD", directional=True, inplace=True)
         assert out is None
         assert "OOD_combined_positive" in embed_copy.varm
         assert "OOD_combined_negative" in embed_copy.varm
 
     def test_calculate_interpretability_scores_return(self, trained_model_outputs_with_stats):
         adata, model, embed = trained_model_outputs_with_stats
-        result = model.calculate_interpretability_scores(
-            embed, methods="IND", directional=False, inplace=False
-        )
+        result = model.calculate_interpretability_scores(embed, methods="IND", directional=False, inplace=False)
         assert isinstance(result, dict)
         assert "IND_max" in result
         assert result["IND_max"].shape[0] == embed.n_vars
@@ -168,19 +156,13 @@ class TestInterpretabilityMixin:
         embed_copy = embed.copy()
         model.calculate_interpretability_scores(embed_copy, methods="OOD", inplace=True)
 
-        df = model.get_interpretability_scores(
-            embed_copy, adata, key="OOD_combined", directional=True
-        )
+        df = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", directional=True)
         assert isinstance(df, pd.DataFrame)
         assert df.shape[0] == adata.n_vars
         assert df.shape[1] == 2 * embed_copy.n_vars  # positive + negative per dimension
 
-        model.calculate_interpretability_scores(
-            embed_copy, methods="OOD", directional=False, inplace=True
-        )
-        df_nd = model.get_interpretability_scores(
-            embed_copy, adata, key="OOD_combined", directional=False
-        )
+        model.calculate_interpretability_scores(embed_copy, methods="OOD", directional=False, inplace=True)
+        df_nd = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", directional=False)
         assert df_nd.shape[0] == adata.n_vars
         assert df_nd.shape[1] == embed_copy.n_vars
 
@@ -188,8 +170,6 @@ class TestInterpretabilityMixin:
         adata, model, embed = trained_model_outputs_with_stats
         embed_copy = embed.copy()
         model.calculate_interpretability_scores(embed_copy, methods="OOD", inplace=True)
-        fig = model.plot_interpretability_scores(
-            embed_copy, adata, show=False, score_threshold=-1.0
-        )
+        fig = model.plot_interpretability_scores(embed_copy, adata, show=False, score_threshold=-1.0)
         assert fig is not None
         plt.close(fig)

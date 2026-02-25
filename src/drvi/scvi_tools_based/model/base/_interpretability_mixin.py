@@ -10,13 +10,12 @@ import pandas as pd
 import scvi
 import torch
 from lightning import LightningDataModule
-from scipy import sparse
-
-from drvi.scvi_tools_based.util._sparse_arrays import _flatten_to_1d, _sparse_std
 from matplotlib import pyplot as plt
+from scipy import sparse
 from torch.nn import functional as F
 
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+from drvi.scvi_tools_based.util._sparse_arrays import _flatten_to_1d, _sparse_std
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
