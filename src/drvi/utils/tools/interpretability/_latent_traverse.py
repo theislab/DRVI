@@ -5,6 +5,7 @@ import pandas as pd
 import scvi
 from anndata import AnnData
 from scipy import sparse
+import warnings
 
 from drvi.model import DRVI
 
@@ -386,6 +387,12 @@ def traverse_latent(
     >>> # Traversal with custom parameters
     >>> traverse_data = traverse_latent(model, embed, n_steps=30, n_samples=50)
     """
+    # Raise deprecation warning in favor of model.calculate_interpretability_scores
+    warnings.warn(
+        "traverse_latent is deprecated and will be removed soon; use model.calculate_interpretability_scores(embed, ...) instead.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     if "original_dim_id" not in embed.var:
         raise ValueError(
             'Column "original_dim_id" not found in `embed.var`. Please run `set_latent_dimension_stats` to set vanished status.'
