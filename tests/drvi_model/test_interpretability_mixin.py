@@ -62,7 +62,7 @@ class TestInterpretabilityMixin:
             layer="counts",
             is_count_data=True,
         )
-        model_kwargs = dict(
+        model_kwargs = dict( # noqa: C408
             n_latent=n_latent,
             encoder_dims=[64],
             decoder_dims=[64],
