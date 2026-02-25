@@ -10,6 +10,9 @@ import pandas as pd
 import scvi
 import torch
 from lightning import LightningDataModule
+from scipy import sparse
+
+from drvi.scvi_tools_based.util._sparse_arrays import _flatten_to_1d, _sparse_std
 from matplotlib import pyplot as plt
 from torch.nn import functional as F
 
@@ -208,6 +211,75 @@ class InterpretabilityMixin:
             return torch.cat(store, dim=0).numpy(force=True)
 
     @torch.inference_mode()
+    def set_latent_dimension_stats(
+        self,
+        embed: AnnData,
+        vanished_threshold: float = 0.1,
+    ) -> AnnData | None:
+        """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
+
+        Computes and stores various statistics for each latent dimension in the
+        embedding AnnData object: reconstruction effects, ordering, and basic
+        statistical measures (mean, std, min, max) for each dimension.
+
+        Parameters
+        ----------
+        embed
+            AnnData object containing the latent representation (embedding) of the model.
+            The latent dimensions should be in the `.X` attribute.
+        vanished_threshold
+            Threshold for determining if a latent dimension has "vanished" (become inactive).
+            Dimensions with max absolute values below this threshold are marked as vanished.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        The following columns are added to `embed.var`:
+
+        - `original_dim_id`: Original dimension indices
+        - `reconstruction_effect`: Reconstruction effect scores from the DRVI model
+        - `order`: Ranking of dimensions by reconstruction effect (descending)
+        - `max_value`: Maximum absolute value across all cells for each dimension
+        - `mean`: Mean value across all cells for each dimension
+        - `min`: Minimum value across all cells for each dimension
+        - `max`: Maximum value across all cells for each dimension
+        - `std`: Standard deviation; `std_abs`: std of absolute values
+        - `title`: Dimension titles in format "DR {order+1}"
+        - `vanished`: Boolean indicating if dimension is considered "vanished" (max_value < threshold)
+
+        Examples
+        --------
+        >>> latent_adata = model.get_latent_representation(adata, return_anndata=True)
+        >>> model.set_latent_dimension_stats(latent_adata)
+        >>> print(latent_adata.var[["order", "reconstruction_effect", "vanished"]].head())
+        """
+        if "original_dim_id" not in embed.var:
+            embed.var["original_dim_id"] = np.arange(embed.var.shape[0])
+
+        embed.var["reconstruction_effect"] = 0.0
+        embed.var.loc[embed.var.sort_values("original_dim_id").index, "reconstruction_effect"] = (
+            self.get_reconstruction_effect_of_each_split()
+        )
+        embed.var["order"] = (-embed.var["reconstruction_effect"]).argsort().argsort()
+
+        embed.var["max_value"] = _flatten_to_1d(np.abs(embed.X).max(axis=0))
+        embed.var["mean"] = _flatten_to_1d(embed.X.mean(axis=0))
+        embed.var["min"] = _flatten_to_1d(embed.X.min(axis=0))
+        embed.var["max"] = _flatten_to_1d(embed.X.max(axis=0))
+        if sparse.issparse(embed.X):
+            embed.var["std"] = _sparse_std(embed.X, axis=0)
+            embed.var["std_abs"] = _sparse_std(np.abs(embed.X), axis=0)
+        else:
+            embed.var["std"] = embed.X.std(axis=0)
+            embed.var["std_abs"] = np.abs(embed.X).std(axis=0)
+
+        embed.var["title"] = "DR " + (1 + embed.var["order"]).astype(str)
+        embed.var["vanished"] = embed.var["max_value"] < vanished_threshold
+
+    @torch.inference_mode()
     def get_effect_of_splits_within_distribution(
         self,
         adata: AnnData | None = None,
@@ -356,7 +428,7 @@ class InterpretabilityMixin:
         self,
         embed: AnnData,
         n_steps: int = 20,
-        n_samples: int = 20,
+        n_samples: int = 100,
         add_to_counts: float = 1.0,
         directional: bool = True,
         batch_size: int = scvi.settings.batch_size,
