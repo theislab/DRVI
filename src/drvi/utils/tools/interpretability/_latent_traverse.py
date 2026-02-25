@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import scvi
 from anndata import AnnData
 from scipy import sparse
-import warnings
 
 from drvi.model import DRVI
 

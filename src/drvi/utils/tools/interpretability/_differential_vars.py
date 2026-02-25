@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy
-import warnings
 
 from drvi.model import DRVI
 from drvi.utils.tools.interpretability._latent_traverse import get_dimensions_of_traverse_data, traverse_latent
