@@ -14,7 +14,7 @@ from scvi.utils import setup_anndata_dsp
 
 import drvi
 from drvi.scvi_tools_based.data.fields import FixedCategoricalJointObsField
-from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin
+from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin, InterpretabilityMixin
 from drvi.scvi_tools_based.module import DRVIModule
 
 if TYPE_CHECKING:
@@ -31,7 +31,15 @@ _DRVI_OBSERVED_LIB_SIZE = "_drvi_observed_lib_size"
 logger = logging.getLogger(__name__)
 
 
-class DRVI(RNASeqMixin, VAEMixin, DRVIArchesMixin, UnsupervisedTrainingMixin, BaseModelClass, GenerativeMixin):
+class DRVI(
+    RNASeqMixin,
+    VAEMixin,
+    DRVIArchesMixin,
+    UnsupervisedTrainingMixin,
+    BaseModelClass,
+    GenerativeMixin,
+    InterpretabilityMixin,
+):
     """DRVI model based on scvi-tools framework for disentangled representation learning.
 
     Parameters

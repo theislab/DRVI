@@ -2,6 +2,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scvi
 from matplotlib import pyplot as plt
 from scipy import sparse
 
@@ -97,6 +98,21 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
     def test_whole_integration_and_interpretability_pipeline(self):
         self._whole_integration_and_interpretability_pipeline()
+
+    def test_whole_pipeline_with_interpretability_mixin(self):
+        scvi.settings.batch_size = 32
+        train_results = self._whole_integration_and_interpretability_pipeline()
+        model = train_results["model"]
+        adata = train_results["adata"]
+        embed = train_results["embed"]
+
+        model.calculate_interpretability_scores(embed, methods="ALL", inplace=True)
+        model.get_interpretability_scores(embed, adata)
+        model.plot_interpretability_scores(embed, adata, show=False)
+        model.calculate_interpretability_scores(embed, methods="ALL", directional=False, inplace=True)
+        model.get_interpretability_scores(embed, adata, directional=False)
+        model.plot_interpretability_scores(embed, adata, directional=False, show=False)
+        plt.close()
 
     def test_plotting_functions(self):
         train_results = self._whole_integration_and_interpretability_pipeline()
