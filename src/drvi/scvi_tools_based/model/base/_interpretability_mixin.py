@@ -762,7 +762,7 @@ class InterpretabilityMixin:
                 ).tolist()
             else:
                 keep_dims = embed.var.query("vanished == False")["title"].astype(str).tolist()
-            plot_df = plot_df[keep_dims]
+            plot_df = plot_df[[c for c in plot_df.columns if c in keep_dims]]
         plot_info = [
             (k, v)
             for k, v in plot_df.to_dict(orient="series").items()
