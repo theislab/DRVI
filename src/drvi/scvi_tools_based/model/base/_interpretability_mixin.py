@@ -698,11 +698,15 @@ class InterpretabilityMixin:
                 .assign(keep=True)
                 .reset_index(drop=True)
             )
-            var_info["keep"] = ~np.where(
-                var_info["direction"] == "+", 
-                var_info["vanished_positive_direction"], 
-                var_info["vanished_negative_direction"]
-            ) if hide_vanished else True
+            var_info["keep"] = (
+                ~np.where(
+                    var_info["direction"] == "+",
+                    var_info["vanished_positive_direction"],
+                    var_info["vanished_negative_direction"],
+                )
+                if hide_vanished
+                else True
+            )
         else:
             effect_data = embed.varm[key]
             var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction="")
