@@ -660,6 +660,7 @@ class InterpretabilityMixin:
         gene_symbols: str | None = None,
         order_col: str = "order",
         title_col: str = "title",
+        hide_vanished: bool = True,
     ) -> pd.DataFrame:
         """Extract interpretability scores as a DataFrame.
 
@@ -681,6 +682,8 @@ class InterpretabilityMixin:
             Column name in `embed.var` for dimension ordering.
         title_col
             Column name in `embed.var` for dimension titles.
+        hide_vanished: bool, optional
+            Whether to hide vanished dimensions from the plot.
 
         Returns
         -------
@@ -688,15 +691,22 @@ class InterpretabilityMixin:
             DataFrame with genes as rows and dimensions as columns.
         """
         if directional:
+            effect_data = np.concatenate([embed.varm[key + "_positive"], embed.varm[key + "_negative"]])
             var_info = (
                 pd.concat([embed.var.assign(direction="+"), embed.var.assign(direction="-")])
                 .assign(title=lambda df: df[title_col] + df["direction"])
+                .assign(keep=True)
                 .reset_index(drop=True)
             )
-            effect_data = np.concatenate([embed.varm[key + "_positive"], embed.varm[key + "_negative"]])
+            var_info["keep"] = ~np.where(
+                var_info["direction"] == "+", 
+                var_info["vanished_positive_direction"], 
+                var_info["vanished_negative_direction"]
+            ) if hide_vanished else True
         else:
-            var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction="")
             effect_data = embed.varm[key]
+            var_info = embed.var.assign(title=lambda df: df[title_col]).assign(direction="")
+            var_info["keep"] = ~var_info["vanished"] if hide_vanished else True
 
         gene_names = adata.var_names if gene_symbols is None else adata.var[gene_symbols]
 
@@ -706,7 +716,7 @@ class InterpretabilityMixin:
                 columns=gene_names,
                 index=var_info["title"],
             )
-            .loc[var_info.sort_values(["order", "direction"])["title"]]
+            .loc[var_info.query("keep == True").sort_values([order_col, "direction"])["title"]]
             .T
         )
 
@@ -717,7 +727,6 @@ class InterpretabilityMixin:
         ncols: int = 5,
         n_top_genes: int = 10,
         score_threshold: float = 0.1,
-        hide_vanished: bool = True,
         dim_subset: Sequence[str] | None = None,
         show: bool = True,
         **kwargs,
@@ -736,8 +745,6 @@ class InterpretabilityMixin:
             Number of top genes to display per dimension.
         score_threshold
             Minimum score threshold for dimensions to be plotted.
-        hide_vanished: bool, optional
-            Whether to hide vanished dimensions from the plot.
         dim_subset
             Optional list of dimension titles to plot. If None, all dimensions
             meeting the threshold are plotted.
@@ -752,17 +759,6 @@ class InterpretabilityMixin:
             The figure object if `show=False`, otherwise None.
         """
         plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
-        if hide_vanished:
-            if plot_df.columns[0][-1] in ["+", "-"]:  # directional
-                keep_dims = np.concatenate(
-                    [
-                        embed.var.query("vanished_positive_direction == False")["title"].astype(str) + "+",
-                        embed.var.query("vanished_negative_direction == False")["title"].astype(str) + "-",
-                    ]
-                ).tolist()
-            else:
-                keep_dims = embed.var.query("vanished == False")["title"].astype(str).tolist()
-            plot_df = plot_df[[c for c in plot_df.columns if c in keep_dims]]
         plot_info = [
             (k, v)
             for k, v in plot_df.to_dict(orient="series").items()
