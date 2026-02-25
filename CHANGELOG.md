@@ -10,7 +10,17 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
-## [0.2.2] - 2026-02-09
+### Added
+- Added within distribution interpretability
+- An efficient implementation of out-of-distribution interpretability is added
+- plotting and getting relevant genes is now possible in DRVI model interface.
+- Setting latent dimension stats is now done in model interface. Previous util functions still work, but will show a deprecation warning.
+
+### Changed
+- The default value for vanished threshold in new the interface of `set_latent_dimension_stats` is 1.0 (previously 0.1).
+- Interpretability scores for the other direction of a non-vanished dimension is not shown if that direction is meaningless.
+
+## [0.2.2] - 2026-02-11
 
 ### Added
 - Added "tutorials" optional dependency that was accidentally removed.
