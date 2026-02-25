@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -383,6 +384,13 @@ def calculate_differential_vars(traverse_adata: AnnData, **kwargs) -> None:
     >>> min_effects = traverse_adata.varm["min_possible_traverse_effect_pos"]
     >>> combined_effects = traverse_adata.varm["combined_score_traverse_effect_pos"]
     """
+    # Raise deprecation warning in favor of model.calculate_interpretability_scores
+    warnings.warn(
+        "calculate_differential_vars is deprecated and will be removed soon; use model.calculate_interpretability_scores(embed, ...) instead.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+
     print("Finding differential variables per latent dimension ...")
     find_differential_effects(traverse_adata, method="max_possible", key_added="max_possible", **kwargs)
     find_differential_effects(traverse_adata, method="min_possible", key_added="min_possible", **kwargs)
