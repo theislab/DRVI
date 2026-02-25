@@ -156,13 +156,13 @@ class TestInterpretabilityMixin:
         embed_copy = embed.copy()
         model.calculate_interpretability_scores(embed_copy, methods="OOD", inplace=True)
 
-        df = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", directional=True)
+        df = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", hide_vanished=False, directional=True)
         assert isinstance(df, pd.DataFrame)
         assert df.shape[0] == adata.n_vars
         assert df.shape[1] == 2 * embed_copy.n_vars  # positive + negative per dimension
 
         model.calculate_interpretability_scores(embed_copy, methods="OOD", directional=False, inplace=True)
-        df_nd = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", directional=False)
+        df_nd = model.get_interpretability_scores(embed_copy, adata, key="OOD_combined", hide_vanished=False, directional=False)
         assert df_nd.shape[0] == adata.n_vars
         assert df_nd.shape[1] == embed_copy.n_vars
 
