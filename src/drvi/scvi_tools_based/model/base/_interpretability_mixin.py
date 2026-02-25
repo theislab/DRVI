@@ -754,10 +754,12 @@ class InterpretabilityMixin:
         plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
         if hide_vanished:
             if plot_df.columns[0][-1] in ["+", "-"]:  # directional
-                keep_dims = np.concatenate([
-                    embed.var.query("vanished_positive_direction == False")["title"].astype(str) + "+",
-                    embed.var.query("vanished_negative_direction == False")["title"].astype(str) + "-",
-                ]).tolist()
+                keep_dims = np.concatenate(
+                    [
+                        embed.var.query("vanished_positive_direction == False")["title"].astype(str) + "+",
+                        embed.var.query("vanished_negative_direction == False")["title"].astype(str) + "-",
+                    ]
+                ).tolist()
             else:
                 keep_dims = embed.var.query("vanished == False")["title"].astype(str).tolist()
             plot_df = plot_df[keep_dims]
