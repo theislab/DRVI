@@ -213,7 +213,7 @@ class InterpretabilityMixin:
     def set_latent_dimension_stats(
         self,
         embed: AnnData,
-        vanished_threshold: float = 0.1,
+        vanished_threshold: float = 0.5,
     ) -> AnnData | None:
         """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
 
@@ -247,7 +247,9 @@ class InterpretabilityMixin:
         - `max`: Maximum value across all cells for each dimension
         - `std`: Standard deviation; `std_abs`: std of absolute values
         - `title`: Dimension titles in format "DR {order+1}"
-        - `vanished`: Boolean indicating if dimension is considered "vanished" (max_value < threshold)
+        - `vanished`: Boolean indicating if dimension is "vanished" (max_value < threshold)
+        - `vanished_positive_direction`: Dimension is "vanished" in the + direction if max < threshold.
+        - `vanished_negative_direction`: Dimension is "vanished" in the - direction if min > -threshold.
 
         Examples
         --------
@@ -277,6 +279,8 @@ class InterpretabilityMixin:
 
         embed.var["title"] = "DR " + (1 + embed.var["order"]).astype(str)
         embed.var["vanished"] = embed.var["max_value"] < vanished_threshold
+        embed.var["vanished_positive_direction"] = embed.var["max"] < vanished_threshold
+        embed.var["vanished_negative_direction"] = embed.var["min"] > -vanished_threshold
 
     @torch.inference_mode()
     def get_effect_of_splits_within_distribution(
@@ -713,6 +717,7 @@ class InterpretabilityMixin:
         ncols: int = 5,
         n_top_genes: int = 10,
         score_threshold: float = 0.1,
+        hide_vanished: bool = True,
         dim_subset: Sequence[str] | None = None,
         show: bool = True,
         **kwargs,
@@ -731,6 +736,8 @@ class InterpretabilityMixin:
             Number of top genes to display per dimension.
         score_threshold
             Minimum score threshold for dimensions to be plotted.
+        hide_vanished: bool, optional
+            Whether to hide vanished dimensions from the plot.
         dim_subset
             Optional list of dimension titles to plot. If None, all dimensions
             meeting the threshold are plotted.
@@ -745,6 +752,15 @@ class InterpretabilityMixin:
             The figure object if `show=False`, otherwise None.
         """
         plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
+        if hide_vanished:
+            if plot_df.columns[0][-1] in ["+", "-"]:  # directional
+                keep_dims = np.concatenate([
+                    embed.var.query("vanished_positive_direction == False")["title"].astype(str) + "+",
+                    embed.var.query("vanished_negative_direction == False")["title"].astype(str) + "-",
+                ]).tolist()
+            else:
+                keep_dims = embed.var.query("vanished == False")["title"].astype(str).tolist()
+            plot_df = plot_df[keep_dims]
         plot_info = [
             (k, v)
             for k, v in plot_df.to_dict(orient="series").items()

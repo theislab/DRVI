@@ -173,3 +173,7 @@ class TestInterpretabilityMixin:
         fig = model.plot_interpretability_scores(embed_copy, adata, show=False, score_threshold=-1.0)
         assert fig is not None
         plt.close(fig)
+        model.calculate_interpretability_scores(embed_copy, methods="OOD", inplace=True, directional=False)
+        fig = model.plot_interpretability_scores(embed_copy, adata, show=False, score_threshold=-1.0, directional=False)
+        assert fig is not None
+        plt.close(fig)
