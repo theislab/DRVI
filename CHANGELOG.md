@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning][].
 - Added within distribution interpretability
 - An efficient implementation of out-of-distribution interpretability is added
 - plotting and getting relevant genes is now possible in DRVI model interface.
+- Setting latent dimension stats is now done in model interface. Previous util functions still work, but will show a deprecation warning.
 
 ## [0.2.2] - 2026-02-11
 
