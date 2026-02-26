@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning][].
 - An efficient implementation of out-of-distribution interpretability is added
 - plotting and getting relevant genes is now possible in DRVI model interface.
 - Setting latent dimension stats is now done in model interface. Previous util functions still work, but will show a deprecation warning.
+- Update main tutorial
+- Add tutorial for query to reference mapping
 
 ### Changed
 - The default value for vanished threshold in new the interface of `set_latent_dimension_stats` is 1.0 (previously 0.1).
