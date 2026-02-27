@@ -84,7 +84,7 @@ If you found a bug, please use the [issue tracker][].
 If DRVI is helpful in your research, please consider citing the following paper:
 
 > Moinfar, A. A. & Theis, F. J.
-> **Unsupervised deep disentangled representation of single-cell omics.**
+> **Disentangling cellular heterogeneity into interpretable biological factors through structured latent representations.**
 > bioRxiv 2024.11.06.622266 (2024) [doi:10.1101/2024.11.06.622266](https://doi.org/10.1101/2024.11.06.622266).
 
 ## Reproducibility
