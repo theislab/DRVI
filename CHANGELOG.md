@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
+### Removed
+- Remove old interpretability modules in drvi.util (slower) in favor of model mixins.
+
+## [Unreleased]
+
 ### Added
 - Added within distribution interpretability
 - An efficient implementation of out-of-distribution interpretability is added
