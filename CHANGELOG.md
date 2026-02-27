@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-02-27
+
 ### Added
 - Added within distribution interpretability
 - An efficient implementation of out-of-distribution interpretability is added
