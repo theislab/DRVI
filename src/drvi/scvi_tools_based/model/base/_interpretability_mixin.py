@@ -213,6 +213,8 @@ class InterpretabilityMixin:
     def set_latent_dimension_stats(
         self,
         embed: AnnData,
+        adata: AnnData | None = None,
+        datamodule: LightningDataModule | None = None,
         vanished_threshold: float = 0.5,
     ) -> AnnData | None:
         """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
@@ -226,6 +228,11 @@ class InterpretabilityMixin:
         embed
             AnnData object containing the latent representation (embedding) of the model.
             The latent dimensions should be in the `.X` attribute.
+        adata
+            AnnData object with equivalent structure to initial AnnData.
+            If None, defaults to the AnnData object used to initialize the model.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if
         vanished_threshold
             Threshold for determining if a latent dimension has "vanished" (become inactive).
             Dimensions with max absolute values below this threshold are marked as vanished.
@@ -262,7 +269,7 @@ class InterpretabilityMixin:
 
         embed.var["reconstruction_effect"] = 0.0
         embed.var.loc[embed.var.sort_values("original_dim_id").index, "reconstruction_effect"] = (
-            self.get_reconstruction_effect_of_each_split()
+            self.get_reconstruction_effect_of_each_split(adata=adata, datamodule=datamodule)
         )
         embed.var["order"] = (-embed.var["reconstruction_effect"]).argsort().argsort()
 
