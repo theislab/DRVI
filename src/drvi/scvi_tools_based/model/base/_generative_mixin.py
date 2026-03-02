@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import scvi
 import torch
-from scipy import sparse
 from lightning import LightningDataModule
+from scipy import sparse
 from scvi import REGISTRY_KEYS
 from tqdm import tqdm
 
@@ -329,7 +329,6 @@ class GenerativeMixin:
             self.module.fully_deterministic = False
             self.module.inspect_mode = False
 
-
     @torch.inference_mode()
     def iterate_on_encoded_input(
         self,
@@ -380,9 +379,7 @@ class GenerativeMixin:
         >>> import anndata as ad
         >>> # Process data through encoder and aggregate results
         >>> store = []
-        >>> for inference_outputs in model.iterate_onencoded_input(
-        ...     adata=adata, deterministic=True
-        ... ):
+        >>> for inference_outputs in model.iterate_onencoded_input(adata=adata, deterministic=True):
         ...     store.append(inference_outputs["qzm"].detach().cpu())
         >>> latents = torch.cat(store, dim=0).numpy()
         >>> print(latents.shape)  # (n_cells, n_latent)
@@ -413,7 +410,7 @@ class GenerativeMixin:
         datamodule: LightningDataModule | None = None,
         indices: Sequence[int] | None = None,
         batch_size: int | None = None,
-        zero_threshold: float = 0.,
+        zero_threshold: float = 0.0,
         **kwargs: Any,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Iterate over the data and generate the sparse latent representation for each cell.
@@ -455,9 +452,9 @@ class GenerativeMixin:
         ):
             qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
             qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
-            if zero_threshold > 0.:
-                qz_m.masked_fill_(qz_m < zero_threshold, 0.)
-            qz_v.masked_fill_(qz_m  == 0., 0.)
+            if zero_threshold > 0.0:
+                qz_m.masked_fill_(qz_m < zero_threshold, 0.0)
+            qz_v.masked_fill_(qz_m == 0.0, 0.0)
             qz_m = qz_m.detach().cpu().numpy(force=True)
             qz_v = qz_v.detach().cpu().numpy(force=True)
             qz_m = sparse.csr_matrix(qz_m)
@@ -472,7 +469,7 @@ class GenerativeMixin:
         datamodule: LightningDataModule | None = None,
         indices: Sequence[int] | None = None,
         batch_size: int | None = None,
-        zero_threshold: float = 0.,
+        zero_threshold: float = 0.0,
         return_dist: bool = False,
         **kwargs: Any,
     ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
