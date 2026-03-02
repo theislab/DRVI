@@ -106,14 +106,15 @@ class InterpretabilityMixin:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
 
             if directional:
-                # effect_tensor: n_samples x n_splits x n_genes
-                effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
-                # Create masks for positive and negative values: n_samples x 2 x n_splits
-                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(
-                    -1
-                )  # n_samples x 2 x n_latent_dims x 1
-
-                effect_tensor = effect_tensor * pos_neg_mask
+                pos_mask = (latent > 0).float().unsqueeze(-1)
+                neg_mask = (latent < 0).float().unsqueeze(-1)
+                effect_tensor = torch.stack(
+                    [
+                        effect_tensor * pos_mask,
+                        effect_tensor * neg_mask,
+                    ],
+                    dim=1,
+                )  # n_samples x 2 x n_splits x n_genes
 
             yield effect_tensor, latent
 
@@ -199,7 +200,7 @@ class InterpretabilityMixin:
             effect_share = effect_share.detach().cpu()
 
             if aggregate_over_cells:
-                effect_share = effect_share.sum(dim=0)
+                effect_share = effect_share.sum(dim=0).to_dense()
                 store = effect_share if store is None else store + effect_share
             else:
                 store.append(effect_share)
@@ -392,7 +393,8 @@ class InterpretabilityMixin:
         ):
             for aggregation in aggregations:
                 if aggregation == "max":
-                    effect_tensor_agg = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
+                    # We use to_dense() for now as sparse tensors do not support amax()
+                    effect_tensor_agg = effect_tensor.to_dense().amax(dim=0).detach().cpu().numpy(force=True)
                     if i == 0:
                         store[aggregation] = {"result": effect_tensor_agg}
                     else:
@@ -412,7 +414,7 @@ class InterpretabilityMixin:
                     if aggregation == "exp_weighted_mean":
                         weights = torch.exp(weights) - 1.0
                     # Calculate weighted mean
-                    effect_tensor_agg = (effect_tensor * weights).sum(dim=0).detach().cpu().numpy(force=True)
+                    effect_tensor_agg = (effect_tensor * weights).sum(dim=0).to_dense().detach().cpu().numpy(force=True)
                     sum_weights = weights.sum(dim=0).detach().cpu().numpy(force=True)
                     # Store results
                     if i == 0:
