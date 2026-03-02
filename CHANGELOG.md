@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 - Allow sparse input as X
+- Allow generating memory efficient sparse tensors as latent
 
 ## [0.2.3] - 2026-02-27
 
