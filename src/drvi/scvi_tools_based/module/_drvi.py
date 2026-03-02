@@ -327,6 +327,7 @@ class DRVIModule(BaseModuleClass):
         dict
             Dictionary with parsed input data.
         """
+        tensors[REGISTRY_KEYS.X_KEY] = tensors[REGISTRY_KEYS.X_KEY].to_dense()
         x = tensors[REGISTRY_KEYS.X_KEY]
 
         batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning][].
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-03-02
+
+### Added
+- Allow sparse input as X
+
 ## [0.2.3] - 2026-02-27
 
 ### Added
