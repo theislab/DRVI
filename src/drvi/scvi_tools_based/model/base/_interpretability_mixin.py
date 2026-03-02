@@ -108,10 +108,13 @@ class InterpretabilityMixin:
             if directional:
                 pos_mask = (latent > 0).float().unsqueeze(-1)
                 neg_mask = (latent < 0).float().unsqueeze(-1)
-                effect_tensor = torch.stack([
-                    effect_tensor * pos_mask,
-                    effect_tensor * neg_mask,
-                ], dim=1)  # n_samples x 2 x n_splits x n_genes
+                effect_tensor = torch.stack(
+                    [
+                        effect_tensor * pos_mask,
+                        effect_tensor * neg_mask,
+                    ],
+                    dim=1,
+                )  # n_samples x 2 x n_splits x n_genes
 
             yield effect_tensor, latent
 
