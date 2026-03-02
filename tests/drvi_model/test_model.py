@@ -104,6 +104,11 @@ class TestDRVIModel:
         latent = model.get_latent_representation(adata)
         assert latent.shape[0] == adata.n_obs
 
+    def test_get_sparse_latent_representation_function(self, default_adata_and_model):
+        adata, model = default_adata_and_model
+        latent = model.get_sparse_latent_representation()
+        assert latent.shape[0] == adata.n_obs
+
     def test_simple_integration_with_masking(self, base_adata):
         adata = base_adata.copy()
         self._general_integration_test(adata, fill_in_the_blanks_ratio=0.5)
