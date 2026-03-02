@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import scvi
 import torch
+from scipy import sparse
 from lightning import LightningDataModule
 from scvi import REGISTRY_KEYS
 from tqdm import tqdm
@@ -327,3 +328,201 @@ class GenerativeMixin:
         finally:
             self.module.fully_deterministic = False
             self.module.inspect_mode = False
+
+
+    @torch.inference_mode()
+    def iterate_on_encoded_input(
+        self,
+        adata: AnnData,
+        datamodule: LightningDataModule | None = None,
+        indices: Sequence[int] | None = None,
+        batch_size: int | None = None,
+        deterministic: bool = False,
+    ):
+        """Iterate over inference outputs as a generator.
+
+        This method processes data through the encoder (inference) component only
+        and yields the inference outputs for each batch.
+
+        Parameters
+        ----------
+        adata
+            AnnData object with equivalent structure to initial AnnData.
+            If None, defaults to the AnnData object used to initialize the model.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData.
+            adata will be ignored if datamodule is provided.
+        indices
+            Indices of cells in adata to use. If None, all cells are used.
+        batch_size
+            Minibatch size for data loading into model.
+            Defaults to scvi.settings.batch_size.
+        deterministic
+            Makes model fully deterministic (e.g., no sampling in the bottleneck).
+
+        Yields
+        ------
+        dict[str, Any]
+            Inference outputs for each batch, containing latent variables and
+            other encoder outputs.
+
+        Notes
+        -----
+        This method processes data through only the encoder (inference) component
+        of the model, without running the decoder. The calling function should handle
+        processing and aggregation of the yielded outputs.
+
+        When deterministic=True, the model operates without stochastic sampling,
+        which is useful for reproducible analysis.
+
+        Examples
+        --------
+        >>> import anndata as ad
+        >>> # Process data through encoder and aggregate results
+        >>> store = []
+        >>> for inference_outputs in model.iterate_onencoded_input(
+        ...     adata=adata, deterministic=True
+        ... ):
+        ...     store.append(inference_outputs["qzm"].detach().cpu())
+        >>> latents = torch.cat(store, dim=0).numpy()
+        >>> print(latents.shape)  # (n_cells, n_latent)
+        """
+        if datamodule is None:
+            adata = self._validate_anndata(adata)
+            data_loader = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
+        else:
+            datamodule.setup(stage="predict")
+            data_loader = datamodule.predict_dataloader()
+
+        try:
+            if deterministic:
+                self.module.fully_deterministic = True
+            for tensors in tqdm(data_loader, mininterval=5.0):
+                outputs = self.module.inference(**self.module._get_inference_input(tensors))
+                yield outputs
+        except Exception as e:
+            self.module.fully_deterministic = False
+            raise e
+        finally:
+            self.module.fully_deterministic = False
+
+    @torch.inference_mode()
+    def generate_sparse_latent_representation(
+        self,
+        adata: AnnData | None = None,
+        datamodule: LightningDataModule | None = None,
+        indices: Sequence[int] | None = None,
+        batch_size: int | None = None,
+        zero_threshold: float = 0.,
+        **kwargs: Any,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Iterate over the data and generate the sparse latent representation for each cell.
+
+        This method computes the sparse latent representation by applying sparsity
+        constraints to the latent variables. The sparsity is controlled by the model's sparsity configuration.
+
+        Parameters
+        ----------
+        adata
+            AnnData object with observations. If None, uses the AnnData object
+            from model setup.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if datamodule is provided.
+        indices
+            Indices of cells to include. If None, all cells are used.
+        batch_size
+            Minibatch size for data loading. If None, uses the full data.
+        zero_threshold
+            Threshold for zeroing out the latent variables. Exact zero by default.
+        **kwargs
+            Additional keyword arguments passed to the iteration method.
+
+        Returns
+        -------
+        generator[tuple[sparse.csr_matrix, sparse.csr_matrix]]
+        returns a generator of (sparse latent means, sparse latent variances) for each cell.
+        Both are scipy sparse matrices in CSR format.
+        """
+        self._check_if_trained(warn=False)
+
+        for inference_outputs in self.iterate_on_encoded_input(
+            adata=adata,
+            datamodule=datamodule,
+            deterministic=True,
+            indices=indices,
+            batch_size=batch_size,
+            **kwargs,
+        ):
+            qz_m = inference_outputs[MODULE_KEYS.QZM_KEY]
+            qz_v = inference_outputs[MODULE_KEYS.QZV_KEY]
+            if zero_threshold > 0.:
+                qz_m.masked_fill_(qz_m < zero_threshold, 0.)
+            qz_v.masked_fill_(qz_m  == 0., 0.)
+            qz_m = qz_m.detach().cpu().numpy(force=True)
+            qz_v = qz_v.detach().cpu().numpy(force=True)
+            qz_m = sparse.csr_matrix(qz_m)
+            qz_v = sparse.csr_matrix(qz_v)
+
+            yield qz_m, qz_v
+
+    @torch.inference_mode()
+    def get_sparse_latent_representation(
+        self,
+        adata: AnnData | None = None,
+        datamodule: LightningDataModule | None = None,
+        indices: Sequence[int] | None = None,
+        batch_size: int | None = None,
+        zero_threshold: float = 0.,
+        return_dist: bool = False,
+        **kwargs: Any,
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
+        """Return the sparse latent representation for each cell.
+
+        This method computes the sparse latent representation by applying sparsity
+        constraints to the latent variables. The sparsity is controlled by the model's sparsity configuration.
+
+        Parameters
+        ----------
+        adata
+            AnnData object with observations. If None, uses the AnnData object
+            from model setup.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if datamodule is provided.
+        indices
+            Indices of cells to include. If None, all cells are used.
+        batch_size
+            Minibatch size for data loading. If None, uses the full data.
+        zero_threshold
+            Threshold for zeroing out the latent variables. Exact zero by default.
+        return_dist
+            Whether to return both mean and variance of the latent distribution.
+            If False, only returns the mean.
+        **kwargs
+            Additional keyword arguments passed to the iteration method.
+
+        Returns
+        -------
+        sparse.csr_matrix | tuple[sparse.csr_matrix, sparse.csr_matrix]
+            If return_dist=False, returns sparse matrix of latent means.
+            If return_dist=True, returns tuple of (sparse latent means, sparse latent variances).
+        """
+        self._check_if_trained(warn=False)
+
+        output = []
+        for qz_m, qz_v in self.generate_sparse_latent_representation(
+            adata=adata,
+            datamodule=datamodule,
+            indices=indices,
+            batch_size=batch_size,
+            zero_threshold=zero_threshold,
+            **kwargs,
+        ):
+            output.append([qz_m, qz_v])
+
+        output = list(zip(*output, strict=False))
+        output = [sparse.vstack(output[i]).tocsr() for i in range(len(output))]
+
+        if return_dist:
+            return output[0], output[1]
+        else:
+            return output[0]
