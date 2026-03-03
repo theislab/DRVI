@@ -28,7 +28,8 @@ Unsupervised Deep Disentangled Representation of Single-Cell Omics
 Please refer to the [documentation][]. In particular, the
 
 - [Tutorials][], specially
-    - [A demo](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html) of how to train DRVI and interpret the latent dimensions.
+    - [Train DRVI and interpret the latent dimensions](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/general_pipeline.ipynb)
+    - [Mapping query data into a DRVI reference](https://drvi.readthedocs.io/latest/tutorials/external/query_to_reference_mapping.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/query_to_reference_mapping.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
@@ -105,3 +106,4 @@ Code, notebooks, and instructions to reproduce the results from the paper are av
 [pypi]: https://pypi.org/project/drvi-py
 [tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
 [reproducibility repository]: https://github.com/theislab/drvi_reproducibility
+[open-in-colab]: https://colab.research.google.com/assets/colab-badge.svg
