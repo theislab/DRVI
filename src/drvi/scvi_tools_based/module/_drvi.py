@@ -19,6 +19,7 @@ from drvi.nn_modules.noise_model import (
 from drvi.nn_modules.prior import StandardPrior
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
 from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
+from drvi.scvi_tools_based.module._metrics import StreamingPairwiseMI
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
@@ -127,6 +128,7 @@ class DRVIModule(BaseModuleClass):
         self,
         n_input: int,
         n_latent: int = 32,
+        n_labels: int = 1,
         n_split_latent: int | None = -1,
         split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
         split_method: Literal["split", "power", "split_map", "split_diag"] | str = "split_map",
@@ -167,6 +169,7 @@ class DRVIModule(BaseModuleClass):
     ) -> None:
         super().__init__()
         self.n_latent = n_latent
+        self.n_labels = n_labels
         self.encoder_dims = encoder_dims
         self.decoder_dims = decoder_dims
         if n_split_latent is None or n_split_latent == -1:
@@ -248,6 +251,7 @@ class DRVIModule(BaseModuleClass):
             **(extra_decoder_kwargs or {}),
         )
 
+        self._setup_mi_metrics(n_latent, n_labels)
         self.prior = self._construct_prior(prior)
         self.inspect_mode = False
 
@@ -658,6 +662,33 @@ class DRVIModule(BaseModuleClass):
         """Get KL divergence term for z."""
         return self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=-1)
 
+    def _setup_mi_metrics(self, n_latent: int, n_labels: int) -> None:
+        """Setup MI metrics."""
+        # MI metrics — one accumulator per split (train vs val).
+        # Only initialised when there are actual distinct labels.
+        if n_labels > 1:
+            self.train_mi = StreamingPairwiseMI(n_latent=n_latent, n_label=n_labels)
+            self.val_mi = StreamingPairwiseMI(n_latent=n_latent, n_label=n_labels)
+        else:
+            self.train_mi = None
+            self.val_mi = None
+
+    def _streaming_mi_step(
+        self,
+        tensors: TensorDict,
+        inference_outputs: dict[str, Any],
+    ) -> None:
+        """Compute MI."""
+        if self.n_labels > 1:
+            labels = tensors[REGISTRY_KEYS.LABELS_KEY]
+            if labels is not None:
+                z = inference_outputs[MODULE_KEYS.Z_KEY]
+                labels_flat = torch.clamp(labels.view(-1).long(), 0, self.n_labels - 1)
+                # Select the metric accumulator based on the module training mode.
+                mi_metric = self.train_mi if self.training else self.val_mi
+                if mi_metric is not None:
+                    mi_metric.update(z, labels_flat)
+
     def loss(
         self,
         tensors: TensorDict,
@@ -701,6 +732,8 @@ class DRVIModule(BaseModuleClass):
         weighted_kl_local = kl_weight * kl_local_for_warmup + kl_local_no_warmup
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
+
+        self._streaming_mi_step(tensors, inference_outputs)
 
         kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z}
         reconstruction_loss = {MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss}

@@ -412,3 +412,14 @@ class TestDRVIModel:
                             covariate_modeling_strategy=covariate_modeling_strategy,
                             data_kwargs=dict(batch_key=batch_key),  # noqa: C408
                         )
+
+    def test_mi_metric_tracking(self, base_adata):
+        """Test that MI metric is correctly tracked in the history."""
+        adata = base_adata.copy()
+        DRVI.setup_anndata(adata, labels_key="cell_type")
+        model = DRVI(adata, n_latent=5)
+        model.train(max_epochs=2, accelerator="cpu", log_every_n_steps=1)
+        
+        history = model.history
+        found_mi = any("mi_train" in k for k in history.keys())
+        assert found_mi, f"MI metric not found in history keys: {list(history.keys())}"
