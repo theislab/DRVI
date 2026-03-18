@@ -8,10 +8,11 @@ def get_optimal_matching_sum(score_matrix: np.ndarray) -> float:
     """
     Finds the optimal 1-to-1 matching to maximize the sum of scores.
     """
+    n_label = score_matrix.shape[1]
     cost_matrix = -score_matrix
     row_ind, col_ind = linear_sum_assignment(cost_matrix)
     matched_scores = score_matrix[row_ind, col_ind]
-    return matched_scores.sum()
+    return matched_scores.sum() / n_label
 
 
 class StreamingPairwiseMI(Metric):
@@ -90,33 +91,51 @@ class StreamingPairwiseMI(Metric):
             self.z_max_prev = self.z_max_curr.clone()
         super().reset()
 
-    def compute(self, epsilon: float = 1e-8):
-        """
-        Computes the optimal Matching sum of normalized Mutual Information across pairs of (z, label).
-        """
+    def _pairwise_mi(self, epsilon: float = 1e-8):
         if self.total_samples == 0:
-            return torch.zeros(self.n_latent, device=self.device).sum()
+            return torch.tensor(0.0, device=self.device)
 
-        p_zy = self.counts / self.total_samples
-        p_z = p_zy.sum(dim=2, keepdim=True)
-        p_y_per_z = p_zy.sum(dim=1, keepdim=True)  # [L, 1, n_label]
-        
-        # p_y is the same for all latent dimensions, but we calculate it from the joint
-        # to ensure consistency with p_zy. We use the first latent dimension's marginal.
-        p_y = p_y_per_z[0, 0, :]  # [n_label]
-        h_y = -torch.sum(p_y * torch.log(p_y + epsilon))
-        
-        p_z_p_y = p_z * p_y_per_z
-        mask = p_zy > 0
+        assert self.counts.sum() == self.total_samples * self.n_latent
 
-        mi = torch.zeros_like(p_zy)
-        mi[mask] = p_zy[mask] * torch.log(p_zy[mask] / (p_z_p_y[mask] + epsilon))
+        # 1. P(Z=b, Y_j=1): Prob of falling in bin 'b' AND being class 'j'
+        p_z_y1 = self.counts / self.total_samples  # Shape: [n_latent, n_bins, n_label]
+        
+        # 2. P(Z=b): Prob of falling in bin 'b'. 
+        # Because labels are one-hot (mutually exclusive), summing across labels gives the total bin count.
+        p_z = p_z_y1.sum(dim=2, keepdim=True)  # Shape: [n_latent, n_bins, 1]
+        
+        # 3. P(Z=b, Y_j=0): Prob of falling in bin 'b' AND NOT being class 'j'
+        p_z_y0 = p_z - p_z_y1  # Shape: [n_latent, n_bins, n_label]
 
-        # Sum over bins ONLY to get [n_latent, n_label] matrix
-        mi_matrix = mi.sum(dim=1) 
+        # 4. P(Y_j=1) and P(Y_j=0): Marginal probability of the classes
+        # Summing across bins gives the total class probabilities
+        p_y1 = p_z_y1.sum(dim=1)  # Shape: [n_latent, n_label]
+        p_y0 = 1.0 - p_y1         # Shape: [n_latent, n_label]
         
-        # Normalize the matrix by the entropy of Y
-        normalized_mi_matrix = mi_matrix / (h_y + epsilon)
+        # --- Calculate Entropies ---
+        # We use torch.xlogy(x, y) which safely evaluates to 0 if x = 0.
         
-        # Apply the matching function
-        return get_optimal_matching_sum(normalized_mi_matrix.detach().cpu().numpy())
+        # H(Z) = - sum_b P(z=b) * log(P(z=b))
+        h_z = -torch.xlogy(p_z, p_z).sum(dim=1)  # Shape: [n_latent, 1]
+        
+        # H(Y_j) = - ( P(y=1)log(P(y=1)) + P(y=0)log(P(y=0)) )
+        h_y = -(torch.xlogy(p_y1, p_y1) + torch.xlogy(p_y0, p_y0))  # Shape: [n_latent, n_label]
+        
+        # H(Z, Y_j) = - sum_b ( P(z=b, y=1)log(P(z=b, y=1)) + P(z=b, y=0)log(P(z=b, y=0)) )
+        h_zy = -(torch.xlogy(p_z_y1, p_z_y1) + torch.xlogy(p_z_y0, p_z_y0)).sum(dim=1) # Shape: [n_latent, n_label]
+        
+        # --- Calculate Mutual Information ---
+        # MI(Z; Y) = H(Z) + H(Y) - H(Z, Y)
+        mi = h_z + h_y - h_zy
+        
+        # Guard against microscopic negative values caused by float32/float64 arithmetic limits
+        mi = torch.clamp(mi, min=0.0) / (h_y + epsilon)
+        
+        return mi.detach().cpu().numpy()
+
+    def compute(self):
+        """
+        Computes the One-vs-Rest (Binary) Normalized Mutual Information 
+        for each latent dimension against each individual label class.
+        """
+        return get_optimal_matching_sum(self._pairwise_mi())
