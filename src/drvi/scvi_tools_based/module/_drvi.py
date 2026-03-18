@@ -667,11 +667,9 @@ class DRVIModule(BaseModuleClass):
         # MI metrics — one accumulator per split (train vs val).
         # Only initialised when there are actual distinct labels.
         if n_labels > 1:
-            self.train_mi = StreamingPairwiseMI(n_latent=n_latent, n_label=n_labels)
-            self.val_mi = StreamingPairwiseMI(n_latent=n_latent, n_label=n_labels)
+            self.mi_metric = StreamingPairwiseMI(n_latent=n_latent, n_label=n_labels)
         else:
-            self.train_mi = None
-            self.val_mi = None
+            self.mi_metric = None
 
     def _streaming_mi_step(
         self,
@@ -684,10 +682,8 @@ class DRVIModule(BaseModuleClass):
             if labels is not None:
                 z = inference_outputs[MODULE_KEYS.Z_KEY]
                 labels_flat = torch.clamp(labels.view(-1).long(), 0, self.n_labels - 1)
-                # Select the metric accumulator based on the module training mode.
-                mi_metric = self.train_mi if self.training else self.val_mi
-                if mi_metric is not None:
-                    mi_metric.update(z, labels_flat)
+                if self.mi_metric is not None:
+                    self.mi_metric.update(z, labels_flat, is_train=self.training)
 
     def loss(
         self,

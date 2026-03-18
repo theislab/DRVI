@@ -15,29 +15,43 @@ class DRVITrainingPlan(TrainingPlan):
         super().__init__(module=module, **kwargs)
 
     def on_train_epoch_end(self):
-        if getattr(self.module, "train_mi", None) is not None:
-            mi_val = self.module.train_mi.compute()
-            self.log(
-                "mi_train",
-                mi_val,
+        if getattr(self.module, "mi_metric", None) is not None:
+            mi_metrics = self.module.mi_metric.compute(is_train=True)
+            self.log_dict(
+                {f"{k}_train": v for k, v in mi_metrics.items()},
                 on_step=False,
                 on_epoch=True,
-                prog_bar=True,
+                prog_bar=False,
                 sync_dist=self.use_sync_dist,
             )
-            self.module.train_mi.reset()
+            self.log(
+                "lms_smi_train",
+                mi_metrics["LMS_SMI"],
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=self.use_sync_dist,
+            )
+            self.module.mi_metric.reset_z_bounds()  # reset after train, as validation is done first
+            self.module.mi_metric.reset()
         super().on_train_epoch_end()
 
     def on_validation_epoch_end(self):
-        if getattr(self.module, "val_mi", None) is not None:
-            mi_val = self.module.val_mi.compute()
+        if getattr(self.module, "mi_metric", None) is not None:
+            mi_metrics = self.module.mi_metric.compute(is_train=False)
+            self.log_dict(
+                {f"{k}_validation": v for k, v in mi_metrics.items()},
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=self.use_sync_dist,
+            )
             self.log(
-                "mi_validation",
-                mi_val,
+                "lms_smi_validation",
+                mi_metrics["LMS_SMI"],
                 on_step=False,
                 on_epoch=True,
                 prog_bar=True,
                 sync_dist=self.use_sync_dist,
             )
-            self.module.val_mi.reset()
         super().on_validation_epoch_end()
