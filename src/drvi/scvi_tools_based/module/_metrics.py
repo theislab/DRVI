@@ -1,7 +1,7 @@
-import torch
 import numpy as np
-from torchmetrics import Metric
+import torch
 from scipy.optimize import linear_sum_assignment
+from torchmetrics import Metric
 
 
 def latent_matching_score(train_score_matrix: np.ndarray, val_score_matrix: np.ndarray):
@@ -124,12 +124,16 @@ class StreamingPairwiseMI(Metric):
 
         # Contingency matrix and sample count — reset each epoch.
         self.add_state(
-            "train_counts", default=torch.zeros((self.n_latent, n_bins, n_label), dtype=torch.float64), dist_reduce_fx="sum"
+            "train_counts",
+            default=torch.zeros((self.n_latent, n_bins, n_label), dtype=torch.float64),
+            dist_reduce_fx="sum",
         )
         self.add_state("train_total_samples", default=torch.tensor(0.0, dtype=torch.float64), dist_reduce_fx="sum")
 
         self.add_state(
-            "val_counts", default=torch.zeros((self.n_latent, n_bins, n_label), dtype=torch.float64), dist_reduce_fx="sum"
+            "val_counts",
+            default=torch.zeros((self.n_latent, n_bins, n_label), dtype=torch.float64),
+            dist_reduce_fx="sum",
         )
         self.add_state("val_total_samples", default=torch.tensor(0.0, dtype=torch.float64), dist_reduce_fx="sum")
 

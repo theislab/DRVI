@@ -18,8 +18,8 @@ from drvi.nn_modules.noise_model import (
 )
 from drvi.nn_modules.prior import StandardPrior
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
-from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
 from drvi.scvi_tools_based.module._metrics import LatentStats, StreamingPairwiseMI
+from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence

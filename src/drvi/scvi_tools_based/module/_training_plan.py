@@ -1,5 +1,5 @@
-from scvi.train import TrainingPlan
 from scvi.module.base import BaseModuleClass
+from scvi.train import TrainingPlan
 
 
 class DRVITrainingPlan(TrainingPlan):
