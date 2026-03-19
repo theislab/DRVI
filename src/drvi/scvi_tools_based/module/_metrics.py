@@ -59,14 +59,12 @@ class StreamingPairwiseMI(Metric):
         # Survive reset(), so they are available at the start of the next epoch.
         self.register_buffer("z_min_prev", torch.full((n_latent,), -5.0))
         self.register_buffer("z_max_prev", torch.full((n_latent,), 5.0))
-        self.register_buffer("z_min_curr", torch.full((n_latent,), float('inf')))
-        self.register_buffer("z_max_curr", torch.full((n_latent,), float('-inf')))
 
         # Epoch-level states — these ARE reset each epoch.
         # They accumulate the current epoch's observed min/max so that reset()
         # can promote them to z_min_prev / z_max_prev for the next epoch.
-        # self.add_state("z_min_curr", default=torch.full((n_latent,), float('inf')), dist_reduce_fx="min")
-        # self.add_state("z_max_curr", default=torch.full((n_latent,), float('-inf')), dist_reduce_fx="max")
+        self.add_state("z_min_curr", default=torch.full((n_latent,), float('inf')), dist_reduce_fx="min")
+        self.add_state("z_max_curr", default=torch.full((n_latent,), float('-inf')), dist_reduce_fx="max")
 
         # Contingency matrix and sample count — reset each epoch.
         self.add_state("train_counts", default=torch.zeros((n_latent, n_bins, n_label), dtype=torch.float64), dist_reduce_fx="sum")
@@ -114,9 +112,10 @@ class StreamingPairwiseMI(Metric):
             self.val_total_samples += B
             self.val_counts += flat_counts.view(L, self.n_bins, self.n_label)
 
-    def reset_z_bounds(self):
+    def reset(self):
         self.z_min_prev = self.z_min_curr.clone()
         self.z_max_prev = self.z_max_curr.clone()
+        super().reset()
 
     def _pairwise_mi(self, counts, total_samples, epsilon: float = 1e-8):
         if total_samples == 0:
@@ -160,6 +159,12 @@ class StreamingPairwiseMI(Metric):
         
         return mi.detach().cpu().numpy()
 
+    def _vanished_stats(self, threshold=0.5):
+        non_vanished_neg = self.z_min_prev < -threshold
+        non_vanished_pos = self.z_max_prev > threshold
+        non_vanished = non_vanished_pos | non_vanished_neg
+        return non_vanished.sum(), non_vanished_pos.sum(), non_vanished_neg.sum()
+
     def compute(self, is_train: bool):
         """
         Computes the One-vs-Rest (Binary) Normalized Mutual Information 
@@ -168,16 +173,23 @@ class StreamingPairwiseMI(Metric):
         """
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
 
+        vanished_stats = self._vanished_stats()
+        output = {
+            "non_vanished": vanished_stats[0],
+            "non_vanished_pos": vanished_stats[1],
+            "non_vanished_neg": vanished_stats[2],
+        }
         if is_train:
-            return {
+            output.update({
                 "LMS_SMI": latent_matching_score(train_score_matrix, train_score_matrix),
                 "MSAS_SMI": most_similar_averaging_score(train_score_matrix, train_score_matrix),
                 "MSGS_SMI": most_similar_gap_score(train_score_matrix, train_score_matrix)
-            }
+            })
         else:
             val_score_matrix = self._pairwise_mi(self.val_counts, self.val_total_samples)
-            return {
+            output.update({
                 "LMS_SMI": latent_matching_score(train_score_matrix, val_score_matrix),
                 "MSAS_SMI": most_similar_averaging_score(train_score_matrix, val_score_matrix),
                 "MSGS_SMI": most_similar_gap_score(train_score_matrix, val_score_matrix)
-            }
+            })
+        return output

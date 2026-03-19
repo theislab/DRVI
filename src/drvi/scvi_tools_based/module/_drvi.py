@@ -680,7 +680,7 @@ class DRVIModule(BaseModuleClass):
         if self.n_labels > 1:
             labels = tensors[REGISTRY_KEYS.LABELS_KEY]
             if labels is not None:
-                z = inference_outputs[MODULE_KEYS.Z_KEY]
+                z = inference_outputs[MODULE_KEYS.QZM_KEY]
                 labels_flat = torch.clamp(labels.view(-1).long(), 0, self.n_labels - 1)
                 if self.mi_metric is not None:
                     self.mi_metric.update(z, labels_flat, is_train=self.training)

@@ -32,8 +32,7 @@ class DRVITrainingPlan(TrainingPlan):
                 prog_bar=False,
                 sync_dist=self.use_sync_dist,
             )
-            self.module.mi_metric.reset_z_bounds()  # reset after train, as validation is done first
-            self.module.mi_metric.reset()
+            self.module.mi_metric.reset()  # reset here, as on_validation_epoch_end is done first
         super().on_train_epoch_end()
 
     def on_validation_epoch_end(self):
