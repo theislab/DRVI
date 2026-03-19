@@ -7,6 +7,7 @@ from torchmetrics import Metric
 def latent_matching_score(train_score_matrix: np.ndarray, val_score_matrix: np.ndarray):
     """
     Finds the optimal 1-to-1 matching to maximize the sum of scores.
+
     Returns the row and column indices.
     """
     cost_matrix = -train_score_matrix
@@ -61,16 +62,12 @@ class LatentStats(Metric):
         self.add_state("z_max_accum", default=torch.full((n_latent,), float("-inf")), dist_reduce_fx="max")
 
     def update(self, z: torch.Tensor):
-        """
-        Updates the running min/max for the current epoch.
-        """
+        """Updates the running min/max for the current epoch."""
         self.z_min_accum = torch.minimum(self.z_min_accum, z.min(dim=0).values.detach())
         self.z_max_accum = torch.maximum(self.z_max_accum, z.max(dim=0).values.detach())
 
     def reset(self):
-        """
-        Promotes current epoch's min/max to be the bounds for the next epoch.
-        """
+        """Promotes current epoch's min/max to be the bounds for the next epoch."""
         self.z_min_prev = self.z_min_accum.clone()
         self.z_max_prev = self.z_max_accum.clone()
         super().reset()
@@ -79,9 +76,7 @@ class LatentStats(Metric):
         return self.z_min_prev, self.z_max_prev
 
     def compute(self):
-        """
-        Computes vanished statistics based on the previous epoch's bounds.
-        """
+        """Computes vanished statistics based on the previous epoch's bounds."""
         non_vanished_neg = self.z_min_prev < -self.vanished_threshold
         non_vanished_pos = self.z_max_prev > self.vanished_threshold
         non_vanished = non_vanished_pos | non_vanished_neg
@@ -215,8 +210,9 @@ class StreamingPairwiseMI(Metric):
 
     def compute(self, is_train: bool):
         """
-        Computes the One-vs-Rest (Binary) Normalized Mutual Information
-        for each latent dimension against each individual label class.
+        Computes the One-vs-Rest (Binary) Normalized Mutual Information.
+
+        This is calculated for each latent dimension against each individual label class.
         Finds the best matching using the training data and applies it.
         """
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
