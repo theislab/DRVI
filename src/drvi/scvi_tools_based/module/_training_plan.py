@@ -15,6 +15,17 @@ class DRVITrainingPlan(TrainingPlan):
         super().__init__(module=module, **kwargs)
 
     def on_train_epoch_end(self):
+        if getattr(self.module, "latent_stats", None) is not None:
+            latent_metrics = self.module.latent_stats.compute()
+            self.log_dict(
+                {f"{k}_train": v for k, v in latent_metrics.items()},
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=self.use_sync_dist,
+            )
+            self.module.latent_stats.reset()
+
         if getattr(self.module, "mi_metric", None) is not None:
             mi_metrics = self.module.mi_metric.compute(is_train=True)
             self.log_dict(
@@ -36,6 +47,16 @@ class DRVITrainingPlan(TrainingPlan):
         super().on_train_epoch_end()
 
     def on_validation_epoch_end(self):
+        if getattr(self.module, "latent_stats", None) is not None:
+            latent_metrics = self.module.latent_stats.compute()
+            self.log_dict(
+                {f"{k}_validation": v for k, v in latent_metrics.items()},
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=self.use_sync_dist,
+            )
+
         if getattr(self.module, "mi_metric", None) is not None:
             mi_metrics = self.module.mi_metric.compute(is_train=False)
             self.log_dict(
