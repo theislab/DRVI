@@ -37,6 +37,8 @@ class DRVIModule(BaseModuleClass):
         Number of input genes.
     n_latent
         Dimensionality of the latent space.
+    n_labels
+        Number of ground-truth labels. Only used for calculation of metrics during training.
     n_split_latent
         Number of splits in the latent space. -1 means split all dimensions
         (n_split_latent=n_latent).
