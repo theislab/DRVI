@@ -52,8 +52,8 @@ class LatentStats(Metric):
 
         # Persistent buffers — the bounds adopted from the *previous* epoch.
         # Survive reset(), so they are available at the start of the next epoch.
-        self.register_buffer("z_min_prev", torch.full((n_latent,), -5.0))
-        self.register_buffer("z_max_prev", torch.full((n_latent,), 5.0))
+        self.register_buffer("z_min_prev", torch.full((n_latent,), -5.0), persistent=False)
+        self.register_buffer("z_max_prev", torch.full((n_latent,), 5.0), persistent=False)
 
         # Epoch-level states — these ARE reset each epoch.
         # They accumulate the current epoch's observed min/max so that reset()
