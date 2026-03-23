@@ -13,7 +13,7 @@ def set_latent_dimension_stats(
     model: DRVI,
     embed: AnnData,
     inplace: bool = True,
-    vanished_threshold: float = 0.1,
+    vanished_threshold: float = 0.5,
 ) -> AnnData | None:
     """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
 

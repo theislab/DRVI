@@ -106,14 +106,15 @@ class InterpretabilityMixin:
                 raise NotImplementedError("Only logsumexp and sum aggregations are supported for now.")
 
             if directional:
-                # effect_tensor: n_samples x n_splits x n_genes
-                effect_tensor = effect_tensor.unsqueeze(1).expand(-1, 2, -1, -1)  # n_samples x 2 x n_splits x n_genes
-                # Create masks for positive and negative values: n_samples x 2 x n_splits
-                pos_neg_mask = torch.stack([(latent > 0).float(), (latent < 0).float()], dim=1).unsqueeze(
-                    -1
-                )  # n_samples x 2 x n_latent_dims x 1
-
-                effect_tensor = effect_tensor * pos_neg_mask
+                pos_mask = (latent > 0).float().unsqueeze(-1)
+                neg_mask = (latent < 0).float().unsqueeze(-1)
+                effect_tensor = torch.stack(
+                    [
+                        effect_tensor * pos_mask,
+                        effect_tensor * neg_mask,
+                    ],
+                    dim=1,
+                )  # n_samples x 2 x n_splits x n_genes
 
             yield effect_tensor, latent
 
@@ -199,7 +200,7 @@ class InterpretabilityMixin:
             effect_share = effect_share.detach().cpu()
 
             if aggregate_over_cells:
-                effect_share = effect_share.sum(dim=0)
+                effect_share = effect_share.sum(dim=0).to_dense()
                 store = effect_share if store is None else store + effect_share
             else:
                 store.append(effect_share)
@@ -213,6 +214,8 @@ class InterpretabilityMixin:
     def set_latent_dimension_stats(
         self,
         embed: AnnData,
+        adata: AnnData | None = None,
+        datamodule: LightningDataModule | None = None,
         vanished_threshold: float = 0.5,
     ) -> AnnData | None:
         """Set the latent dimension statistics of a DRVI embedding into var of an AnnData.
@@ -226,6 +229,11 @@ class InterpretabilityMixin:
         embed
             AnnData object containing the latent representation (embedding) of the model.
             The latent dimensions should be in the `.X` attribute.
+        adata
+            AnnData object with equivalent structure to initial AnnData.
+            If None, defaults to the AnnData object used to initialize the model.
+        datamodule
+            LightningDataModule object with equivalent structure to initial AnnData. adata will be ignored if
         vanished_threshold
             Threshold for determining if a latent dimension has "vanished" (become inactive).
             Dimensions with max absolute values below this threshold are marked as vanished.
@@ -262,7 +270,7 @@ class InterpretabilityMixin:
 
         embed.var["reconstruction_effect"] = 0.0
         embed.var.loc[embed.var.sort_values("original_dim_id").index, "reconstruction_effect"] = (
-            self.get_reconstruction_effect_of_each_split()
+            self.get_reconstruction_effect_of_each_split(adata=adata, datamodule=datamodule)
         )
         embed.var["order"] = (-embed.var["reconstruction_effect"]).argsort().argsort()
 
@@ -385,7 +393,8 @@ class InterpretabilityMixin:
         ):
             for aggregation in aggregations:
                 if aggregation == "max":
-                    effect_tensor_agg = effect_tensor.amax(dim=0).detach().cpu().numpy(force=True)
+                    # We use to_dense() for now as sparse tensors do not support amax()
+                    effect_tensor_agg = effect_tensor.to_dense().amax(dim=0).detach().cpu().numpy(force=True)
                     if i == 0:
                         store[aggregation] = {"result": effect_tensor_agg}
                     else:
@@ -405,7 +414,7 @@ class InterpretabilityMixin:
                     if aggregation == "exp_weighted_mean":
                         weights = torch.exp(weights) - 1.0
                     # Calculate weighted mean
-                    effect_tensor_agg = (effect_tensor * weights).sum(dim=0).detach().cpu().numpy(force=True)
+                    effect_tensor_agg = (effect_tensor * weights).sum(dim=0).to_dense().detach().cpu().numpy(force=True)
                     sum_weights = weights.sum(dim=0).detach().cpu().numpy(force=True)
                     # Store results
                     if i == 0:

@@ -11,14 +11,28 @@ and this project adheres to [Semantic Versioning][].
 ## [Unreleased]
 
 ### Added
+- latent stat (n_vanished) logs during training
+- Disentanglement metric logs during training
+
+## [0.2.4] - 2026-03-02
+
+### Added
+- Allow sparse input as X
+- Allow generating memory efficient sparse tensors as latent
+
+## [0.2.3] - 2026-02-27
+
+### Added
 - Added within distribution interpretability
 - An efficient implementation of out-of-distribution interpretability is added
 - plotting and getting relevant genes is now possible in DRVI model interface.
 - Setting latent dimension stats is now done in model interface. Previous util functions still work, but will show a deprecation warning.
+- Add tutorial for query to reference mapping
 
 ### Changed
-- The default value for vanished threshold in new the interface of `set_latent_dimension_stats` is 1.0 (previously 0.1).
+- The default value for vanished threshold in new the interface of `set_latent_dimension_stats` is 0.5 (previously 0.1).
 - Interpretability scores for the other direction of a non-vanished dimension is not shown if that direction is meaningless.
+- Main tutorial updated with the new interpretability interface
 
 ## [0.2.2] - 2026-02-11
 
