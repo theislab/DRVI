@@ -18,6 +18,7 @@ from drvi.nn_modules.noise_model import (
 )
 from drvi.nn_modules.prior import StandardPrior
 from drvi.scvi_tools_based.module._constants import MODULE_KEYS
+from drvi.scvi_tools_based.module._metrics import LatentStats, StreamingPairwiseMI
 from drvi.scvi_tools_based.nn import DecoderDRVI, Encoder
 
 if TYPE_CHECKING:
@@ -36,6 +37,8 @@ class DRVIModule(BaseModuleClass):
         Number of input genes.
     n_latent
         Dimensionality of the latent space.
+    n_labels
+        Number of ground-truth labels. Only used for calculation of metrics during training.
     n_split_latent
         Number of splits in the latent space. -1 means split all dimensions
         (n_split_latent=n_latent).
@@ -90,10 +93,11 @@ class DRVIModule(BaseModuleClass):
         Dropout rate to apply to each of the decoder hidden layers.
     gene_likelihood
         Gene likelihood model. Options include:
-        - "normal", "normal_v", "normal_sv" : Normal distributions
         - "poisson" : Poisson distributions
         - "nb" : Negative binomial distributions
         - "pnb": Log negative binomial distributions
+        - "normal" : Normal distributions
+        - "normal_unit_var" : Normal distributions with unit variance
     dispersion
         Dispersion parameter modeling strategy for negative binomial distributions.
         Options:
@@ -126,6 +130,7 @@ class DRVIModule(BaseModuleClass):
         self,
         n_input: int,
         n_latent: int = 32,
+        n_labels: int = 1,
         n_split_latent: int | None = -1,
         split_aggregation: Literal["sum", "logsumexp", "max"] = "logsumexp",
         split_method: Literal["split", "power", "split_map", "split_diag"] | str = "split_map",
@@ -153,7 +158,7 @@ class DRVIModule(BaseModuleClass):
         input_dropout_rate: float = 0.0,
         encoder_dropout_rate: float = 0.1,
         decoder_dropout_rate: float = 0.0,
-        gene_likelihood: Literal["normal", "normal_v", "normal_sv", "poisson", "nb", "pnb"] = "pnb",
+        gene_likelihood: Literal["pnb", "nb", "poisson", "normal", "normal_unit_var"] = "pnb",
         dispersion: Literal["gene", "gene-batch", "gene-cell"] = "gene",
         prior: Literal["normal"] = "normal",
         var_activation: Callable | Literal["exp", "pow2", "2sig"] = "exp",
@@ -166,6 +171,7 @@ class DRVIModule(BaseModuleClass):
     ) -> None:
         super().__init__()
         self.n_latent = n_latent
+        self.n_labels = n_labels
         self.encoder_dims = encoder_dims
         self.decoder_dims = decoder_dims
         if n_split_latent is None or n_split_latent == -1:
@@ -247,6 +253,7 @@ class DRVIModule(BaseModuleClass):
             **(extra_decoder_kwargs or {}),
         )
 
+        self._setup_streaming_metrics(n_latent, n_labels)
         self.prior = self._construct_prior(prior)
         self.inspect_mode = False
 
@@ -326,6 +333,7 @@ class DRVIModule(BaseModuleClass):
         dict
             Dictionary with parsed input data.
         """
+        tensors[REGISTRY_KEYS.X_KEY] = tensors[REGISTRY_KEYS.X_KEY].to_dense()
         x = tensors[REGISTRY_KEYS.X_KEY]
 
         batch_index = tensors.get(REGISTRY_KEYS.BATCH_KEY)
@@ -656,6 +664,30 @@ class DRVIModule(BaseModuleClass):
         """Get KL divergence term for z."""
         return self.prior.kl(Normal(qz_m, torch.sqrt(qz_v))).sum(dim=-1)
 
+    def _setup_streaming_metrics(self, n_latent: int, n_labels: int) -> None:
+        """Setup Latent stats and MI metrics."""
+        self.latent_stats = LatentStats(n_latent=n_latent)
+        if n_labels > 1:
+            self.mi_metric = StreamingPairwiseMI(latent_stats=self.latent_stats, n_label=n_labels)
+        else:
+            self.mi_metric = None
+
+    def _streaming_metrics_step(
+        self,
+        tensors: TensorDict,
+        inference_outputs: dict[str, Any],
+    ) -> None:
+        """Compute MI."""
+        z = inference_outputs[MODULE_KEYS.QZM_KEY]
+        self.latent_stats.update(z)
+
+        if self.n_labels > 1:
+            labels = tensors[REGISTRY_KEYS.LABELS_KEY]
+            if labels is not None:
+                labels_flat = torch.clamp(labels.view(-1).long(), 0, self.n_labels - 1)
+                if self.mi_metric is not None:
+                    self.mi_metric.update(z, labels_flat, is_train=self.training)
+
     def loss(
         self,
         tensors: TensorDict,
@@ -699,6 +731,8 @@ class DRVIModule(BaseModuleClass):
         weighted_kl_local = kl_weight * kl_local_for_warmup + kl_local_no_warmup
 
         loss = torch.mean(reconst_loss + weighted_kl_local)
+
+        self._streaming_metrics_step(tensors, inference_outputs)
 
         kl_local = {MODULE_KEYS.KL_Z_KEY: kl_divergence_z}
         reconstruction_loss = {MODULE_KEYS.RECONSTRUCTION_LOSS_KEY: reconst_loss}

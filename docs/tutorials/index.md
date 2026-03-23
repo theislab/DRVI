@@ -6,4 +6,5 @@ Our tutorials demonstrate the practical application of DRVI across different use
 :maxdepth: 1
 
 external/general_pipeline
+external/query_to_reference_mapping
 ```

@@ -15,7 +15,7 @@ from scvi.utils import setup_anndata_dsp
 import drvi
 from drvi.scvi_tools_based.data.fields import FixedCategoricalJointObsField
 from drvi.scvi_tools_based.model.base import DRVIArchesMixin, GenerativeMixin, InterpretabilityMixin
-from drvi.scvi_tools_based.module import DRVIModule
+from drvi.scvi_tools_based.module import DRVIModule, DRVITrainingPlan
 
 if TYPE_CHECKING:
     from typing import Any
@@ -66,6 +66,7 @@ class DRVI(
     """
 
     _module_cls = DRVIModule
+    _training_plan_cls = DRVITrainingPlan
     _LATENT_QZM_KEY = _DRVI_LATENT_QZM
     _LATENT_QZV_KEY = _DRVI_LATENT_QZV
     _DEFAULT_CATEGORICAL_EMBEDDING_DIM = 10
@@ -99,6 +100,7 @@ class DRVI(
             n_cats_per_cov=n_cats_per_cov,
             n_continuous_cov=n_continuous_cov,
             categorical_covariate_dims=categorical_covariates_dims,
+            n_labels=self.summary_stats.get("n_labels", 1),
             **model_kwargs,
         )
 
