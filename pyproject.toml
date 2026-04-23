@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "drvi-py"
-version = "0.2.4"
+version = "0.2.5"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -33,19 +33,19 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-  "anndata>=0.10.2,<0.13",
-  "lightning>=2,<2.7",
-  "numpy>=1.16.1,<2.4",
-  "pandas>=1.2,<2.4",
-  "scanpy>=1.9.5,<1.12",
-  "scikit-learn>=1.5.1,<1.8",
-  "scipy>=1.11.3,<1.17",
-  "scvi-tools>=1.0.4,<1.4.2",
+  "anndata>=0.10.2",
+  "lightning>=2",
+  "numpy>=1.16.1",
+  "pandas>=1.2",
+  "scanpy>=1.9.5",
+  "scikit-learn>=1.5.1",
+  "scipy>=1.11.3",
+  "scvi-tools>=1.0.4",
   "session-info2",
-  "torch>=2.1,<2.12",
+  "torch>=2.1",
 ]
 optional-dependencies.tutorials = [
-  "gprofiler-official>=0.3.5,<1.1",
+  "gprofiler-official>=0.3.5",
   "leidenalg",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls

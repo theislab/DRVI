@@ -11,8 +11,14 @@ and this project adheres to [Semantic Versioning][].
 ## [Unreleased]
 
 ### Added
+
+
+## [0.2.5] - 2026-04-21
+
+### Added
 - latent stat (n_vanished) logs during training
 - Disentanglement metric logs during training
+- Relax upper bounds of all dependencies
 
 ## [0.2.4] - 2026-03-02
 
