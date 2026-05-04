@@ -15,7 +15,7 @@ AVAILABLE_METRICS = {
     # More info: https://www.biorxiv.org/content/10.1101/2024.11.06.622266v1.full.pdf lines 985 to 989
     "ASC": spearman_correlataion_score,
     "SPN": nn_alignment_score,
-    "SMI-disc": discrete_mutual_info_score,
+    "SMI": discrete_mutual_info_score,
 }
 
 
@@ -139,7 +139,7 @@ class DiscreteDisentanglementBenchmark:
     >>> benchmark = DiscreteDisentanglementBenchmark(embed, one_hot_target=one_hot)
     """
 
-    version = "v2"
+    version = "v3"
 
     def __init__(
         self,
@@ -147,7 +147,7 @@ class DiscreteDisentanglementBenchmark:
         discrete_target=None,
         one_hot_target=None,
         dim_titles=None,
-        metrics=("SMI-disc", "SPN", "ASC"),
+        metrics=("SMI", "SPN"),
         aggregation_methods=("LMS", "MSAS", "MSGS"),
         additional_metric_params=None,
     ):
