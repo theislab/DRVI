@@ -81,9 +81,9 @@ class LatentStats(Metric):
         non_vanished_pos = self.z_max_prev > self.vanished_threshold
         non_vanished = non_vanished_pos | non_vanished_neg
         return {
-            "non_vanished": non_vanished.sum(),
-            "non_vanished_pos": non_vanished_pos.sum(),
-            "non_vanished_neg": non_vanished_neg.sum(),
+            "non_vanished": non_vanished.sum().item(),
+            "non_vanished_pos": non_vanished_pos.sum().item(),
+            "non_vanished_neg": non_vanished_neg.sum().item(),
         }
 
 
