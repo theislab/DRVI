@@ -1,0 +1,54 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.1, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/amir/projects/drvi
+configfile: pyproject.toml
+plugins: anyio-4.12.1, zarr-3.1.5
+collected 1 item
+
+tests/sae_model/test_model.py F                                          [100%]
+
+=================================== FAILURES ===================================
+______________________ TestSAEModel.test_simple_training _______________________
+tests/sae_model/test_model.py:94: in test_simple_training
+    self._general_test(adata)
+tests/sae_model/test_model.py:76: in _general_test
+    latent = model.get_latent_representation(adata)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv_backup/lib/python3.12/site-packages/torch/utils/_contextlib.py:124: in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv_backup/lib/python3.12/site-packages/scvi/model/base/_vaemixin.py:346: in get_latent_representation
+    qz: Distribution = Normal(qzm, qzv.sqrt())
+                                   ^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'sqrt'
+----------------------------- Captured stdout call -----------------------------
+INFO     Generating sequential column names                                     
+INFO     DRVI: The model has been initialized                                   
+Training:   0%|          | 0/2 [00:00<?, ?it/s]Epoch 1/2:   0%|          | 0/2 [00:00<?, ?it/s]Epoch 1/2:  50%|█████     | 1/2 [00:00<00:00, 22.54it/s, v_num=1, train_loss=25.2]Epoch 2/2:  50%|█████     | 1/2 [00:00<00:00, 20.89it/s, v_num=1, train_loss=25.2]Epoch 2/2: 100%|██████████| 2/2 [00:00<00:00, 28.50it/s, v_num=1, train_loss=21.1]Epoch 2/2: 100%|██████████| 2/2 [00:00<00:00, 28.03it/s, v_num=1, train_loss=21.1]
+----------------------------- Captured stderr call -----------------------------
+INFO: GPU available: True (mps), used: False
+INFO: TPU available: False, using: 0 TPU cores
+INFO: 💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+INFO: `Trainer.fit` stopped: `max_epochs=2` reached.
+------------------------------ Captured log call -------------------------------
+INFO     lightning.pytorch.utilities.rank_zero:setup.py:164 GPU available: True (mps), used: False
+INFO     lightning.pytorch.utilities.rank_zero:setup.py:167 TPU available: False, using: 0 TPU cores
+INFO     lightning.pytorch.utilities.rank_zero:logger_connector.py:91 💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+INFO     lightning.pytorch.utilities.rank_zero:fit_loop.py:192 `Trainer.fit` stopped: `max_epochs=2` reached.
+=============================== warnings summary ===============================
+tests/sae_model/test_model.py::TestSAEModel::test_simple_training
+  /Users/amir/projects/drvi/.venv_backup/lib/python3.12/site-packages/lightning/pytorch/trainer/setup.py:175: GPU available but not used. You can set it by doing `Trainer(accelerator='gpu')`.
+
+tests/sae_model/test_model.py::TestSAEModel::test_simple_training
+  /Users/amir/projects/drvi/.venv_backup/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+
+tests/sae_model/test_model.py::TestSAEModel::test_simple_training
+  /Users/amir/projects/drvi/.venv_backup/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=7` in the `DataLoader` to improve performance.
+
+tests/sae_model/test_model.py::TestSAEModel::test_simple_training
+  /Users/amir/projects/drvi/.venv_backup/lib/python3.12/site-packages/lightning/pytorch/loops/fit_loop.py:317: The number of training batches (8) is smaller than the logging interval Trainer(log_every_n_steps=10). Set a lower value for log_every_n_steps if you want to see logs for the training epoch.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/sae_model/test_model.py::TestSAEModel::test_simple_training - At...
+======================== 1 failed, 4 warnings in 43.98s ========================

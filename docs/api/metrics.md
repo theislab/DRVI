@@ -26,7 +26,7 @@ The following functions represent the similarity functions used in benchmarking:
     :toctree: generated
 
     metrics.nn_alignment_score
-    metrics.local_mutual_info_score
+    metrics.discrete_mutual_info_score
     metrics.spearman_correlataion_score
 ```
 
