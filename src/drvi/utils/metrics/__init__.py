@@ -1,17 +1,15 @@
 from ._aggregation import latent_matching_score, most_similar_averaging_score, most_similar_gap_score
 from ._benchmark import DiscreteDisentanglementBenchmark
 from ._pairwise import (
-    discrete_adjusted_mutual_info_score,
     discrete_scaled_mutual_info_score,
     nn_alignment_score,
-    spearman_correlataion_score,
+    spearman_correlation_score,
 )
 
 __all__ = [
     "nn_alignment_score",
     "discrete_scaled_mutual_info_score",
-    "discrete_adjusted_mutual_info_score",
-    "spearman_correlataion_score",
+    "spearman_correlation_score",
     "most_similar_averaging_score",
     "latent_matching_score",
     "most_similar_gap_score",

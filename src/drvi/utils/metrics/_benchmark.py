@@ -5,19 +5,17 @@ import pandas as pd
 
 from drvi.utils.metrics._aggregation import latent_matching_score, most_similar_averaging_score, most_similar_gap_score
 from drvi.utils.metrics._pairwise import (
-    discrete_adjusted_mutual_info_score,
     discrete_scaled_mutual_info_score,
     nn_alignment_score,
-    spearman_correlataion_score,
+    spearman_correlation_score,
 )
 
 AVAILABLE_METRICS = {
     # ASC is generally unsuitable for discrete targets.
     # More info: https://www.biorxiv.org/content/10.1101/2024.11.06.622266v1.full.pdf lines 985 to 989
-    "ASC": spearman_correlataion_score,
+    "ASC": spearman_correlation_score,
     "SPN": nn_alignment_score,
     "SMI": discrete_scaled_mutual_info_score,
-    "AMI": discrete_adjusted_mutual_info_score,
 }
 
 
@@ -149,7 +147,7 @@ class DiscreteDisentanglementBenchmark:
         discrete_target=None,
         one_hot_target=None,
         dim_titles=None,
-        metrics=("SMI", "SPN", "AMI"),
+        metrics=("SMI", "SPN"),
         aggregation_methods=("LMS", "MSAS", "MSGS"),
         additional_metric_params=None,
     ):
@@ -182,8 +180,9 @@ class DiscreteDisentanglementBenchmark:
         if dim_titles is None:
             dim_titles = [f"dim_{d}" for d in range(embed.shape[1])]
 
-        self.embed = embed.copy()
-        self.one_hot_target = one_hot_target.copy()
+        random_order = np.random.permutation(embed.shape[0])
+        self.embed = embed[random_order].copy()
+        self.one_hot_target = one_hot_target.iloc[random_order].reset_index(drop=True).copy()
         self.dim_titles = dim_titles
         self.metrics = metrics
         self.aggregation_methods = aggregation_methods

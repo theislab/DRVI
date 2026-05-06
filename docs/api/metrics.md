@@ -27,8 +27,7 @@ The following functions represent the similarity functions used in benchmarking:
 
     metrics.nn_alignment_score
     metrics.discrete_scaled_mutual_info_score
-    metrics.discrete_adjusted_mutual_info_score
-    metrics.spearman_correlataion_score
+    metrics.spearman_correlation_score
 ```
 
 The following functions represent the aggregation functions used in benchmarking:

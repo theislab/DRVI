@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.feature_selection import mutual_info_classif
-from sklearn.metrics.cluster import adjusted_mutual_info_score, entropy, mutual_info_score
+from sklearn.metrics.cluster import entropy, mutual_info_score
 from sklearn.preprocessing import KBinsDiscretizer
 
 
@@ -229,73 +229,12 @@ def discrete_scaled_mutual_info_score(
     for j in range(n_targets):
         h_target = entropy(gt_01[:, j])
         for i in range(n_vars):
-            result[i, j] = mutual_info_score(all_vars_discrete[:, i], gt_01[:, j]) / h_target
+                result[i, j] = mutual_info_score(all_vars_discrete[:, i], gt_01[:, j]) / h_target
     return result
 
 
-def discrete_adjusted_mutual_info_score(
-    all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None, n_bins=10
-) -> np.ndarray:
-    """Compute adjusted mutual information scores using discretized continuous variables.
 
-    This function discretizes continuous variables into bins and then computes
-    adjusted mutual information between the discretized variables and categorical
-    ground truth. AMI is adjusted for chance, making it more robust when dealing
-    with clusters of different sizes.
-
-    Parameters
-    ----------
-    all_vars_continues
-        Matrix of continuous variables with shape (n_samples, n_variables).
-        Each column represents a different continuous variable.
-    gt_cat_series
-        Categorical series with ground truth labels.
-    gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
-    n_bins
-        Number of bins to use for discretizing continuous variables.
-        More bins capture finer details but may be more sensitive to noise.
-
-    Returns
-    -------
-    np.ndarray
-        Adjusted mutual information score matrix with shape (n_variables, n_categories).
-        Element [i, j] represents the adjusted mutual information between
-        discretized variable i and category j.
-
-    Notes
-    -----
-    This function uses uniform binning to discretize continuous variables,
-    then computes adjusted mutual information between the discretized variables
-    and categorical ground truth.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> # Simple example: 3 variables, 2 categories
-    >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
-    >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = discrete_adjusted_mutual_info_score(all_vars, gt_cat_series=gt_series, n_bins=2)
-    >>> print(scores.shape)  # (3, 2)
-    >>> print(scores)
-    """
-    _check_discrete_metric_input(gt_cat_series, gt_one_hot)
-    gt_01 = _get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
-
-    discretizer = KBinsDiscretizer(n_bins=n_bins, encode="ordinal", strategy="uniform", random_state=123)
-    all_vars_discrete = discretizer.fit_transform(all_vars_continues)
-
-    n_vars = all_vars_discrete.shape[1]
-    n_targets = gt_01.shape[1]
-    result = np.zeros([n_vars, n_targets])
-    for j in range(n_targets):
-        for i in range(n_vars):
-            result[i, j] = adjusted_mutual_info_score(all_vars_discrete[:, i], gt_01[:, j])
-    return result
-
-
-def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
+def spearman_correlation_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
     """Compute Spearman correlation scores between continuous variables and categories.
 
     This function computes the absolute Spearman correlation coefficients
@@ -337,7 +276,7 @@ def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=No
     >>> # Simple example: 3 variables, 2 categories
     >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
     >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = spearman_correlataion_score(all_vars, gt_cat_series=gt_series)
+    >>> scores = spearman_correlation_score(all_vars, gt_cat_series=gt_series)
     >>> print(scores.shape)  # (3, 2)
     >>> print(scores)
     """
