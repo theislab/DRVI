@@ -5,6 +5,7 @@ import pandas as pd
 
 from drvi.utils.metrics._aggregation import latent_matching_score, most_similar_averaging_score, most_similar_gap_score
 from drvi.utils.metrics._pairwise import (
+    binary_maximum_mutual_information_score,
     discrete_scaled_mutual_info_score,
     nn_alignment_score,
     spearman_correlation_score,
@@ -16,6 +17,8 @@ AVAILABLE_METRICS = {
     "ASC": spearman_correlation_score,
     "SPN": nn_alignment_score,
     "SMI": discrete_scaled_mutual_info_score,
+    # Continuous SMI is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
+    "BMMI": binary_maximum_mutual_information_score,
 }
 
 
@@ -49,10 +52,10 @@ class DiscreteDisentanglementBenchmark:
         Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc..
     metrics
         Metrics to compute for evaluation. Available options:
-        - "SMI-disc": Discrete mutual information score
+        - "SMI": Discrete mutual information score
         - "SPN": Nearest neighbor alignment score
         - "ASC": Spearman correlation score
-        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772).
+        - "BMMI": Binary maximum mutual information score
     aggregation_methods
         Methods to aggregate metric scores across dimensions. Available options:
         - "LMS": Latent matching score
@@ -104,8 +107,8 @@ class DiscreteDisentanglementBenchmark:
       neighbor structure in latent space preserves categorical relationships.
     - **ASC**: Spearman correlation score. Measures linear correlation between
       latent dimensions and categorical targets (less suitable for discrete targets).
-    - **SMI-cont**: Continuous mutual information (SMI-cont is not working as expected.
-      More info: https://github.com/scikit-learn/scikit-learn/issues/30772).
+    - **BMMI**: Binary maximum mutual information score. Finds the optimal threshold 
+      to maximize normalized mutual information for binary targets.
 
     **Aggregation Methods:**
 
@@ -139,7 +142,7 @@ class DiscreteDisentanglementBenchmark:
     >>> benchmark = DiscreteDisentanglementBenchmark(embed, one_hot_target=one_hot)
     """
 
-    version = "v3"
+    version = "v3_1"
 
     def __init__(
         self,
