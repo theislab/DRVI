@@ -544,8 +544,12 @@ class Encoder(nn.Module):
 
         if mean_activation == "identity":
             self.mean_activation = nn.Identity()
+        elif callable(mean_activation):
+            self.mean_activation = mean_activation()
         elif mean_activation == "relu":
             self.mean_activation = nn.ReLU()
+        elif mean_activation == "gelu":
+            self.mean_activation = nn.GELU()
         elif mean_activation.startswith("leaky_relu"):
             if mean_activation == "leaky_relu":
                 mean_activation = "leaky_relu_0.01"
@@ -562,8 +566,7 @@ class Encoder(nn.Module):
             alpha = float(mean_activation.split("celu_")[1])
             self.mean_activation = nn.CELU(alpha=alpha)
         else:
-            assert callable(mean_activation)
-            self.mean_activation = mean_activation
+            raise NotImplementedError(f"Activation {mean_activation} is not implemented")
 
     def _generate_variational_distribution(self, qz_m: torch.Tensor, qz_v: torch.Tensor) -> Normal:
         """Generate the variational distribution.
