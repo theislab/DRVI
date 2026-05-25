@@ -14,7 +14,7 @@ maintainers = [
 authors = [
   { name = "Amir Ali Moinfar" },
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 classifiers = [
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
@@ -28,6 +28,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -89,9 +90,9 @@ envs.docs.scripts.clean = "git clean -fdX -- {args:docs}"
 envs.hatch-test.dependency-groups = [ "dev", "test" ]
 envs.hatch-test.matrix = [
   # Test the lowest and highest supported Python versions with normal deps
-  { deps = [ "stable" ], python = [ "3.10", "3.14" ] },
+  { deps = [ "stable" ], python = [ "3.10", "3.15" ] },
   # Test the newest supported Python version also with pre-release deps
-  { deps = [ "pre" ], python = [ "3.14" ] },
+  { deps = [ "pre" ], python = [ "3.15" ] },
 ]
 # If the matrix variable `deps` is set to "pre",
 # set the environment variable `UV_PRERELEASE` to "allow".
