@@ -178,7 +178,7 @@ class TestInterpretabilityMixin:
         assert fig is not None
         plt.close(fig)
 
-        dim_subset = ["DR 2+", "DR 0+", "DR 1+"]
+        dim_subset = ["DR 1+", "DR 1-", "DR 2+", "DR 2-"]
         fig_subset = model.plot_interpretability_scores(
             embed_copy, adata, show=False, score_threshold=-1.0, dim_subset=dim_subset
         )
