@@ -288,18 +288,24 @@ def spearman_correlation_score(all_vars_continues: np.ndarray, gt_cat_series=Non
 
 
 def _maximum_mutual_information_per_pair(var_continues: np.ndarray, gt_01: np.ndarray):
-    """
+    """Find the exact optimal threshold that maximizes normalized mutual information.
+
     Finds the exact optimal threshold x that maximizes the normalized mutual
     information I(B; A > x) / H(B) in strictly O(N) time.
 
-    Args:
-        var_continues: 1D numpy array of shape (n_samples,).
-        gt_01: 2D binary numpy array of shape (n_samples, n_categories).
+    Parameters
+    ----------
+    var_continues
+        1D numpy array of shape (n_samples,).
+    gt_01
+        2D binary numpy array of shape (n_samples, n_categories).
 
     Returns
     -------
-        best_x: 1D numpy array of shape (n_categories,) containing optimal split thresholds.
-        max_normalized_mi: 1D numpy array of shape (n_categories,) containing max normalized mutual information.
+    best_x
+        1D numpy array of shape (n_categories,) containing optimal split thresholds.
+    max_normalized_mi
+        1D numpy array of shape (n_categories,) containing max normalized mutual information.
     """
     n_samples = var_continues.shape[0]
     order = var_continues.argsort()
@@ -382,16 +388,21 @@ def _maximum_mutual_information_per_pair(var_continues: np.ndarray, gt_01: np.nd
 def binary_maximum_mutual_information_score(
     all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None
 ) -> np.ndarray:
-    """
-    Compute the maximum mutual information score for binary ground truth.
+    """Compute the maximum mutual information score for binary ground truth.
 
-    Args:
-        all_vars_continues: Matrix of continuous variables with shape (n_samples, n_variables).
-        gt_binary: Binary ground truth matrix with shape (n_samples, n_categories).
+    Parameters
+    ----------
+    all_vars_continues
+        Matrix of continuous variables with shape (n_samples, n_variables).
+    gt_cat_series
+        Categorical series with ground truth labels.
+    gt_one_hot
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Returns
     -------
-        np.ndarray: Maximum mutual information scores with shape (n_variables, n_categories).
+    np.ndarray
+        Maximum mutual information scores with shape (n_variables, n_categories).
     """
     _check_discrete_metric_input(gt_cat_series, gt_one_hot)
     gt_01 = _get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
