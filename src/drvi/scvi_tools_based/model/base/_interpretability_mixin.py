@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import itertools
 import logging
+import re
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -772,16 +773,15 @@ class InterpretabilityMixin:
             The figure object if `show=False`, otherwise None.
         """
         plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
-        plot_info = [
-            (k, v)
-            for k, v in plot_df.to_dict(orient="series").items()
-            if (v.max() >= score_threshold) and (dim_subset is None or k in dim_subset)
-        ]
+        plot_info_dict = {k: v for k, v in plot_df.to_dict(orient="series").items() if v.max() >= score_threshold}
+        if dim_subset is None:
+            dim_subset = sorted(plot_info_dict.keys(), key=lambda x: int(re.search(r"\d+", x).group()))
+        plot_info = {k: plot_info_dict[k] for k in dim_subset if k in plot_info_dict}
 
         n_row = int(np.ceil(len(plot_info) / ncols))
         fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, int(1 + 0.2 * n_top_genes) * n_row))
 
-        for ax, info in zip(axes.flatten(), plot_info, strict=False):
+        for ax, info in zip(axes.flatten(), plot_info.items(), strict=False):
             top_indices = info[1].sort_values(ascending=False)[:n_top_genes]
             if len(top_indices) > 0:
                 ax.barh(top_indices.index, top_indices.values, color="skyblue")

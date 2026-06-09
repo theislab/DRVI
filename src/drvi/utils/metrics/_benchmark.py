@@ -5,20 +5,20 @@ import pandas as pd
 
 from drvi.utils.metrics._aggregation import latent_matching_score, most_similar_averaging_score, most_similar_gap_score
 from drvi.utils.metrics._pairwise import (
-    discrete_mutual_info_score,
-    local_mutual_info_score,
+    binary_maximum_mutual_information_score,
+    discrete_scaled_mutual_info_score,
     nn_alignment_score,
-    spearman_correlataion_score,
+    spearman_correlation_score,
 )
 
 AVAILABLE_METRICS = {
     # ASC is generally unsuitable for discrete targets.
     # More info: https://www.biorxiv.org/content/10.1101/2024.11.06.622266v1.full.pdf lines 985 to 989
-    "ASC": spearman_correlataion_score,
+    "ASC": spearman_correlation_score,
     "SPN": nn_alignment_score,
-    # SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
-    "SMI-cont": local_mutual_info_score,
-    "SMI-disc": discrete_mutual_info_score,
+    # Continuous SMI is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
+    "SMI": discrete_scaled_mutual_info_score,
+    "BMMI": binary_maximum_mutual_information_score,
 }
 
 
@@ -52,10 +52,10 @@ class DiscreteDisentanglementBenchmark:
         Titles for each latent dimension. If None, will use "dim_0", "dim_1", etc..
     metrics
         Metrics to compute for evaluation. Available options:
-        - "SMI-disc": Discrete mutual information score
+        - "SMI": Discrete mutual information score
         - "SPN": Nearest neighbor alignment score
         - "ASC": Spearman correlation score
-        - "SMI-cont": Continuous mutual information score (SMI-cont is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772).
+        - "BMMI": Binary maximum mutual information score
     aggregation_methods
         Methods to aggregate metric scores across dimensions. Available options:
         - "LMS": Latent matching score
@@ -107,8 +107,8 @@ class DiscreteDisentanglementBenchmark:
       neighbor structure in latent space preserves categorical relationships.
     - **ASC**: Spearman correlation score. Measures linear correlation between
       latent dimensions and categorical targets (less suitable for discrete targets).
-    - **SMI-cont**: Continuous mutual information (SMI-cont is not working as expected.
-      More info: https://github.com/scikit-learn/scikit-learn/issues/30772).
+    - **BMMI**: Binary maximum mutual information score. Finds the optimal threshold
+      to maximize normalized mutual information for binary targets.
 
     **Aggregation Methods:**
 
@@ -142,7 +142,7 @@ class DiscreteDisentanglementBenchmark:
     >>> benchmark = DiscreteDisentanglementBenchmark(embed, one_hot_target=one_hot)
     """
 
-    version = "v2"
+    version = "v3_1"
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class DiscreteDisentanglementBenchmark:
         discrete_target=None,
         one_hot_target=None,
         dim_titles=None,
-        metrics=("SMI-disc", "SPN", "ASC"),
+        metrics=("SMI", "SPN"),
         aggregation_methods=("LMS", "MSAS", "MSGS"),
         additional_metric_params=None,
     ):
@@ -183,8 +183,9 @@ class DiscreteDisentanglementBenchmark:
         if dim_titles is None:
             dim_titles = [f"dim_{d}" for d in range(embed.shape[1])]
 
-        self.embed = embed.copy()
-        self.one_hot_target = one_hot_target.copy()
+        random_order = np.random.permutation(embed.shape[0])
+        self.embed = embed[random_order].copy()
+        self.one_hot_target = one_hot_target.iloc[random_order].reset_index(drop=True).copy()
         self.dim_titles = dim_titles
         self.metrics = metrics
         self.aggregation_methods = aggregation_methods
