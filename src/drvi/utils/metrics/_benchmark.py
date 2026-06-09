@@ -16,8 +16,8 @@ AVAILABLE_METRICS = {
     # More info: https://www.biorxiv.org/content/10.1101/2024.11.06.622266v1.full.pdf lines 985 to 989
     "ASC": spearman_correlation_score,
     "SPN": nn_alignment_score,
-    "SMI": discrete_scaled_mutual_info_score,
     # Continuous SMI is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
+    "SMI": discrete_scaled_mutual_info_score,
     "BMMI": binary_maximum_mutual_information_score,
 }
 
