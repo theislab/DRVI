@@ -107,7 +107,7 @@ class DiscreteDisentanglementBenchmark:
       neighbor structure in latent space preserves categorical relationships.
     - **ASC**: Spearman correlation score. Measures linear correlation between
       latent dimensions and categorical targets (less suitable for discrete targets).
-    - **BMMI**: Binary maximum mutual information score. Finds the optimal threshold 
+    - **BMMI**: Binary maximum mutual information score. Finds the optimal threshold
       to maximize normalized mutual information for binary targets.
 
     **Aggregation Methods:**

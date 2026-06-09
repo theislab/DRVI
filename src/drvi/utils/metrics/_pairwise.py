@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.feature_selection import mutual_info_classif
 from sklearn.metrics.cluster import entropy, mutual_info_score
 from sklearn.preprocessing import KBinsDiscretizer
 
@@ -166,6 +165,7 @@ def nn_alignment_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_on
         result[i, :] = _nn_alignment_score_per_dim(all_vars_continues[:, i], gt_01)
     return result
 
+
 def discrete_scaled_mutual_info_score(
     all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None, n_bins=10
 ) -> np.ndarray:
@@ -229,9 +229,8 @@ def discrete_scaled_mutual_info_score(
     for j in range(n_targets):
         h_target = entropy(gt_01[:, j])
         for i in range(n_vars):
-                result[i, j] = mutual_info_score(all_vars_discrete[:, i], gt_01[:, j]) / h_target
+            result[i, j] = mutual_info_score(all_vars_discrete[:, i], gt_01[:, j]) / h_target
     return result
-
 
 
 def spearman_correlation_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
@@ -292,12 +291,13 @@ def _maximum_mutual_information_per_pair(var_continues: np.ndarray, gt_01: np.nd
     """
     Finds the exact optimal threshold x that maximizes the normalized mutual
     information I(B; A > x) / H(B) in strictly O(N) time.
-    
+
     Args:
         var_continues: 1D numpy array of shape (n_samples,).
         gt_01: 2D binary numpy array of shape (n_samples, n_categories).
-        
-    Returns:
+
+    Returns
+    -------
         best_x: 1D numpy array of shape (n_categories,) containing optimal split thresholds.
         max_normalized_mi: 1D numpy array of shape (n_categories,) containing max normalized mutual information.
     """
@@ -305,96 +305,97 @@ def _maximum_mutual_information_per_pair(var_continues: np.ndarray, gt_01: np.nd
     order = var_continues.argsort()
     var_sorted = var_continues[order]
     gt_01 = gt_01[order]
-    
+
     # 1. Total counts
     total_1s = np.sum(gt_01, axis=0)
     total_0s = n_samples - total_1s
-    
+
     # Probability of classes in the entire dataset
     p1_total = total_1s / n_samples
     p0_total = total_0s / n_samples
-    
+
     # 2. Base Entropy H(B)
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         e1_b = np.where(p1_total > 0, p1_total * np.log2(p1_total), 0.0)
         e0_b = np.where(p0_total > 0, p0_total * np.log2(p0_total), 0.0)
     h_b = -(e1_b + e0_b)
-    
+
     # 3. Cumulative sums (Prefix sums)
     left_1s = np.cumsum(gt_01, axis=0)
     left_sizes = np.arange(1, n_samples + 1)[:, None]
     left_0s = left_sizes - left_1s
-    
+
     right_1s = total_1s - left_1s
     right_sizes = n_samples - left_sizes
     right_0s = total_0s - left_0s
-    
+
     # 4. Probabilities for all possible splits
     # np.maximum replaces torch.clamp to prevent division by zero
     safe_left_sizes = np.maximum(left_sizes, 1)
     safe_right_sizes = np.maximum(right_sizes, 1)
-    
+
     p1_left = left_1s / safe_left_sizes
     p0_left = left_0s / safe_left_sizes
     p1_right = right_1s / safe_right_sizes
     p0_right = right_0s / safe_right_sizes
-    
+
     # 5. Fast Conditional Entropy Calculation H(B | A > x)
     def compute_entropy(p1, p0):
         # Suppress warnings for log2(0); np.where handles the valid outputs safely
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             e1 = np.where(p1 > 0, p1 * np.log2(p1), 0.0)
             e0 = np.where(p0 > 0, p0 * np.log2(p0), 0.0)
         return -(e1 + e0)
-    
+
     h_left = compute_entropy(p1_left, p0_left)
     h_right = compute_entropy(p1_right, p0_right)
-    
+
     h_cond = (left_sizes / n_samples) * h_left + (right_sizes / n_samples) * h_right
-    
+
     # 6. Mask out invalid splits (cannot split between identical continuous values)
     diffs = np.diff(var_sorted)
-    valid_splits = diffs > 0 
-    
+    valid_splits = diffs > 0
+
     # The last element cannot be a split point
     valid_splits = np.concatenate([valid_splits, [False]])[:, None]
-    
+
     h_cond = np.where(valid_splits, h_cond, np.inf)
-    
+
     # 7. Find the best split
     best_idx = np.argmin(h_cond, axis=0)
     min_h_cond = np.min(h_cond, axis=0)
-    
+
     best_x = np.where(
-        np.isinf(min_h_cond), 
-        np.nan, 
-        (var_sorted[best_idx] + var_sorted[np.minimum(best_idx + 1, n_samples - 1)]) / 2.0
+        np.isinf(min_h_cond), np.nan, (var_sorted[best_idx] + var_sorted[np.minimum(best_idx + 1, n_samples - 1)]) / 2.0
     )
-    
+
     # 8. Calculate Normalized Mutual Information: I(B; A > x) / H(B)
     mutual_information = h_b - min_h_cond
     normalized_mi = np.zeros_like(h_b)
-    
+
     mask = (h_b > 0) & (~np.isinf(min_h_cond))
     normalized_mi[mask] = mutual_information[mask] / h_b[mask]
-    
+
     return best_x, normalized_mi
 
 
-def binary_maximum_mutual_information_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
+def binary_maximum_mutual_information_score(
+    all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None
+) -> np.ndarray:
     """
     Compute the maximum mutual information score for binary ground truth.
-    
+
     Args:
         all_vars_continues: Matrix of continuous variables with shape (n_samples, n_variables).
         gt_binary: Binary ground truth matrix with shape (n_samples, n_categories).
-        
-    Returns:
+
+    Returns
+    -------
         np.ndarray: Maximum mutual information scores with shape (n_variables, n_categories).
     """
     _check_discrete_metric_input(gt_cat_series, gt_one_hot)
     gt_01 = _get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
-    
+
     n_vars = all_vars_continues.shape[1]
     n_targets = gt_01.shape[1]
     result = np.zeros([n_vars, n_targets])
@@ -402,4 +403,3 @@ def binary_maximum_mutual_information_score(all_vars_continues: np.ndarray, gt_c
         best_x, normalized_mi = _maximum_mutual_information_per_pair(all_vars_continues[:, i], gt_01)
         result[i, :] = normalized_mi
     return result
-    
