@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 import itertools
 import logging
-import re
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -11,7 +10,6 @@ import pandas as pd
 import scvi
 import torch
 from lightning import LightningDataModule
-from matplotlib import pyplot as plt
 from scipy import sparse
 from torch.nn import functional as F
 
@@ -772,29 +770,15 @@ class InterpretabilityMixin:
         matplotlib.figure.Figure or None
             The figure object if `show=False`, otherwise None.
         """
-        plot_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
-        plot_info_dict = {k: v for k, v in plot_df.to_dict(orient="series").items() if v.max() >= score_threshold}
-        if dim_subset is None:
-            dim_subset = sorted(plot_info_dict.keys(), key=lambda x: int(re.search(r"\d+", x).group()))
-        plot_info = {k: plot_info_dict[k] for k in dim_subset if k in plot_info_dict}
+        # Imported lazily to avoid a circular import (drvi.utils.plotting -> drvi.model -> this mixin).
+        from drvi.utils.plotting import plot_interpretability_scores
 
-        n_row = int(np.ceil(len(plot_info) / ncols))
-        fig, axes = plt.subplots(n_row, ncols, figsize=(3 * ncols, int(1 + 0.2 * n_top_genes) * n_row))
-
-        for ax, info in zip(axes.flatten(), plot_info.items(), strict=False):
-            top_indices = info[1].sort_values(ascending=False)[:n_top_genes]
-            if len(top_indices) > 0:
-                ax.barh(top_indices.index, top_indices.values, color="skyblue")
-                ax.set_xlabel("Gene Score")
-                ax.set_title(info[0])
-                ax.invert_yaxis()
-            ax.grid(False)
-
-        for ax in axes.flatten()[len(plot_info) :]:
-            fig.delaxes(ax)
-
-        plt.tight_layout()
-        if show:
-            plt.show()
-        else:
-            return fig
+        gene_scores_df = self.get_interpretability_scores(embed=embed, adata=adata, **kwargs)
+        return plot_interpretability_scores(
+            gene_scores_df,
+            n_top_genes=n_top_genes,
+            ncols=ncols,
+            score_threshold=score_threshold,
+            dim_subset=dim_subset,
+            show=show,
+        )

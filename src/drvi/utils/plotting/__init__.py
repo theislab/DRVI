@@ -2,6 +2,7 @@ from . import _cmap as cmap
 from ._interpretability import (
     differential_vars_heatmap,
     make_heatmap_groups,
+    plot_interpretability_scores,
     plot_relevant_genes_on_umap,
     show_differential_vars_scatter_plot,
     show_top_differential_vars,
@@ -23,5 +24,6 @@ __all__ = [
     "show_top_differential_vars",
     "show_differential_vars_scatter_plot",
     "plot_relevant_genes_on_umap",
+    "plot_interpretability_scores",
     "cmap",
 ]
