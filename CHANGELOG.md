@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning][].
 ## [Unreleased]
 
 ### Added
+- Add `drvi.utils.pl.plot_interpretability_scores` plotting utility, now reused by `DRVI.plot_interpretability_scores`
 
 
 ## [0.2.5] - 2026-04-21
