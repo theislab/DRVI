@@ -74,7 +74,7 @@ class _DrviPy021ToDrviPy022(_Migration):
             raise DRVIPortError("'prior_init_obs' (data-initialized prior) has no equivalent")
 
 
-class _DrviPy026ToScviTools150(_Migration):
+class _DrviPy027ToScviTools150(_Migration):
     """Migration for the drvi-py -> scvi-tools hop: split value renames (split_diag->split_mask, sum->mean)."""
 
     # drvi value -> scvi-tools value; a value absent from the map is not portable.
@@ -94,12 +94,12 @@ class _DrviPy026ToScviTools150(_Migration):
 # Version lineage as a chain of hops. A saved model at ``(package, version)`` is upgraded one hop at
 # a time until it reaches the final scvi-tools version; each hop's migration adjusts params for that
 # step. Keys are ``(from_pkg, from_version, to_pkg, to_version)``; the sole terminal key is
-# ``(package, version)`` -> None. drvi-py releases go up to 0.2.6 (PyPI); DRVI ships in scvi 1.5.0.
-# Add hops for future changes.
+# ``(package, version)`` -> None. This porter ships in drvi-py 0.2.7 (the last drvi-py version); DRVI
+# then lives in scvi-tools, shipped in scvi 1.5.0. Add hops for future changes.
 _MIGRATION_CHAIN = {
     ("drvi", "0.2.1", "drvi", "0.2.2"): _DrviPy021ToDrviPy022(),
-    ("drvi", "0.2.2", "drvi", "0.2.6"): _Identity(),  # no model-kwarg changes in 0.2.2 .. 0.2.6
-    ("drvi", "0.2.6", "scvi", "1.5.0"): _DrviPy026ToScviTools150(),
+    ("drvi", "0.2.2", "drvi", "0.2.7"): _Identity(),  # no model-kwarg changes in 0.2.2 .. 0.2.7
+    ("drvi", "0.2.7", "scvi", "1.5.0"): _DrviPy027ToScviTools150(),
     ("scvi", "1.5.0"): None,  # final version; nothing to port to
 }
 
