@@ -3,8 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.metrics.cluster import contingency_matrix, entropy, mutual_info_score
+from sklearn.metrics.cluster import entropy, mutual_info_score
 from sklearn.preprocessing import KBinsDiscretizer
 
 
@@ -167,94 +166,7 @@ def nn_alignment_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_on
     return result
 
 
-def _local_mutual_info_score_per_binary_gt(all_vars_continues: np.ndarray, gt_binary: np.ndarray) -> np.ndarray:
-    """Compute scaled mutual information for a binary ground truth variable.
-
-    Parameters
-    ----------
-    all_vars_continues
-        Matrix of continuous variables with shape (n_samples, n_variables).
-    gt_binary
-        Binary ground truth labels with shape (n_samples,).
-
-    Returns
-    -------
-    np.ndarray
-        Scaled mutual information scores with shape (n_variables,).
-        Scores are normalized by the entropy of the binary ground truth.
-
-    Notes
-    -----
-    This function computes mutual information between each continuous variable
-    and a binary ground truth, then normalizes by the entropy of the ground
-    truth to obtain scores between 0 and 1.
-
-    This metric is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
-
-    **Mathematical formula:**
-    ```
-    MI(all_vars_continues, gt_binary) / entropy(gt_binary)
-    ```
-    """
-    mi_score = mutual_info_classif(all_vars_continues, gt_binary, n_jobs=-1)
-    gt_prob = np.sum(gt_binary == 1) / gt_binary.shape[0]
-    gt_entropy = stats.entropy([gt_prob, 1 - gt_prob])
-    return mi_score / gt_entropy
-
-
-def local_mutual_info_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
-    """Compute local mutual information scores for all variables and categories.
-
-    This function calculates the scaled mutual information between each
-    continuous variable and each categorical ground truth variable. The scores
-    are scaled by the entropy of each ground truth category.
-
-    Parameters
-    ----------
-    all_vars_continues
-        Matrix of continuous variables with shape (n_samples, n_variables).
-        Each column represents a different continuous variable.
-    gt_cat_series
-        Categorical series with ground truth labels.
-    gt_one_hot
-        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
-
-    Returns
-    -------
-    np.ndarray
-        Mutual information score matrix with shape (n_variables, n_categories).
-        Element [i, j] represents the scaled mutual information between
-        variable i and category j. Scores range from 0 to 1.
-
-    Notes
-    -----
-    This function calculates the scaled mutual information between each
-    continuous variable and each categorical ground truth variable. The scores
-    are scaled by the entropy of each ground truth category.
-    This metric is not working as expected. More info: https://github.com/scikit-learn/scikit-learn/issues/30772
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> # Simple example: 3 variables, 2 categories
-    >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
-    >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = local_mutual_info_score(all_vars, gt_cat_series=gt_series)
-    >>> print(scores.shape)  # (3, 2)
-    >>> print(scores)
-    """
-    _check_discrete_metric_input(gt_cat_series, gt_one_hot)
-    gt_01 = _get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
-
-    n_vars = all_vars_continues.shape[1]
-    result = np.zeros([n_vars, gt_01.shape[1]])
-    for j in range(gt_01.shape[1]):
-        result[:, j] = _local_mutual_info_score_per_binary_gt(all_vars_continues, gt_01[:, j])
-    return result
-
-
-def discrete_mutual_info_score(
+def discrete_scaled_mutual_info_score(
     all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None, n_bins=10
 ) -> np.ndarray:
     """Compute mutual information scores using discretized continuous variables.
@@ -301,7 +213,7 @@ def discrete_mutual_info_score(
     >>> # Simple example: 3 variables, 2 categories
     >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
     >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = discrete_mutual_info_score(all_vars, gt_cat_series=gt_series, n_bins=2)
+    >>> scores = discrete_scaled_mutual_info_score(all_vars, gt_cat_series=gt_series, n_bins=2)
     >>> print(scores.shape)  # (3, 2)
     >>> print(scores)
     """
@@ -317,13 +229,11 @@ def discrete_mutual_info_score(
     for j in range(n_targets):
         h_target = entropy(gt_01[:, j])
         for i in range(n_vars):
-            contingency = contingency_matrix(all_vars_discrete[:, i], gt_01[:, j], sparse=True)
-            mi = mutual_info_score(None, None, contingency=contingency)
-            result[i, j] = mi / h_target
+            result[i, j] = mutual_info_score(all_vars_discrete[:, i], gt_01[:, j]) / h_target
     return result
 
 
-def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
+def spearman_correlation_score(all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None) -> np.ndarray:
     """Compute Spearman correlation scores between continuous variables and categories.
 
     This function computes the absolute Spearman correlation coefficients
@@ -365,7 +275,7 @@ def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=No
     >>> # Simple example: 3 variables, 2 categories
     >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
     >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = spearman_correlataion_score(all_vars, gt_cat_series=gt_series)
+    >>> scores = spearman_correlation_score(all_vars, gt_cat_series=gt_series)
     >>> print(scores.shape)  # (3, 2)
     >>> print(scores)
     """
@@ -377,48 +287,130 @@ def spearman_correlataion_score(all_vars_continues: np.ndarray, gt_cat_series=No
     return result
 
 
-def global_dim_mutual_info_score(all_vars_continues: np.ndarray, gt_cat_series: pd.Series) -> np.ndarray:
-    """Compute global mutual information scores for all variables with categorical ground truth.
+def _maximum_mutual_information_per_pair(var_continues: np.ndarray, gt_01: np.ndarray):
+    """Find the exact optimal threshold that maximizes normalized mutual information.
 
-    This function computes the normalized mutual information between each
-    continuous variable and the overall categorical ground truth. Unlike
-    local mutual information, this treats the ground truth as a single
-    categorical variable rather than separate binary variables.
+    Finds the exact optimal threshold x that maximizes the normalized mutual
+    information I(B; A > x) / H(B) in strictly O(N) time.
+
+    Parameters
+    ----------
+    var_continues
+        1D numpy array of shape (n_samples,).
+    gt_01
+        2D binary numpy array of shape (n_samples, n_categories).
+
+    Returns
+    -------
+    best_x
+        1D numpy array of shape (n_categories,) containing optimal split thresholds.
+    max_normalized_mi
+        1D numpy array of shape (n_categories,) containing max normalized mutual information.
+    """
+    n_samples = var_continues.shape[0]
+    order = var_continues.argsort()
+    var_sorted = var_continues[order]
+    gt_01 = gt_01[order]
+
+    # 1. Total counts
+    total_1s = np.sum(gt_01, axis=0)
+    total_0s = n_samples - total_1s
+
+    # Probability of classes in the entire dataset
+    p1_total = total_1s / n_samples
+    p0_total = total_0s / n_samples
+
+    # 2. Base Entropy H(B)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        e1_b = np.where(p1_total > 0, p1_total * np.log2(p1_total), 0.0)
+        e0_b = np.where(p0_total > 0, p0_total * np.log2(p0_total), 0.0)
+    h_b = -(e1_b + e0_b)
+
+    # 3. Cumulative sums (Prefix sums)
+    left_1s = np.cumsum(gt_01, axis=0)
+    left_sizes = np.arange(1, n_samples + 1)[:, None]
+    left_0s = left_sizes - left_1s
+
+    right_1s = total_1s - left_1s
+    right_sizes = n_samples - left_sizes
+    right_0s = total_0s - left_0s
+
+    # 4. Probabilities for all possible splits
+    # np.maximum replaces torch.clamp to prevent division by zero
+    safe_left_sizes = np.maximum(left_sizes, 1)
+    safe_right_sizes = np.maximum(right_sizes, 1)
+
+    p1_left = left_1s / safe_left_sizes
+    p0_left = left_0s / safe_left_sizes
+    p1_right = right_1s / safe_right_sizes
+    p0_right = right_0s / safe_right_sizes
+
+    # 5. Fast Conditional Entropy Calculation H(B | A > x)
+    def compute_entropy(p1, p0):
+        # Suppress warnings for log2(0); np.where handles the valid outputs safely
+        with np.errstate(divide="ignore", invalid="ignore"):
+            e1 = np.where(p1 > 0, p1 * np.log2(p1), 0.0)
+            e0 = np.where(p0 > 0, p0 * np.log2(p0), 0.0)
+        return -(e1 + e0)
+
+    h_left = compute_entropy(p1_left, p0_left)
+    h_right = compute_entropy(p1_right, p0_right)
+
+    h_cond = (left_sizes / n_samples) * h_left + (right_sizes / n_samples) * h_right
+
+    # 6. Mask out invalid splits (cannot split between identical continuous values)
+    diffs = np.diff(var_sorted)
+    valid_splits = diffs > 0
+
+    # The last element cannot be a split point
+    valid_splits = np.concatenate([valid_splits, [False]])[:, None]
+
+    h_cond = np.where(valid_splits, h_cond, np.inf)
+
+    # 7. Find the best split
+    best_idx = np.argmin(h_cond, axis=0)
+    min_h_cond = np.min(h_cond, axis=0)
+
+    best_x = np.where(
+        np.isinf(min_h_cond), np.nan, (var_sorted[best_idx] + var_sorted[np.minimum(best_idx + 1, n_samples - 1)]) / 2.0
+    )
+
+    # 8. Calculate Normalized Mutual Information: I(B; A > x) / H(B)
+    mutual_information = h_b - min_h_cond
+    normalized_mi = np.zeros_like(h_b)
+
+    mask = (h_b > 0) & (~np.isinf(min_h_cond))
+    normalized_mi[mask] = mutual_information[mask] / h_b[mask]
+
+    return best_x, normalized_mi
+
+
+def binary_maximum_mutual_information_score(
+    all_vars_continues: np.ndarray, gt_cat_series=None, gt_one_hot=None
+) -> np.ndarray:
+    """Compute the maximum mutual information score for binary ground truth.
 
     Parameters
     ----------
     all_vars_continues
         Matrix of continuous variables with shape (n_samples, n_variables).
-        Each column represents a different continuous variable.
     gt_cat_series
         Categorical series with ground truth labels.
+    gt_one_hot
+        One-hot encoded ground truth matrix with shape (n_samples, n_categories).
 
     Returns
     -------
     np.ndarray
-        Global mutual information scores with shape (n_variables,).
-        Each element represents the normalized mutual information between
-        a variable and the overall categorical ground truth.
-
-    Notes
-    -----
-    This metric is not used in standard disentanglement analysis but is
-    provided for completeness. It measures how much information each
-    variable shares with the overall categorical structure, rather than
-    with individual categories.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> # Simple example: 3 variables, 2 categories
-    >>> all_vars = np.array([[1.0, 2.0, 0.5], [2.0, 1.0, 0.8], [3.0, 0.5, 1.2], [0.5, 3.0, 0.9]])
-    >>> gt_series = pd.Series(["A", "A", "B", "B"], dtype="category")
-    >>> scores = global_dim_mutual_info_score(all_vars, gt_series)
-    >>> print(scores.shape)  # (3,)
-    >>> print(scores)
+        Maximum mutual information scores with shape (n_variables, n_categories).
     """
-    # This metric is not used in any analysis, but is provided for completeness.
-    mi_score = mutual_info_classif(all_vars_continues, gt_cat_series)
-    gt_entropy = stats.entropy(pd.Series(gt_cat_series).value_counts(normalize=True, sort=False))
-    return mi_score / gt_entropy
+    _check_discrete_metric_input(gt_cat_series, gt_one_hot)
+    gt_01 = _get_one_hot_encoding(gt_cat_series) if gt_cat_series is not None else gt_one_hot
+
+    n_vars = all_vars_continues.shape[1]
+    n_targets = gt_01.shape[1]
+    result = np.zeros([n_vars, n_targets])
+    for i in range(n_vars):
+        best_x, normalized_mi = _maximum_mutual_information_per_pair(all_vars_continues[:, i], gt_01)
+        result[i, :] = normalized_mi
+    return result

@@ -17,7 +17,7 @@ class TestDiscreteDisentanglementBenchmark:
     def _general_test_pipeline(
         self, continuous_latent, categorical_features=None, categorical_features_01=None, **kwargs
     ):
-        METRICS = ["ASC", "SPN", "SMI-cont", "SMI-disc"]
+        METRICS = ["ASC", "SPN", "SMI", "BMMI"]
         AGGREGATION_METHODS = ["LMS", "MSAS", "MSGS"]
 
         benchmark = DiscreteDisentanglementBenchmark(

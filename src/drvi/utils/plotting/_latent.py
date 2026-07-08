@@ -209,6 +209,7 @@ def plot_latent_dims_in_umap(
     remove_vanished: bool = True,
     rearrange_titles: bool = True,
     color_bar_rescale_ratio: float = 1.0,
+    min_max_thresholds: tuple[float, float] | None = (-1.0, 1.0),
     show: bool = True,
     **kwargs,
 ):
@@ -324,13 +325,20 @@ def plot_latent_dims_in_umap(
     if additional_columns:
         cols_to_show = list(cols_to_show) + list(additional_columns)
 
+    if min_max_thresholds is not None:
+        vmin = list(np.minimum(tmp_df["min"].values, min_max_thresholds[0]))
+        vmax = list(np.maximum(tmp_df["max"].values, min_max_thresholds[1]))
+    else:
+        vmin = list(tmp_df["min"].values)
+        vmax = list(tmp_df["max"].values)
+
     kwargs = {
         **dict(  # noqa: C408
             frameon=False,
             cmap=cmap.saturated_red_blue_cmap if not directional else cmap.saturated_sky_cmap,
-            vmin=list(np.minimum(tmp_df["min"].values, -1)),
+            vmin=vmin,
             vcenter=0,
-            vmax=list(np.maximum(tmp_df["max"].values, +1)),
+            vmax=vmax,
         ),
         **kwargs,
     }

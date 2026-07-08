@@ -13,6 +13,33 @@ and this project adheres to [Semantic Versioning][].
 ### Added
 
 
+## [0.2.7]
+
+### Added
+- Add `drvi.utils.port_to_scvi_tools` to migrate a trained/saved drvi-py model into a checkpoint loadable by `scvi.external.DRVI` (available in scvi-tools 1.5.0). Pure checkpoint surgery — no model is instantiated. Unsupported capabilities raise `DRVIPortError` with a link to open an issue.
+
+
+## [0.2.6] - 2026-07-02
+
+### Added
+- Add `drvi.utils.pl.plot_interpretability_scores` plotting utility, now reused by `DRVI.plot_interpretability_scores`
+- Add `binary_maximum_mutual_information_score` (BMMI) disentanglement metric
+- Add `min_max_thresholds` argument to `plot_latent_dims_in_umap` to control color-scale clamping
+- Add `"gelu"` option and callable factory support for the encoder `mean_activation`
+
+### Changed
+- In `DiscreteDisentanglementBenchmark`, default metrics are now `("SMI", "SPN")`, samples are shuffled before evaluation, and the benchmark version is bumped to `v3_1`
+- Renamed `discrete_mutual_info_score` to `discrete_scaled_mutual_info_score`.
+- Unknown encoder `mean_activation` values now raise `NotImplementedError` instead of failing an assertion
+- `LatentStats` now logs `non_vanished*` counts as Python scalars
+
+### Removed
+- Remove MI metrics `local_mutual_info_score`, and `global_dim_mutual_info_score`, along with the `SMI-cont`/`SMI-disc` benchmark keys (superseded by `SMI` and `BMMI`)
+
+### Fixed
+- Fix typo in metric name `spearman_correlataion_score` -> `spearman_correlation_score`
+
+
 ## [0.2.5] - 2026-04-21
 
 ### Added
