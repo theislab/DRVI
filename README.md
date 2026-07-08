@@ -38,20 +38,23 @@ Please refer to the [documentation][]. In particular, the
 
 ## DRVI is now part of scvi-tools
 
-The PyTorch model of DRVI is now contributed to [scvi-tools][] and will be
+The PyTorch model of DRVI has been contributed to [scvi-tools][] and will be
 maintained from there. Everything else in this package, including the utility
-and plotting functions, metrics, and interpretability tools, will continue to be
+and plotting functions, metrics, and interpretability tools, continues to be
 maintained here and works on top of the scvi-tools model.
 
-For the model itself, we recommend new projects use the scvi-tools
-implementation. Existing users can still use `drvi-py < 0.3.0`, but the pytorch model (not utilities) in
-this package will be deprecated starting from `0.3.0`.
+We recommend new projects import the model directly from scvi-tools as
+`scvi.external.DRVI`, and keep importing the utilities and extras from this
+package (`drvi.utils`, etc.). For backward compatibility, `drvi.model.DRVI`
+remains importable as of version `0.3.0` and is now an alias for
+`scvi.external.DRVI`. Existing users can keep using `drvi-py < 0.3.0`, but the
+in-package PyTorch model (not the utilities) is deprecated starting from
+`0.3.0`.
 
 If you want to move to the scvi-tools implementation, the
 [Porting a DRVI model from drvi-py to scvi-tools](https://drvi.readthedocs.io/latest/tutorials/external/porting_drvi_to_scvi_tools.html)
-tutorial walks through converting a trained model
-into an scvi-tools DRVI model, so you can continue your analysis without
-retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
+tutorial walks through converting a trained model into an scvi-tools DRVI model,
+so you can continue your analysis without retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
 
 ## System requirements
 
