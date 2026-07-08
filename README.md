@@ -53,7 +53,7 @@ access utilities not available in older versions.
 
 If you want to move a model trained with `drvi-py < 0.3.0` to the scvi-tools
 implementation (`scvi-tools >= 1.5.0`), the
-[Porting a DRVI model from drvi-py to scvi-tools](https://drvi.readthedocs.io/latest/tutorials/external/porting_drvi_to_scvi_tools.html)
+[Porting a DRVI model (drvi-py < 0.3) to scvi.external.DRVI (scvi-tools)](https://drvi.readthedocs.io/latest/tutorials/external/porting_drvi_to_scvi_tools.html)
 tutorial walks through the conversion, so you can continue your analysis without
 retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
 
