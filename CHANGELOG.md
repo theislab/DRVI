@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning][].
 ### Added
 
 
+## [0.2.7]
+
+### Added
+- Add `drvi.utils.port_to_scvi_tools` to migrate a trained/saved drvi-py model into a checkpoint loadable by `scvi.external.DRVI` (available in scvi-tools 1.5.0). Pure checkpoint surgery — no model is instantiated. Unsupported capabilities raise `DRVIPortError` with a link to open an issue.
+
+
 ## [0.2.6] - 2026-07-02
 
 ### Added
