@@ -30,10 +30,32 @@ Please refer to the [documentation][]. In particular, the
 - [Tutorials][], specially
     - [Train DRVI and interpret the latent dimensions](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/general_pipeline.ipynb)
     - [Mapping query data into a DRVI reference](https://drvi.readthedocs.io/latest/tutorials/external/query_to_reference_mapping.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/query_to_reference_mapping.ipynb)
+    - [Finding rare cell types with DRVI](https://drvi.readthedocs.io/latest/tutorials/external/find_rare_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/find_rare_cell_types.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+
+## DRVI is now part of scvi-tools
+
+The PyTorch model of DRVI has been contributed to [scvi-tools][] and will be
+maintained from there. Everything else in this package, including the utility
+and plotting functions, metrics, and interpretability tools, continues to be
+maintained here and works on top of the scvi-tools model.
+
+We recommend new projects import the model directly from scvi-tools as
+`scvi.external.DRVI`, and keep importing the utilities and extras from this
+package (`drvi.utils`, etc.). For backward compatibility, `drvi.model.DRVI`
+remains importable as of version `0.3.0` and is now an alias for
+`scvi.external.DRVI`, though this alias may itself be deprecated from `0.4.0`.
+Existing users can keep using `drvi-py < 0.3.0`, but we recommend upgrading to
+access utilities not available in older versions.
+
+If you want to move a model trained with `drvi-py < 0.3.0` to the scvi-tools
+implementation (`scvi-tools >= 1.5.0`), the
+[Porting a DRVI model (drvi-py < 0.3) to scvi.external.DRVI (scvi-tools)](https://drvi.readthedocs.io/latest/tutorials/external/porting_drvi_to_scvi_tools.html)
+tutorial walks through the conversion, so you can continue your analysis without
+retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
 
 ## System requirements
 
@@ -106,4 +128,5 @@ Code, notebooks, and instructions to reproduce the results from the paper are av
 [pypi]: https://pypi.org/project/drvi-py
 [tutorials]: https://drvi.readthedocs.io/latest/tutorials/index.html
 [reproducibility repository]: https://github.com/theislab/drvi_reproducibility
+[scvi-tools]: https://scvi-tools.org/
 [open-in-colab]: https://colab.research.google.com/assets/colab-badge.svg

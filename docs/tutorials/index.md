@@ -7,4 +7,6 @@ Our tutorials demonstrate the practical application of DRVI across different use
 
 external/general_pipeline
 external/query_to_reference_mapping
+external/find_rare_cell_types
+external/porting_drvi_to_scvi_tools
 ```
