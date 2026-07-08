@@ -47,7 +47,8 @@ We recommend new projects import the model directly from scvi-tools as
 `scvi.external.DRVI`, and keep importing the utilities and extras from this
 package (`drvi.utils`, etc.). For backward compatibility, `drvi.model.DRVI`
 remains importable as of version `0.3.0` and is now an alias for
-`scvi.external.DRVI`. Existing users can keep using `drvi-py < 0.3.0`, but the
+`scvi.external.DRVI`, though this alias may itself be deprecated from `0.4.0`.
+Existing users can keep using `drvi-py < 0.3.0`, but the
 in-package PyTorch model (not the utilities) is deprecated starting from
 `0.3.0`.
 
