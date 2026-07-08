@@ -48,14 +48,14 @@ We recommend new projects import the model directly from scvi-tools as
 package (`drvi.utils`, etc.). For backward compatibility, `drvi.model.DRVI`
 remains importable as of version `0.3.0` and is now an alias for
 `scvi.external.DRVI`, though this alias may itself be deprecated from `0.4.0`.
-Existing users can keep using `drvi-py < 0.3.0`, but the
-in-package PyTorch model (not the utilities) is deprecated starting from
-`0.3.0`.
+Existing users can keep using `drvi-py < 0.3.0`, but we recommend upgrading to
+access utilities not available in older versions.
 
-If you want to move to the scvi-tools implementation, the
+If you want to move a model trained with `drvi-py < 0.3.0` to the scvi-tools
+implementation (`scvi-tools >= 1.5.0`), the
 [Porting a DRVI model from drvi-py to scvi-tools](https://drvi.readthedocs.io/latest/tutorials/external/porting_drvi_to_scvi_tools.html)
-tutorial walks through converting a trained model into an scvi-tools DRVI model,
-so you can continue your analysis without retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
+tutorial walks through the conversion, so you can continue your analysis without
+retraining. [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/porting_drvi_to_scvi_tools.ipynb)
 
 ## System requirements
 
