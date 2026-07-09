@@ -1,4 +1,9 @@
-# DRVI
+<h1 align="center">
+    <picture>
+        <source srcset="https://raw.githubusercontent.com/theislab/DRVI/main/.github/misc/logo.svg">
+        <img width="300" src="https://raw.githubusercontent.com/theislab/DRVI/main/.github/misc/logo.svg" alt="DRVI">
+    </picture>
+</h1>
 
 [![Build][badge-build]][link-build]
 [![Tests][badge-tests]][link-tests]
@@ -14,7 +19,7 @@
 [badge-pyver]: https://img.shields.io/pypi/pyversions/drvi-py
 [badge-pypi-downloads]: https://static.pepy.tech/personalized-badge/drvi-py?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=%F0%9F%93%A6+downloads
 
-Unsupervised Deep Disentangled Representation of Single-Cell Omics
+# DRVI (Unsupervised Deep Disentangled Representation of Single-Cell Omics)
 
 <h1 align="center">
     <picture>
