@@ -44,9 +44,36 @@ dependencies = [
   "session-info2",
   "torch>=2.1",
 ]
+# Minimal tutorial extra
 optional-dependencies.tutorials = [
-  "gprofiler-official>=0.3.5",
   "leidenalg",
+]
+# Everything for every tutorial
+optional-dependencies.tutorials-all = [
+  "drvi-py[tutorials,tutorials-biological-processes,tutorials-cell-types,tutorials-llm]",
+]
+# Notebook: identification_of_factors_2_biological_processes
+optional-dependencies.tutorials-biological-processes = [
+  "decoupler>=2.1.6",
+  "gprofiler-official>=1",
+  "gseapy>=1.3",
+  "statsmodels>=0.14",
+]
+# Tutorial extras
+# Notebook: identification_of_factors_1_cell_types
+optional-dependencies.tutorials-cell-types = [
+  "celltypist>=1.7.1",
+  "networkx>=3",
+]
+# Notebook: identification_of_factors_3_llm_tools
+optional-dependencies.tutorials-llm = [
+  "anthropic>=0.116",
+  "cassia>=1.3.9",
+  "claude-agent-sdk>=0.2.113",
+  "google-genai>=2.10",
+  "gs2txt[enrichment]>=0.1.2",
+  "nest-asyncio>=1.6",
+  "openai>=2.44",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://drvi.readthedocs.io/"
