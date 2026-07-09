@@ -30,6 +30,12 @@ Please refer to the [documentation][]. In particular, the
 - [Tutorials][], specially
     - [Train DRVI and interpret the latent dimensions](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/general_pipeline.ipynb)
     - [Mapping query data into a DRVI reference](https://drvi.readthedocs.io/latest/tutorials/external/query_to_reference_mapping.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/query_to_reference_mapping.ipynb)
+    - [Finding rare cell types with DRVI](https://drvi.readthedocs.io/latest/tutorials/external/find_rare_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/find_rare_cell_types.ipynb)
+    - Identifying and interpreting factors:
+        - [Cell types](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_1_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_1_cell_types.ipynb)
+        - [Biological processes](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_2_biological_processes.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_2_biological_processes.ipynb)
+        - [LLM tools](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_3_llm_tools.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_3_llm_tools.ipynb)
+        - [Curation](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
