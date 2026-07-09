@@ -34,8 +34,8 @@ Please refer to the [documentation][]. In particular, the
     - Identifying and interpreting factors:
         - [Cell types](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_1_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_1_cell_types.ipynb)
         - [Biological processes](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_2_biological_processes.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_2_biological_processes.ipynb)
-        - [LLM tools](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_3_llm_tools.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_3_llm_tools.ipynb)
-        - [Curation](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
+        - [Using LLM tools](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_3_llm_tools.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_3_llm_tools.ipynb)
+        - [Curation of factor annotations](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
