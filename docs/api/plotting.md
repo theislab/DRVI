@@ -64,9 +64,9 @@ Creates heatmap visualizations of latent dimensions across different cell groups
 - Compare latent dimension activation across cell types
 - Identify condition-specific latent patterns
 
-## Interpretability and Differential Effects
+## Interpretability
 
-The core functions are:
+The core function is:
 
 ```{eval-rst}
 .. module:: drvi.utils.plotting
@@ -77,58 +77,22 @@ The core functions are:
     :nosignatures:
     :toctree: generated
 
-    plotting.show_top_differential_vars
-    plotting.plot_relevant_genes_on_umap
-    plotting.show_differential_vars_scatter_plot
-    plotting.differential_vars_heatmap
+    plotting.plot_interpretability_scores
 ```
 
-### show_top_differential_vars
+### plot_interpretability_scores
 
-Displays bar plots of the top relevant expressed genes for each latent dimension.
+Bar plots of the top genes per latent dimension for an interpretability score. It visualizes the
+gene-score DataFrame returned by the DRVI model
+(`scvi.external.DRVI.get_interpretability_scores`).
 
-- Shows top N genes with highest score per dimension
-- Support for gene symbol mapping
+- Shows the top N genes with the highest score per dimension
+- Skips dimensions whose maximum gene score is below a threshold
 
 **Use Cases:**
 
 - Identify the most important genes for each biological process
 - Compare gene effects across different latent dimensions
-
-### plot_relevant_genes_on_umap
-
-Visualizes the expression of top relevant genes for each dimension on UMAP embeddings.
-
-- Shows genes most affected by selected latent dimensions
-- Automatic title generation and layout
-
-**Use Cases:**
-
-- Understand expression patterns of key genes
-- Validate biological interpretation of latent dimensions
-
-### show_differential_vars_scatter_plot
-
-Creates scatter plots, allowing users to understand the scoring function under the hood.
-
-- Compares two main effect values (min_possible and max_possible)
-- Colors genes by the combined effect
-
-**Use Cases:**
-
-- Visualize max_possible and min_possible effects
-- Understand the scoring function
-
-### differential_vars_heatmap
-
-Generates comprehensive heatmaps showing how genes respond to latent dimension traversals.
-
-- Shows stepwise effects across all latent dimensions and genes
-- Groups genes by their maximum effect dimension
-
-**Use Cases:**
-
-- Observe the sparsity of the identified modules
 
 ## Utility Functions
 

@@ -38,8 +38,8 @@ Please refer to the [documentation][]. In particular, the
         - [Curation of factor annotations](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
-    - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+    - [DRVI metrics](https://drvi.readthedocs.io/latest/api/metrics.html)
 
 ## DRVI is now part of scvi-tools
 
