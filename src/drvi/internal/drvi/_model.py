@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 
 from scvi.external import DRVI as _UpstreamDRVI
 
-from drvi.internal._generative_mixin import SparseLatentMixin
-from drvi.internal._module import DRVIModule
-from drvi.internal._trainingplan import DRVITrainingPlan
+from drvi.internal.drvi._generative_mixin import SparseLatentMixin
+from drvi.internal.drvi._module import DRVIModule
+from drvi.internal.drvi._trainingplan import DRVITrainingPlan
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -29,18 +29,18 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
 
     * **Residual connections** (``residual=True``) — skip connections between the same-width hidden
       layers of the encoder and decoder bodies (``n_hidden`` is fixed across hidden layers). Needs
-      ``n_layers >= 2`` to matter. See :class:`drvi.internal.DRVIModule`.
+      ``n_layers >= 2`` to matter. See :class:`drvi.internal.drvi.DRVIModule`.
     * **Streaming (online) metrics** (``track_streaming_metrics=True``, the default) — per-epoch
       latent statistics (non-vanished dimension counts) and, when a ``labels_key`` was registered,
       streaming label/latent mutual-information scores, computed during training and logged via
-      :class:`drvi.internal.DRVITrainingPlan`.
+      :class:`drvi.internal.drvi.DRVITrainingPlan`.
     * **Sparse latent representation** — :meth:`get_sparse_latent_representation` /
-      :meth:`generate_sparse_latent_representation` from :class:`drvi.internal.SparseLatentMixin`.
+      :meth:`generate_sparse_latent_representation` from :class:`drvi.internal.drvi.SparseLatentMixin`.
     * **Gene-subsampled reconstruction** (``n_genes_to_reconstruct=N``) — reconstruct a random subset
       of ``N`` genes per training step for scalable training on very wide panels (``None`` = all
-      genes). See :class:`drvi.internal.DRVIModule`.
+      genes). See :class:`drvi.internal.drvi.DRVIModule`.
     * **Gradient scaling** (``gradient_scale``) — scale the gradient flowing from the decoder heads
-      back into the decoder body/encoder (identity forward). See :class:`drvi.internal.DRVIModule`.
+      back into the decoder body/encoder (identity forward). See :class:`drvi.internal.drvi.DRVIModule`.
 
     Parameters
     ----------
@@ -58,7 +58,7 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
     gradient_scale
         Factor applied to the gradient from the decoder heads into the decoder body (``1.0`` = no-op).
     **kwargs
-        Forwarded to :class:`scvi.external.DRVI` / :class:`drvi.internal.DRVIModule` (e.g.
+        Forwarded to :class:`scvi.external.DRVI` / :class:`drvi.internal.drvi.DRVIModule` (e.g.
         ``n_latent``, ``n_hidden``, ``n_layers``, ``split_method``, ``gene_likelihood``).
 
     Examples

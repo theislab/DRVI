@@ -5,7 +5,7 @@ import pytest
 from scipy import sparse
 
 import drvi.internal
-from drvi.internal import DecoderDRVI
+from drvi.internal.drvi import DecoderDRVI
 
 
 def _make_adata(n=120, g=20, n_ct=3, n_batch=2, seed=0):

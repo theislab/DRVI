@@ -12,8 +12,8 @@ from scvi.module._constants import MODULE_KEYS
 from scvi.module.base import auto_move_data
 from torch.nn.functional import linear, one_hot
 
-from drvi.internal._base_components import DecoderDRVI, enable_residual
-from drvi.internal._metrics import LatentStats, StreamingPairwiseMI
+from drvi.internal.drvi._base_components import DecoderDRVI, enable_residual
+from drvi.internal.drvi._metrics import LatentStats, StreamingPairwiseMI
 
 if TYPE_CHECKING:
     from scvi.module.base import LossOutput
@@ -29,15 +29,15 @@ class DRVIModule(_UpstreamDRVIModule):
     unchanged otherwise:
 
     * ``residual`` — skip connections between the same-width hidden layers of the encoder body and
-      the decoder split body (see :func:`drvi.internal.enable_residual`). Requires ``n_layers >= 2``.
+      the decoder split body (see :func:`drvi.internal.drvi.enable_residual`). Requires ``n_layers >= 2``.
     * ``track_streaming_metrics`` — accumulate per-batch online metrics during training
-      (:class:`~drvi.internal.LatentStats`, always; :class:`~drvi.internal.StreamingPairwiseMI`,
+      (:class:`~drvi.internal.drvi.LatentStats`, always; :class:`~drvi.internal.drvi.StreamingPairwiseMI`,
       only when the data was set up with a ``labels_key`` so ``n_labels > 1``). Updated inside
-      :meth:`loss`; logged/reset each epoch by :class:`drvi.internal.DRVITrainingPlan`.
+      :meth:`loss`; logged/reset each epoch by :class:`drvi.internal.drvi.DRVITrainingPlan`.
     * ``n_genes_to_reconstruct`` — ``None`` (default) reconstructs all genes; an integer ``N``
       reconstructs a random subset of ``N`` genes per *training* step, so the decoder's
       ``n_hidden -> n_genes`` projection is done for the subset only (useful on very wide panels).
-      Validation and all inference paths stay dense. See :class:`~drvi.internal.DecoderDRVI`.
+      Validation and all inference paths stay dense. See :class:`~drvi.internal.drvi.DecoderDRVI`.
     * ``gradient_scale`` — multiply the gradient flowing from the parameter heads back into the
       decoder body (and hence the encoder) by this factor; the forward pass is unchanged. ``1.0``
       (default) is a no-op.

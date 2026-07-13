@@ -40,11 +40,11 @@ drvi-py, inheriting everything else unchanged:
     :toctree: generated
 
     internal.DRVI
-    internal.DRVIModule
-    internal.DecoderDRVI
-    internal.enable_residual
-    internal.LatentStats
-    internal.StreamingPairwiseMI
+    internal.drvi.DRVIModule
+    internal.drvi.DecoderDRVI
+    internal.drvi.enable_residual
+    internal.drvi.LatentStats
+    internal.drvi.StreamingPairwiseMI
 ```
 
 ## Usage Example
