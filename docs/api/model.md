@@ -21,7 +21,7 @@ from scvi.external import DRVI
 
 For backward compatibility, `drvi.model.DRVI` remains importable as an alias for
 `scvi.external.DRVI`.
-See the 
+See the
 [scvi-tools DRVI documentation](https://docs.scvi-tools.org/en/stable/api/reference/scvi.external.DRVI.html)
 for the full model API.
 
