@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning][].
 - Removed the traversal-based plotting functions `drvi.utils.pl.show_top_differential_vars`, `plot_relevant_genes_on_umap`, `show_differential_vars_scatter_plot`, `differential_vars_heatmap`, and `make_heatmap_groups` (they consumed the removed traversal outputs). `plot_interpretability_scores` (which visualizes the model's `get_interpretability_scores`) and the latent-dimension plots remain.
 
 
-## [0.2.7]
+## [0.2.7] - 2026-07-09
 
 ### Added
 - Add `drvi.utils.port_to_scvi_tools` to migrate a trained/saved drvi-py model into a checkpoint loadable by `scvi.external.DRVI` (available in scvi-tools 1.5.0). Pure checkpoint surgery — no model is instantiated. Unsupported capabilities raise `DRVIPortError` with a link to open an issue.
