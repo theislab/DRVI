@@ -173,6 +173,4 @@ nitpick_ignore = [
     ("py:func", "register_module_forward_pre_hook"),
     ("py:func", "register_module_full_backward_hook"),
     ("py:func", "register_module_full_backward_pre_hook"),
-    # DRVI internal references
-    ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]

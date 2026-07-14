@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "drvi-py"
-version = "0.2.7"
+version = "0.3.0"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -14,7 +14,7 @@ maintainers = [
 authors = [
   { name = "Amir Ali Moinfar" },
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.12,<3.15"
 classifiers = [
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
@@ -23,8 +23,6 @@ classifiers = [
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
@@ -40,7 +38,7 @@ dependencies = [
   "scanpy>=1.9.5",
   "scikit-learn>=1.5.1",
   "scipy>=1.11.3",
-  "scvi-tools>=1.0.4",
+  "scvi-tools>=1.5",
   "session-info2",
   "torch>=2.1",
 ]
@@ -116,7 +114,7 @@ envs.docs.scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 envs.docs.dependency-groups = [ "doc" ]
 envs.hatch-test.matrix = [
   # Test the lowest and highest supported Python versions with normal deps
-  { deps = [ "stable" ], python = [ "3.10", "3.14" ] },
+  { deps = [ "stable" ], python = [ "3.12", "3.14" ] },
   # Test the newest supported Python version also with pre-release deps
   { deps = [ "pre" ], python = [ "3.14" ] },
 ]
