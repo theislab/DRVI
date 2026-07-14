@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning][].
 ## [Unreleased]
 
 ### Added
+- Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: opt-in residual connections between the same-width hidden layers of the encoder/decoder (`residual=True`), streaming (online) training metrics logged per epoch (`track_streaming_metrics`, latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). Its API is unstable and may change or be removed without notice.
 
 
 ## [0.3.0]

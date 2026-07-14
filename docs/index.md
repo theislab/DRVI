@@ -10,6 +10,7 @@
 api/model
 api/plotting
 api/metrics
+api/internal
 ```
 
 ```{toctree}
