@@ -43,8 +43,8 @@ Please refer to the [documentation][]. In particular, the
         - [Curation of factor annotations](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
 - [API documentation][], specially
     - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
-    - [DRVI utility functions (tools)](https://drvi.readthedocs.io/latest/api/tools.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
+    - [DRVI metrics](https://drvi.readthedocs.io/latest/api/metrics.html)
 
 ## DRVI is now part of scvi-tools
 
@@ -79,8 +79,13 @@ While CPU-based systems are supported, GPU-powered systems are strongly recommen
 
 ## Installation
 
-You need to have Python (versions 3.10 to 3.14 supported) installed on your system. If you don't have
+You need to have Python (versions 3.12 to 3.14 supported) installed on your system. If you don't have
 Python installed, we recommend installing [uv][].
+
+> **Note for Python 3.10 and 3.11 users:** Starting from version 0.3, `drvi-py` requires Python >=3.12
+> (a constraint inherited from [scvi-tools][]). If you are on Python 3.10 or 3.11, you can install an
+> earlier release with `pip install "drvi-py<0.3"` and later translate your trained model to the newer
+> format once you upgrade your Python environment.
 
 There are several alternative options to install drvi:
 

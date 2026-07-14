@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning][].
 - Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: opt-in residual connections between the same-width hidden layers of the encoder/decoder (`residual=True`), streaming (online) training metrics logged per epoch (`track_streaming_metrics`, latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). Its API is unstable and may change or be removed without notice.
 
 
+## [0.3.0]
+
+### Changed
+- The DRVI PyTorch model is no longer shipped in this package. It has been contributed to [scvi-tools](https://scvi-tools.org/) and now lives there as `scvi.external.DRVI` (requires `scvi-tools >= 1.5.0`, now the minimum dependency). `drvi.model.DRVI` is kept as an alias for `scvi.external.DRVI` for backward compatibility and may be deprecated from `0.4.0`. New code should import the model directly as `scvi.external.DRVI`. Utility, plotting, metrics, and interpretability tools (`drvi.utils`) continue to be maintained here and work on top of the scvi-tools model.
+
+### Removed
+- Removed the in-package model implementation and its internals: `drvi.scvi_tools_based` (model, module, training plan, neural-network components, data fields), `drvi.nn_modules`, and `drvi.model.DRVIModule`. Model capabilities not supported by `scvi.external.DRVI` are dropped and will not be reinstated. To move a model trained with `drvi-py < 0.3.0` to scvi-tools, use `drvi.utils.port_to_scvi_tools`.
+- Emptied the `drvi.utils.tl` tools namespace (`drvi.utils.tools`): removed `set_latent_dimension_stats`, `traverse_latent`, `calculate_differential_vars`, `get_split_effects`, and `iterate_on_top_differential_vars`. The latent-traversal interpretability pipeline is superseded by the scvi-tools DRVI model's built-in `set_latent_dimension_stats` / `calculate_interpretability_scores` / `get_interpretability_scores`. The `drvi.utils.tl` namespace is kept (now empty) as a stable import location.
+- Removed the traversal-based plotting functions `drvi.utils.pl.show_top_differential_vars`, `plot_relevant_genes_on_umap`, `show_differential_vars_scatter_plot`, `differential_vars_heatmap`, and `make_heatmap_groups` (they consumed the removed traversal outputs). `plot_interpretability_scores` (which visualizes the model's `get_interpretability_scores`) and the latent-dimension plots remain.
+
+
 ## [0.2.7] - 2026-07-09
 
 ### Added
