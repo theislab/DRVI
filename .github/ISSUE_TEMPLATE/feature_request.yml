@@ -1,6 +1,6 @@
 name: Feature request
-description: Propose a new feature for drvi-py
-type: Enhancement
+description: Propose a new feature for drvi
+labels: enhancement
 body:
   - type: textarea
     id: description
