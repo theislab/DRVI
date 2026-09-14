@@ -53,9 +53,15 @@ def plot_interpretability_scores(
     matplotlib.figure.Figure or None
         The figure object if ``show=False``, otherwise None.
     """
+
+    def _dim_number(dim_title: object) -> int:
+        match = re.search(r"\d+", str(dim_title))
+        assert match is not None, f"Expected a dimension number in {dim_title!r}"
+        return int(match.group())
+
     info = {k: v for k, v in gene_scores_df.to_dict(orient="series").items() if v.max() >= score_threshold}
     if dim_subset is None:
-        dims = sorted(info, key=lambda x: int(re.search(r"\d+", x).group()))
+        dims = sorted(info, key=_dim_number)
     else:
         dims = [dim for dim in dim_subset if dim in info]
 

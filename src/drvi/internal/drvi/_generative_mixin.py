@@ -24,6 +24,20 @@ class SparseLatentMixin:
     most latent coordinates exactly (or near) zero.
     """
 
+    if TYPE_CHECKING:
+        # Provided by the model classes this mixin is combined with (e.g. scvi's GenerativeMixin
+        # and BaseModelClass), not by this mixin itself.
+        def _check_if_trained(self, warn: bool = ...) -> None: ...
+
+        def iterate_on_ae_output(
+            self,
+            adata: AnnData | None = ...,
+            indices: Sequence[int] | None = ...,
+            batch_size: int | None = ...,
+            deterministic: bool = ...,
+            **kwargs: Any,
+        ) -> Any: ...
+
     @torch.inference_mode()
     def generate_sparse_latent_representation(
         self,

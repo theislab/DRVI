@@ -186,7 +186,9 @@ class DRVIPorter:
         version = Version(self._old_registry.get("drvi_version") or "0.1.0")
         hops = sorted((k for k in _MIGRATION_CHAIN if len(k) == 4), key=lambda k: Version(k[1]))
         while hop := next((h for h in hops if h[0] == pkg and version <= Version(h[1])), None):
-            _MIGRATION_CHAIN[hop].apply(params)
+            migration = _MIGRATION_CHAIN[hop]
+            assert migration is not None, f"{hop} is a 4-tuple hop, never the None-valued terminal entry"
+            migration.apply(params)
             pkg, version = hop[2], Version(hop[3])
         return params
 

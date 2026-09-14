@@ -181,24 +181,10 @@ lint.pydocstyle.convention = "numpy"
 
 [tool.mypy]
 files = [ "src", "tests" ]
-
-# Third-party dependencies without type stubs or a py.typed marker.
-[[tool.mypy.overrides]]
-module = [ "scanpy.*", "scipy.*", "scvi.*", "sklearn.*" ]
-ignore_missing_imports = true
-
-# TODO: fix type errors in these modules and remove the override.
-[[tool.mypy.overrides]]
-module = [
-  "drvi.internal.drvi._generative_mixin",
-  "drvi.internal.drvi._metrics",
-  "drvi.internal.drvi._module",
-  "drvi.utils.plotting._cmap",
-  "drvi.utils.plotting._interpretability",
-  "drvi.utils.plotting._latent",
-  "drvi.utils.porting",
+overrides = [
+  # Third-party dependencies without type stubs or a py.typed marker.
+  { module = [ "scanpy.*", "scipy.*", "scvi.*", "sklearn.*" ], ignore_missing_imports = true }
 ]
-ignore_errors = true
 
 [tool.pytest]
 addopts = [
