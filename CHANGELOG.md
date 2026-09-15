@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning][].
 ### Added
 - Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: opt-in residual connections between the same-width hidden layers of the encoder/decoder (`residual=True`), streaming (online) training metrics logged per epoch (`track_streaming_metrics`, latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). Its API is unstable and may change or be removed without notice.
 
+### Changed
+- Sync the repository with [cookiecutter-scverse](https://github.com/scverse/cookiecutter-scverse) template v0.8.0: GitHub Actions are pinned to immutable commit hashes and audited by [zizmor](https://github.com/zizmorcore/zizmor), the code-style hooks are run through [prek](https://prek.j178.dev/) locally and [autofix.ci](https://autofix.ci/) on pull requests, and `mypy` type checking is now part of the checks (`hatch check types`). See `docs/contributing.md` for the updated developer workflow.
+- The documentation now uses `sphinx-design` instead of `sphinx-tabs`, and takes the shared sphinx extensions from [scverse-misc](https://github.com/scverse/scverse-misc) instead of the vendored `docs/extensions/typed_returns.py`.
+
+### Fixed
+- `plot_latent_dims_in_umap` now accepts any sequence as `dim_subset`; passing a tuple previously raised a `KeyError`.
+- `plot_interpretability_scores` now raises an explanatory `ValueError` when a dimension title contains no dimension number, instead of an `AttributeError`.
+
 
 ## [0.3.0]
 
