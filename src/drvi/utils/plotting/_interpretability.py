@@ -7,9 +7,17 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Hashable, Sequence
 
     import pandas as pd
+
+
+def _dim_number(dim_title: Hashable) -> int:
+    """Extract the dimension number from a dimension title, e.g. ``"DR 7"`` -> ``7``."""
+    match = re.search(r"\d+", str(dim_title))
+    if match is None:
+        raise ValueError(f"No dimension number found in {dim_title!r}")
+    return int(match.group())
 
 
 def plot_interpretability_scores(
@@ -53,12 +61,6 @@ def plot_interpretability_scores(
     matplotlib.figure.Figure or None
         The figure object if ``show=False``, otherwise None.
     """
-
-    def _dim_number(dim_title: object) -> int:
-        match = re.search(r"\d+", str(dim_title))
-        assert match is not None, f"Expected a dimension number in {dim_title!r}"
-        return int(match.group())
-
     info = {k: v for k, v in gene_scores_df.to_dict(orient="series").items() if v.max() >= score_threshold}
     if dim_subset is None:
         dims = sorted(info, key=_dim_number)

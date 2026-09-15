@@ -9,7 +9,7 @@ from scipy import sparse
 from scvi.module._constants import MODULE_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from typing import Any
 
     from anndata import AnnData
@@ -25,18 +25,10 @@ class SparseLatentMixin:
     """
 
     if TYPE_CHECKING:
-        # Provided by the model classes this mixin is combined with (e.g. scvi's GenerativeMixin
-        # and BaseModelClass), not by this mixin itself.
-        def _check_if_trained(self, warn: bool = ...) -> None: ...
-
-        def iterate_on_ae_output(
-            self,
-            adata: AnnData | None = ...,
-            indices: Sequence[int] | None = ...,
-            batch_size: int | None = ...,
-            deterministic: bool = ...,
-            **kwargs: Any,
-        ) -> Any: ...
+        # Supplied by the model class this mixin is combined with (scvi's GenerativeMixin and
+        # BaseModelClass), which is untyped — hence `Callable` rather than a fabricated signature.
+        _check_if_trained: Callable[..., None]
+        iterate_on_ae_output: Callable[..., Any]
 
     @torch.inference_mode()
     def generate_sparse_latent_representation(

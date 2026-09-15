@@ -212,8 +212,12 @@ class StreamingPairwiseMI(Metric):
         mi = torch.clamp(mi, min=0.0) / (h_y + self.epsilon)
         return mi.detach().cpu().numpy()
 
-    def compute(self, is_train: bool):  # type: ignore[override]  # always called with is_train explicitly
-        """One-vs-rest normalized MI summary, matched via the training-split score matrix."""
+    def compute(self, is_train: bool):  # type: ignore[override]
+        """One-vs-rest normalized MI summary, matched via the training-split score matrix.
+
+        Unlike :meth:`~torchmetrics.Metric.compute`, ``is_train`` is required: this metric is only
+        ever computed explicitly per split (by the training plan), never through ``forward()``.
+        """
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
 
         if is_train:

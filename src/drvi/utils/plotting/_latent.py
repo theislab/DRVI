@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import anndata as ad
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from matplotlib import pyplot as plt
 
@@ -12,21 +11,28 @@ from drvi.utils.plotting import cmap
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
+    from typing import Any, Literal
 
+    import pandas as pd
     from anndata import AnnData
 
 
-def _as_frame(df: object, name: str) -> pd.DataFrame:
-    """Narrow anndata's ``DataFrame | Dataset2D`` to a concrete in-memory `pandas.DataFrame`.
+def _as_df(df: object) -> pd.DataFrame:
+    """Narrow anndata's ``DataFrame | Dataset2D`` annotation to the `pandas.DataFrame` it is here.
 
-    This module relies on pandas-only APIs (``groupby``, ``sort_values``, ``query``, item
-    assignment, ...), so a lazily-backed AnnData (whose ``.obs``/``.var`` would be a
-    ``Dataset2D``) is not supported here.
+    The functions below use pandas-only APIs (``groupby``, ``query``, ``sort_values``, column
+    assignment), so they need an in-memory AnnData anyway; ``Dataset2D`` only occurs for the
+    experimental lazily-backed one.
     """
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError(f"{name} must be an in-memory pandas DataFrame; lazily-backed AnnData is not supported here.")
-    return df
+    return cast("pd.DataFrame", df)
+
+
+def _as_array(x: object) -> Any:
+    """Narrow anndata's ``.X`` annotation, which also allows ``None`` and backed datasets.
+
+    The functions below plot an in-memory embedding, where ``.X`` is a dense or sparse array.
+    """
+    return cast("Any", x)
 
 
 def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> AnnData:
@@ -55,7 +61,7 @@ def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> An
     The function uses a fixed random state (0) for reproducible results.
     If a category has fewer samples than `min_count`, sampling is done with replacement.
     """
-    obs = _as_frame(adata.obs, "adata.obs")
+    obs = _as_df(adata.obs)
     n_sample_per_cond = obs[col].value_counts().min()
     balanced_sample_index = (
         obs.groupby(col)
@@ -147,7 +153,7 @@ def plot_latent_dimension_stats(
 
     # Iterate through columns and plot the data
     for ax, col in zip(axes.flatten(), columns, strict=False):
-        df = _as_frame(embed.var, "embed.var")
+        df = _as_df(embed.var)
         if remove_vanished:
             df = df.query("vanished == False")
         df = df.sort_values("order")
@@ -313,11 +319,10 @@ def plot_latent_dims_in_umap(
             embed_pos.X = embed_pos.layers[kwargs["layer"]]
             del kwargs["layer"]
         embed_neg = embed_pos.copy()
-        assert embed_neg.X is not None
-        embed_neg.X = -embed_neg.X  # type: ignore[operator]  # dense/sparse in-memory X only, not backed datasets
+        embed_neg.X = -_as_array(embed_neg.X)
 
-        var_pos = _as_frame(embed_pos.var, "embed.var")
-        var_neg = _as_frame(embed_neg.var, "embed.var")
+        var_pos = _as_df(embed_pos.var)
+        var_neg = _as_df(embed_neg.var)
         var_neg["min"], var_neg["max"] = -var_neg["max"], -var_neg["min"]
 
         var_pos["_direction"] = "+"
@@ -332,16 +337,15 @@ def plot_latent_dims_in_umap(
             var_neg[order_col] = var_neg[order_col].astype(str) + "-"
 
         embed = ad.concat([embed_pos, embed_neg], axis=1, join="inner", merge="first")
-        _as_frame(embed.var, "embed.var").reset_index(drop=True, inplace=True)
+        _as_df(embed.var).reset_index(drop=True, inplace=True)
 
-    tmp_df = _as_frame(embed.var, "embed.var").sort_values(order_col)
+    tmp_df = _as_df(embed.var).sort_values(order_col)
     if remove_vanished:
         tmp_df = tmp_df.query("vanished == False")
     if dim_subset:
         tmp_df = tmp_df.set_index(title_col).loc[list(dim_subset)].reset_index()
-    cols_to_show: list = list(tmp_df.index if title_col is None else tmp_df[title_col])
-    if additional_columns:
-        cols_to_show = cols_to_show + list(additional_columns)
+    dim_cols = tmp_df.index if title_col is None else tmp_df[title_col]
+    cols_to_show = [*dim_cols, *additional_columns]
 
     if min_max_thresholds is not None:
         vmin = list(np.minimum(tmp_df["min"].to_numpy(), min_max_thresholds[0]))
@@ -480,8 +484,7 @@ def plot_latent_dims_in_heatmap(
         embed = make_balanced_subsample(embed, categorical_column)
 
     if sort_by_categorical:
-        assert embed.X is not None
-        dim_order = np.abs(embed.X).argmax(axis=0).argsort().tolist()  # type: ignore[arg-type]  # dense/sparse in-memory X only
+        dim_order = np.abs(_as_array(embed.X)).argmax(axis=0).argsort().tolist()
     elif order_col is None:
         dim_order = np.arange(embed.n_vars)
     else:
