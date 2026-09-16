@@ -1,3 +1,9 @@
+ci:
+  # The mypy hook shells out to `hatch`, which pre-commit.ci does not have and cannot install:
+  # type checking needs the project's dependencies, and pre-commit.ci has no network access while
+  # running hooks. The `Pre-commit checks` GitHub Actions job runs the full set, mypy included.
+  skip: [mypy]
+
 fail_fast: false
 default_language_version:
   python: python3
