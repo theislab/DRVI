@@ -9,7 +9,7 @@ from scipy import sparse
 from scvi.module._constants import MODULE_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from typing import Any
 
     from anndata import AnnData
@@ -23,6 +23,12 @@ class SparseLatentMixin:
     :class:`scipy.sparse.csr_matrix` objects — useful when a non-negative ``mean_activation`` makes
     most latent coordinates exactly (or near) zero.
     """
+
+    if TYPE_CHECKING:
+        # Supplied by the model class this mixin is combined with (scvi's GenerativeMixin and
+        # BaseModelClass), which is untyped — hence `Callable` rather than a fabricated signature.
+        _check_if_trained: Callable[..., None]
+        iterate_on_ae_output: Callable[..., Any]
 
     @torch.inference_mode()
     def generate_sparse_latent_representation(

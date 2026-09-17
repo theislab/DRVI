@@ -156,6 +156,7 @@ class DRVIModule(_UpstreamDRVIModule):
 
         # dispersion logit over the subset (gene-cell already came from the subsampled head)
         if self.dispersion == "gene-label":
+            assert y is not None, "`y` (labels) is required when dispersion='gene-label'"
             px_r_logit = linear(one_hot(y.squeeze(-1), self.n_labels).float(), self.px_r)[..., idx]
         elif self.dispersion == "gene-batch":
             px_r_logit = linear(one_hot(batch_index.squeeze(-1), self.n_batch).float(), self.px_r)[..., idx]

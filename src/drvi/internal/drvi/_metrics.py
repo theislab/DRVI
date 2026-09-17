@@ -44,6 +44,13 @@ class LatentStats(Metric):
 
     full_state_update: bool = False
 
+    # Declared here (rather than only via add_state/register_buffer) so mypy knows these are
+    # plain tensors, not the generic `Tensor | Module` that `nn.Module.__getattr__` implies.
+    z_min_prev: torch.Tensor
+    z_max_prev: torch.Tensor
+    z_min_accum: torch.Tensor
+    z_max_accum: torch.Tensor
+
     def __init__(
         self,
         n_latent: int,
@@ -101,6 +108,11 @@ class StreamingPairwiseMI(Metric):
     """
 
     full_state_update: bool = False
+
+    train_counts: torch.Tensor
+    train_total_samples: torch.Tensor
+    val_counts: torch.Tensor
+    val_total_samples: torch.Tensor
 
     def __init__(
         self,
@@ -200,8 +212,12 @@ class StreamingPairwiseMI(Metric):
         mi = torch.clamp(mi, min=0.0) / (h_y + self.epsilon)
         return mi.detach().cpu().numpy()
 
-    def compute(self, is_train: bool):
-        """One-vs-rest normalized MI summary, matched via the training-split score matrix."""
+    def compute(self, is_train: bool):  # type: ignore[override]
+        """One-vs-rest normalized MI summary, matched via the training-split score matrix.
+
+        Unlike :meth:`~torchmetrics.Metric.compute`, ``is_train`` is required: this metric is only
+        ever computed explicitly per split (by the training plan), never through ``forward()``.
+        """
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
 
         if is_train:
