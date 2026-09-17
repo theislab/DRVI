@@ -1,49 +1,34 @@
 """Tests for :func:`drvi.utils.port_to_scvi_tools` (drvi-py -> scvi-tools checkpoint migration).
 
 These validate the checkpoint transformation itself (key remapping, value transforms, ``init_params_``
-and ``registry_`` rewriting) without importing scvi-tools. An end-to-end numerical-equivalence check
-against ``scvi.external.DRVI`` lives outside the drvi-py test suite (it needs scvi-tools installed).
+and ``registry_`` rewriting). The porter's input is a drvi-py < 0.3.0 ``model.pt``, which can no
+longer be produced here because the in-package model was removed in 0.3.0. Instead we ship real
+old-format checkpoints under ``tests/data/porting/`` (trained with the drvi-py 0.2.7 model) and port
+those. See ``tests/data/porting/README.md`` for how to regenerate them.
 """
 
 import copy
+import shutil
+from pathlib import Path
 
-import anndata as ad
-import numpy as np
-import pandas as pd
 import pytest
 import torch
 
-from drvi.model import DRVI
 from drvi.utils import port_to_scvi_tools
 from drvi.utils.porting import DRVIPorter, DRVIPortError
 
-
-def _make_adata(n=200, g=50, seed=0):
-    rng = np.random.default_rng(seed)
-    X = rng.poisson(1.0, size=(n, g)).astype(np.float32)
-    adata = ad.AnnData(
-        X=X,
-        obs=pd.DataFrame(
-            {
-                "batch": [f"b{i % 2}" for i in range(n)],
-                "cov": [f"c{i % 3}" for i in range(n)],
-            },
-            index=[f"cell_{i}" for i in range(n)],
-        ),
-        var=pd.DataFrame(index=[f"gene_{i}" for i in range(g)]),
-    )
-    adata.layers["counts"] = X.copy()
-    return adata
+_FIXTURES = Path(__file__).parent.parent / "data" / "porting"
 
 
-def _train_and_save(tmp_path, name, **model_kwargs):
-    adata = _make_adata()
-    DRVI.setup_anndata(adata, layer="counts", batch_key="batch", categorical_covariate_keys=["cov"])
-    model = DRVI(adata, **model_kwargs)
-    model.train(max_epochs=2, accelerator="cpu", batch_size=128, train_size=0.9)
-    out = str(tmp_path / name)
-    model.save(out, overwrite=True)
-    return out
+def _stage(tmp_path, fixture_name):
+    """Copy a committed old-format fixture into ``tmp_path``.
+
+    The porter writes its output next to the source (default dest ``{src}_scvi_tools``), so we work on
+    a copy to keep the committed fixtures pristine.
+    """
+    src = tmp_path / fixture_name
+    shutil.copytree(_FIXTURES / fixture_name, src)
+    return str(src)
 
 
 def _load_sd(model_dir):
@@ -53,7 +38,7 @@ def _load_sd(model_dir):
 
 class TestPortToScviTools:
     def test_default_model_end_to_end(self, tmp_path):
-        src = _train_and_save(tmp_path, "src_default")
+        src = _stage(tmp_path, "default")
         old_sd, _, var_names = _load_sd(src)
 
         dest = port_to_scvi_tools(src)  # default dest = "{src}_scvi_tools"
@@ -142,7 +127,7 @@ class TestPortToScviTools:
         assert new_attr["is_trained_"] is True
 
     def test_no_weight_sharing_transposes_head(self, tmp_path):
-        src = _train_and_save(tmp_path, "src_nowhere", decoder_reuse_weights="nowhere")
+        src = _stage(tmp_path, "reuse_nowhere")
         old_sd, _, _ = _load_sd(src)
         dest = port_to_scvi_tools(src)
         new_sd, new_attr, _ = _load_sd(dest)
@@ -155,7 +140,7 @@ class TestPortToScviTools:
     def test_gene_batch_dispersion_folds_offset(self, tmp_path):
         # scvi computes gene-batch dispersion as linear(one_hot(batch), px_r) with no bias/offset,
         # so the old Linear weight, bias, and drvi's +1.0 must fuse into one px_r matrix.
-        src = _train_and_save(tmp_path, "src_gb", dispersion="gene-batch")
+        src = _stage(tmp_path, "dispersion_gene_batch")
         old_sd, _, _ = _load_sd(src)
         dest = port_to_scvi_tools(src)
         new_sd, new_attr, _ = _load_sd(dest)
@@ -169,7 +154,7 @@ class TestPortToScviTools:
 
     def test_gene_cell_dispersion_head_raw(self, tmp_path):
         # scvi adds drvi's +1.0 after split-aggregation, so the per-cell head is copied raw.
-        src = _train_and_save(tmp_path, "src_gc", dispersion="gene-cell")
+        src = _stage(tmp_path, "dispersion_gene_cell")
         old_sd, _, _ = _load_sd(src)
         dest = port_to_scvi_tools(src)
         new_sd, new_attr, _ = _load_sd(dest)
@@ -184,7 +169,7 @@ class TestPortToScviTools:
         assert new_attr["init_params_"]["kwargs"]["kwargs"]["dispersion"] == "gene-cell"
 
     def test_does_not_overwrite(self, tmp_path):
-        src = _train_and_save(tmp_path, "src_ow")
+        src = _stage(tmp_path, "default")
         dest = str(tmp_path / "explicit_dest")
         port_to_scvi_tools(src, dest)
         with pytest.raises(FileExistsError):
@@ -194,7 +179,7 @@ class TestPortToScviTools:
 
     def test_raises_on_removed_capability(self, tmp_path):
         """A capability with no scvi-tools equivalent must raise DRVIPortError, not silently port."""
-        src = _train_and_save(tmp_path, "src_cap")
+        src = _stage(tmp_path, "default")
         ckpt = torch.load(f"{src}/model.pt", map_location="cpu", weights_only=False)
 
         # unsupported split_aggregation

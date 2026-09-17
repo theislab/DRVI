@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import anndata as ad
 import numpy as np
@@ -11,9 +11,28 @@ from drvi.utils.plotting import cmap
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
+    from typing import Any, Literal
 
+    import pandas as pd
     from anndata import AnnData
+
+
+def _as_df(df: object) -> pd.DataFrame:
+    """Narrow anndata's ``DataFrame | Dataset2D`` annotation to the `pandas.DataFrame` it is here.
+
+    The functions below use pandas-only APIs (``groupby``, ``query``, ``sort_values``, column
+    assignment), so they need an in-memory AnnData anyway; ``Dataset2D`` only occurs for the
+    experimental lazily-backed one.
+    """
+    return cast("pd.DataFrame", df)
+
+
+def _as_array(x: object) -> Any:
+    """Narrow anndata's ``.X`` annotation, which also allows ``None`` and backed datasets.
+
+    The functions below plot an in-memory embedding, where ``.X`` is a dense or sparse array.
+    """
+    return cast("Any", x)
 
 
 def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> AnnData:
@@ -42,9 +61,10 @@ def make_balanced_subsample(adata: AnnData, col: str, min_count: int = 10) -> An
     The function uses a fixed random state (0) for reproducible results.
     If a category has fewer samples than `min_count`, sampling is done with replacement.
     """
-    n_sample_per_cond = adata.obs[col].value_counts().min()
+    obs = _as_df(adata.obs)
+    n_sample_per_cond = obs[col].value_counts().min()
     balanced_sample_index = (
-        adata.obs.groupby(col)
+        obs.groupby(col)
         .sample(n=max(min_count, n_sample_per_cond), random_state=0, replace=n_sample_per_cond < min_count)
         .index
     )
@@ -133,7 +153,7 @@ def plot_latent_dimension_stats(
 
     # Iterate through columns and plot the data
     for ax, col in zip(axes.flatten(), columns, strict=False):
-        df = embed.var
+        df = _as_df(embed.var)
         if remove_vanished:
             df = df.query("vanished == False")
         df = df.sort_values("order")
@@ -299,38 +319,40 @@ def plot_latent_dims_in_umap(
             embed_pos.X = embed_pos.layers[kwargs["layer"]]
             del kwargs["layer"]
         embed_neg = embed_pos.copy()
-        embed_neg.X = -embed_neg.X
-        embed_neg.var["min"], embed_neg.var["max"] = -embed_neg.var["max"], -embed_neg.var["min"]
+        embed_neg.X = -_as_array(embed_neg.X)
 
-        embed_pos.var["_direction"] = "+"
-        embed_neg.var["_direction"] = "-"
-        embed_pos.var[title_col] = embed_pos.var[title_col] + "+"
-        embed_neg.var[title_col] = embed_neg.var[title_col] + "-"
-        if embed.var[order_col].dtype in [np.int32, np.int64, np.float32, np.float64]:
-            embed_pos.var[order_col] = embed_pos.var[order_col] + 1e-8
-            embed_neg.var[order_col] = embed_neg.var[order_col] - 1e-8
+        var_pos = _as_df(embed_pos.var)
+        var_neg = _as_df(embed_neg.var)
+        var_neg["min"], var_neg["max"] = -var_neg["max"], -var_neg["min"]
+
+        var_pos["_direction"] = "+"
+        var_neg["_direction"] = "-"
+        var_pos[title_col] = var_pos[title_col] + "+"
+        var_neg[title_col] = var_neg[title_col] + "-"
+        if var_pos[order_col].dtype in [np.int32, np.int64, np.float32, np.float64]:
+            var_pos[order_col] = var_pos[order_col] + 1e-8
+            var_neg[order_col] = var_neg[order_col] - 1e-8
         else:
-            embed_pos.var[order_col] = embed_pos.var[order_col].astype(str) + "+"
-            embed_neg.var[order_col] = embed_neg.var[order_col].astype(str) + "-"
+            var_pos[order_col] = var_pos[order_col].astype(str) + "+"
+            var_neg[order_col] = var_neg[order_col].astype(str) + "-"
 
         embed = ad.concat([embed_pos, embed_neg], axis=1, join="inner", merge="first")
-        embed.var.reset_index(drop=True, inplace=True)
+        _as_df(embed.var).reset_index(drop=True, inplace=True)
 
-    tmp_df = embed.var.sort_values(order_col)
+    tmp_df = _as_df(embed.var).sort_values(order_col)
     if remove_vanished:
         tmp_df = tmp_df.query("vanished == False")
     if dim_subset:
-        tmp_df = tmp_df.set_index(title_col).loc[dim_subset].reset_index()
-    cols_to_show = tmp_df.index if title_col is None else tmp_df[title_col]
-    if additional_columns:
-        cols_to_show = list(cols_to_show) + list(additional_columns)
+        tmp_df = tmp_df.set_index(title_col).loc[list(dim_subset)].reset_index()
+    dim_cols = tmp_df.index if title_col is None else tmp_df[title_col]
+    cols_to_show = [*dim_cols, *additional_columns]
 
     if min_max_thresholds is not None:
-        vmin = list(np.minimum(tmp_df["min"].values, min_max_thresholds[0]))
-        vmax = list(np.maximum(tmp_df["max"].values, min_max_thresholds[1]))
+        vmin = list(np.minimum(tmp_df["min"].to_numpy(), min_max_thresholds[0]))
+        vmax = list(np.maximum(tmp_df["max"].to_numpy(), min_max_thresholds[1]))
     else:
-        vmin = list(tmp_df["min"].values)
-        vmax = list(tmp_df["max"].values)
+        vmin = list(tmp_df["min"].to_numpy())
+        vmax = list(tmp_df["max"].to_numpy())
 
     kwargs = {
         **dict(  # noqa: C408
@@ -376,7 +398,7 @@ def plot_latent_dims_in_heatmap(
     make_balanced: bool = True,
     order_col: str | None = "order",
     remove_vanished: bool = True,
-    figsize: tuple[int, int] | None = None,
+    figsize: tuple[float, float] | None = None,
     show: bool = True,
     **kwargs,
 ):
@@ -462,7 +484,7 @@ def plot_latent_dims_in_heatmap(
         embed = make_balanced_subsample(embed, categorical_column)
 
     if sort_by_categorical:
-        dim_order = np.abs(embed.X).argmax(axis=0).argsort().tolist()
+        dim_order = np.abs(_as_array(embed.X)).argmax(axis=0).argsort().tolist()
     elif order_col is None:
         dim_order = np.arange(embed.n_vars)
     else:

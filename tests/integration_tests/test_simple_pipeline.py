@@ -69,12 +69,11 @@ class TestSimplePipelineOfTrainingAndInterpretability:
             adata,
             categorical_covariate_keys=["batch"],
             layer="counts",
-            is_count_data=True,
         )
         _model_kwargs = dict(  # noqa: C408
             n_latent=8,
-            encoder_dims=[128],
-            decoder_dims=[128],
+            n_hidden=128,
+            n_layers=1,
             gene_likelihood="pnb",
             decoder_reuse_weights="everywhere",
         )
@@ -84,16 +83,12 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         model.train(accelerator="cpu", max_epochs=100)
         embed = ad.AnnData(model.get_latent_representation(), obs=adata.obs)
 
-        drvi.utils.tl.set_latent_dimension_stats(model, embed)
-
-        traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=2, max_noise_std=0.0)
-        drvi.utils.tl.calculate_differential_vars(traverse_adata)
+        model.set_latent_dimension_stats(embed)
 
         return {
             "adata": adata,
             "model": model,
             "embed": embed,
-            "traverse_adata": traverse_adata,
         }
 
     def test_whole_integration_and_interpretability_pipeline(self):
@@ -106,19 +101,19 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         adata = train_results["adata"]
         embed = train_results["embed"]
 
+        # The scvi-tools DRVI model computes interpretability scores; plotting them is provided by
+        # this package's utility (the model-method plot wrapper was dropped in drvi-py 0.3.0).
         model.calculate_interpretability_scores(embed, methods="ALL", inplace=True)
-        model.get_interpretability_scores(embed, adata)
-        model.plot_interpretability_scores(embed, adata, show=False)
+        scores_df = model.get_interpretability_scores(embed, adata)
+        drvi.utils.pl.plot_interpretability_scores(scores_df, score_threshold=0.0, show=False)
         model.calculate_interpretability_scores(embed, methods="ALL", directional=False, inplace=True)
-        model.get_interpretability_scores(embed, adata, directional=False)
-        model.plot_interpretability_scores(embed, adata, directional=False, show=False)
+        scores_df = model.get_interpretability_scores(embed, adata, directional=False)
+        drvi.utils.pl.plot_interpretability_scores(scores_df, score_threshold=0.0, show=False)
         plt.close()
 
     def test_plotting_functions(self):
         train_results = self._whole_integration_and_interpretability_pipeline()
-        adata = train_results["adata"]
         embed = train_results["embed"]
-        traverse_adata = train_results["traverse_adata"]
 
         # pre-processing
         sc.pp.neighbors(embed, use_rep="X", n_pcs=embed.X.shape[1])
@@ -134,34 +129,4 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         plt.close()
 
         drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False)
-        plt.close()
-        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0, show=False)
-        plt.close()
-
-        dimensions_interpretability = drvi.utils.tools.iterate_on_top_differential_vars(
-            traverse_adata, key="combined_score", score_threshold=0.0
-        )
-
-        sample_dim = dimensions_interpretability[0][0]
-        drvi.utils.pl.show_differential_vars_scatter_plot(
-            traverse_adata,
-            key_x="max_possible",
-            key_y="min_possible",
-            key_combined="combined_score",
-            dim_subset=[sample_dim],
-            score_threshold=0.0,
-            show=False,
-        )
-        plt.close()
-        ax_generator = drvi.utils.pl.plot_relevant_genes_on_umap(
-            adata,
-            embed,
-            traverse_adata,
-            traverse_adata_key="combined_score",
-            dim_subset=[sample_dim],
-            score_threshold=0.0,
-            show=False,
-        )
-        for ax_obj in ax_generator:
-            assert isinstance(ax_obj, plt.Axes) or isinstance(ax_obj[0], plt.Axes)
         plt.close()

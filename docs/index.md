@@ -8,9 +8,9 @@
 :maxdepth: 1
 
 api/model
-api/tools
 api/plotting
 api/metrics
+api/internal
 ```
 
 ```{toctree}

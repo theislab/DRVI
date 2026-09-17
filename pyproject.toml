@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "drvi-py"
-version = "0.2.7"
+version = "0.3.0"
 description = "Unsupervised Deep Disentangled Representation of Single-Cell Omics"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -23,14 +23,13 @@ classifiers = [
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Typing :: Typed",
 ]
 dependencies = [
   "anndata>=0.10.2",
@@ -41,13 +40,40 @@ dependencies = [
   "scanpy>=1.9.5",
   "scikit-learn>=1.5.1",
   "scipy>=1.11.3",
-  "scvi-tools>=1.0.4",
+  "scvi-tools>=1.5",
   "session-info2",
   "torch>=2.1",
 ]
+# Minimal tutorial extra
 optional-dependencies.tutorials = [
-  "gprofiler-official>=0.3.5",
   "leidenalg",
+]
+# Everything for every tutorial
+optional-dependencies.tutorials-all = [
+  "drvi-py[tutorials,tutorials-biological-processes,tutorials-cell-types,tutorials-llm]",
+]
+# Notebook: identification_of_factors_2_biological_processes
+optional-dependencies.tutorials-biological-processes = [
+  "decoupler>=2.1.6",
+  "gprofiler-official>=1",
+  "gseapy>=1.3",
+  "statsmodels>=0.14",
+]
+# Tutorial extras
+# Notebook: identification_of_factors_1_cell_types
+optional-dependencies.tutorials-cell-types = [
+  "celltypist>=1.7.1",
+  "networkx>=3",
+]
+# Notebook: identification_of_factors_3_llm_tools
+optional-dependencies.tutorials-llm = [
+  "anthropic>=0.116",
+  "cassia>=1.3.9",
+  "claude-agent-sdk>=0.2.113",
+  "google-genai>=2.10",
+  "gs2txt[enrichment]>=0.1.2",
+  "nest-asyncio>=1.6",
+  "openai>=2.44",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://drvi.readthedocs.io/"
@@ -56,7 +82,6 @@ urls.Source = "https://github.com/theislab/drvi"
 
 [dependency-groups]
 dev = [
-  "pre-commit",
   "twine>=4.0.2",
 ]
 test = [
@@ -70,14 +95,19 @@ doc = [
   "ipython",
   "myst-nb>=1.1",
   "pandas",
+  "scverse-misc[sphinx]>=0.1.2",
   "sphinx>=8.1",
   "sphinx-autodoc-typehints",
   "sphinx-book-theme>=1",
   "sphinx-copybutton",
-  "sphinx-tabs",
+  "sphinx-design",
   "sphinxcontrib-bibtex>=1",
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
+]
+typecheck = [
+  "mypy",
+  "pandas-stubs",
 ]
 
 [tool.hatch]
@@ -88,6 +118,14 @@ envs.docs.scripts.build = "sphinx-build -M html docs docs/_build --keep-going {a
 envs.docs.scripts.clean = "git clean -fdX -- {args:docs}"
 envs.docs.scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 envs.docs.dependency-groups = [ "doc" ]
+envs.hatch-check-code.dependencies = [ "prek" ]
+envs.hatch-check-code.scripts.lint-check = "echo 'try `hatch check code --fix`'; false"
+envs.hatch-check-code.scripts.lint-fix = "prek run -a --no-group=format --no-group=typecheck"
+envs.hatch-check-fmt.dependencies = [ "prek" ]
+envs.hatch-check-fmt.scripts.format-check = "echo 'try `hatch check fmt --fix`'; false"
+envs.hatch-check-fmt.scripts.format-fix = "prek run -a --group=format --no-group=typecheck"
+envs.hatch-check-types.scripts.check = [ "mypy" ]
+envs.hatch-check-types.dependency-groups = [ "typecheck", "test" ]
 envs.hatch-test.matrix = [
   # Test the lowest and highest supported Python versions with normal deps
   { deps = [ "stable" ], python = [ "3.10", "3.15" ] },
@@ -142,6 +180,13 @@ lint.per-file-ignores."docs/*" = [ "I" ]
 lint.per-file-ignores."tests/*" = [ "D" ]
 lint.pydocstyle.convention = "numpy"
 
+[tool.mypy]
+files = [ "src", "tests" ]
+overrides = [
+  # Third-party dependencies without type stubs or a py.typed marker.
+  { module = [ "scanpy.*", "scipy.*", "scvi.*", "sklearn.*" ], ignore_missing_imports = true }
+]
+
 [tool.pytest]
 addopts = [
   "--import-mode=importlib", # allow using test files with same name
@@ -150,11 +195,11 @@ strict = true
 testpaths = [ "tests" ]
 
 [tool.coverage]
+run.source = [ "drvi" ]
 run.omit = [
   "**/test_*.py",
 ]
 run.patch = [ "subprocess" ]
-run.source = [ "drvi" ]
 
 [tool.cruft]
 skip = [

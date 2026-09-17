@@ -2,7 +2,7 @@
 
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+# https://www.sphinx-doc.org/page/usage/configuration.html
 
 # -- Path setup --------------------------------------------------------------
 import shutil
@@ -60,10 +60,11 @@ extensions = [
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
     "sphinx_autodoc_typehints",
-    "sphinx_tabs.tabs",
+    "sphinx_design",
     "sphinx.ext.mathjax",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinxext.opengraph",
+    "scverse_misc.sphinx_ext",
     *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
@@ -99,8 +100,8 @@ source_suffix = {
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
-    "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
+    "anndata": ("https://anndata.scverse.org/en/stable/", None),
+    "scanpy": ("https://scanpy.scverse.org/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     # DRVI related stuff
     ## General
@@ -173,6 +174,4 @@ nitpick_ignore = [
     ("py:func", "register_module_forward_pre_hook"),
     ("py:func", "register_module_full_backward_hook"),
     ("py:func", "register_module_full_backward_pre_hook"),
-    # DRVI internal references
-    ("py:class", "drvi.nn_modules.layer.factory.LayerFactory"),
 ]
