@@ -79,7 +79,7 @@ While CPU-based systems are supported, GPU-powered systems are strongly recommen
 
 ## Installation
 
-You need to have Python (versions 3.12 to 3.14 supported) installed on your system. If you don't have
+You need to have Python (versions 3.12 to 3.16 supported) installed on your system. If you don't have
 Python installed, we recommend installing [uv][].
 
 > **Note for Python 3.10 and 3.11 users:** Starting from version 0.3, `drvi-py` requires Python >=3.12
