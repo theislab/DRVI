@@ -7,11 +7,11 @@
     (or its alias ``drvi.model.DRVI``).
 
 :class:`drvi.internal.DRVI` subclasses :class:`scvi.external.DRVI` and re-adds a few experimental
-features kept from earlier drvi-py: opt-in residual connections between hidden layers, streaming
-(online) training metrics, and a sparse latent representation.
+features kept from earlier drvi-py: streaming (online) training metrics and a sparse latent
+representation.
 """
 
-from drvi.internal.drvi._base_components import DecoderDRVI, enable_residual
+from drvi.internal.drvi._base_components import DecoderDRVI
 from drvi.internal.drvi._generative_mixin import SparseLatentMixin
 from drvi.internal.drvi._metrics import LatentStats, StreamingPairwiseMI
 from drvi.internal.drvi._model import DRVI
@@ -26,5 +26,4 @@ __all__ = [
     "SparseLatentMixin",
     "LatentStats",
     "StreamingPairwiseMI",
-    "enable_residual",
 ]
