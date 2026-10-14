@@ -445,6 +445,14 @@ def show_top_differential_vars(
     return _bar_plot_top_differential_vars(plot_info, dim_subset, n_top_genes, ncols, show)
 
 
+def _dim_number(dim_title) -> int:
+    """Extract the dimension number from a dimension title, e.g. ``"DR 7"`` -> ``7``."""
+    match = re.search(r"\d+", str(dim_title))
+    if match is None:
+        raise ValueError(f"No dimension number found in {dim_title!r}")
+    return int(match.group())
+
+
 def plot_interpretability_scores(
     gene_scores_df: pd.DataFrame,
     n_top_genes: int = 10,
@@ -488,7 +496,7 @@ def plot_interpretability_scores(
     """
     info = {k: v for k, v in gene_scores_df.to_dict(orient="series").items() if v.max() >= score_threshold}
     if dim_subset is None:
-        dims = sorted(info, key=lambda x: int(re.search(r"\d+", x).group()))
+        dims = sorted(info, key=_dim_number)
     else:
         dims = [dim for dim in dim_subset if dim in info]
 
