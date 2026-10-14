@@ -84,16 +84,12 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         model.train(accelerator="cpu", max_epochs=100)
         embed = ad.AnnData(model.get_latent_representation(), obs=adata.obs)
 
-        drvi.utils.tl.set_latent_dimension_stats(model, embed)
-
-        traverse_adata = drvi.utils.tl.traverse_latent(model, embed, n_samples=2, max_noise_std=0.0)
-        drvi.utils.tl.calculate_differential_vars(traverse_adata)
+        model.set_latent_dimension_stats(embed)
 
         return {
             "adata": adata,
             "model": model,
             "embed": embed,
-            "traverse_adata": traverse_adata,
         }
 
     def test_whole_integration_and_interpretability_pipeline(self):
@@ -116,9 +112,7 @@ class TestSimplePipelineOfTrainingAndInterpretability:
 
     def test_plotting_functions(self):
         train_results = self._whole_integration_and_interpretability_pipeline()
-        adata = train_results["adata"]
         embed = train_results["embed"]
-        traverse_adata = train_results["traverse_adata"]
 
         # pre-processing
         sc.pp.neighbors(embed, use_rep="X", n_pcs=embed.X.shape[1])
@@ -130,38 +124,14 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
         plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, directional=True, show=False)
+        plt.close()
+
+        first_dim = embed.var.sort_values("order")["title"].iloc[0]
+        drvi.utils.pl.plot_latent_dims_in_umap(
+            embed, dim_subset=(f"{first_dim}+",), directional=True, remove_vanished=False, show=False
+        )
         plt.close()
 
         drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False)
-        plt.close()
-        drvi.utils.pl.show_top_differential_vars(traverse_adata, key="combined_score", score_threshold=0.0, show=False)
-        plt.close()
-
-        dimensions_interpretability = drvi.utils.tools.iterate_on_top_differential_vars(
-            traverse_adata, key="combined_score", score_threshold=0.0
-        )
-
-        sample_dim = dimensions_interpretability[0][0]
-        drvi.utils.pl.show_differential_vars_scatter_plot(
-            traverse_adata,
-            key_x="max_possible",
-            key_y="min_possible",
-            key_combined="combined_score",
-            dim_subset=[sample_dim],
-            score_threshold=0.0,
-            show=False,
-        )
-        plt.close()
-        ax_generator = drvi.utils.pl.plot_relevant_genes_on_umap(
-            adata,
-            embed,
-            traverse_adata,
-            traverse_adata_key="combined_score",
-            dim_subset=[sample_dim],
-            score_threshold=0.0,
-            show=False,
-        )
-        for ax_obj in ax_generator:
-            assert isinstance(ax_obj, plt.Axes) or isinstance(ax_obj[0], plt.Axes)
         plt.close()

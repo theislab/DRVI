@@ -372,8 +372,7 @@ class InterpretabilityMixin:
         ...     .loc[var_info.sort_values(["order", "direction"])["title"]]
         ...     .T
         ... )
-        >>> plot_info = list(effect_data.to_dict(orient="series").items())
-        >>> drvi.utils.plotting._interpretability._bar_plot_top_differential_vars(plot_info)
+        >>> drvi.utils.pl.plot_interpretability_scores(effect_data)
         """
         if aggregations == "ALL":
             aggregations = ["max", "linear_weighted_mean", "exp_weighted_mean"]

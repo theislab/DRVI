@@ -1,15 +1,8 @@
-from ._latent import set_latent_dimension_stats
-from .interpretability import (
-    calculate_differential_vars,
-    get_split_effects,
-    iterate_on_top_differential_vars,
-    traverse_latent,
-)
+"""DRVI tools namespace (``drvi.utils.tl``).
 
-__all__ = [
-    "set_latent_dimension_stats",
-    "traverse_latent",
-    "calculate_differential_vars",
-    "iterate_on_top_differential_vars",
-    "get_split_effects",
-]
+Currently empty: latent-dimension statistics and interpretability scores are provided by the DRVI
+model (``set_latent_dimension_stats`` / ``calculate_interpretability_scores`` /
+``get_interpretability_scores``). The namespace is kept as a stable import location for future tools.
+"""
+
+__all__: list[str] = []

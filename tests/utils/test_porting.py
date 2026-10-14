@@ -192,6 +192,17 @@ class TestPortToScviTools:
         # overwrite=True succeeds
         port_to_scvi_tools(src, dest, overwrite=True)
 
+    def test_raises_on_unknown_version(self, tmp_path):
+        """A drvi version past the migration chain must raise, not skip the migrations."""
+        src = _train_and_save(tmp_path, "src_version")
+        ckpt = torch.load(f"{src}/model.pt", map_location="cpu", weights_only=False)
+        ckpt["attr_dict"]["registry_"]["drvi_version"] = "9.9.9"
+        bad_dir = tmp_path / "bad_version"
+        bad_dir.mkdir()
+        torch.save(ckpt, bad_dir / "model.pt")
+        with pytest.raises(DRVIPortError, match="drvi 9.9.9"):
+            port_to_scvi_tools(str(bad_dir))
+
     def test_raises_on_removed_capability(self, tmp_path):
         """A capability with no scvi-tools equivalent must raise DRVIPortError, not silently port."""
         src = _train_and_save(tmp_path, "src_cap")

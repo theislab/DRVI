@@ -1,6 +1,6 @@
 {
   "template": "https://github.com/scverse/cookiecutter-scverse",
-  "commit": "cbf6b45007d28c0cf4faf528f99f46b53565a92f",
+  "commit": "168790f261be4dfdaed7d36a381887552ce36bfc",
   "checkout": null,
   "context": {
     "cookiecutter": {
@@ -13,6 +13,7 @@
       "github_repo": "drvi",
       "license": "BSD 3-Clause License",
       "ide_integration": false,
+      "issue_categorization": "labels",
       "_copy_without_render": [
         ".github/workflows/build.yaml",
         ".github/workflows/test.yaml",
@@ -36,7 +37,7 @@
         "trim_blocks": true
       },
       "_template": "https://github.com/scverse/cookiecutter-scverse",
-      "_commit": "cbf6b45007d28c0cf4faf528f99f46b53565a92f"
+      "_commit": "168790f261be4dfdaed7d36a381887552ce36bfc"
     }
   },
   "directory": null

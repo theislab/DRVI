@@ -5,12 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog][],
 and this project adheres to [Semantic Versioning][].
 
-[keep a changelog]: https://keepachangelog.com/en/1.0.0/
-[semantic versioning]: https://semver.org/spec/v2.0.0.html
+[keep a changelog]: https://keepachangelog.com/
+[semantic versioning]: https://semver.org/
 
 ## [Unreleased]
 
-### Added
+## [0.2.8] - 2026-10-14
+
+### Changed
+- Sync the repository with [cookiecutter-scverse](https://github.com/scverse/cookiecutter-scverse) template v0.8.0: GitHub Actions are pinned to immutable commit hashes and audited by [zizmor](https://github.com/zizmorcore/zizmor), the code-style hooks are run through [prek](https://prek.j178.dev/) locally and [autofix.ci](https://autofix.ci/) on pull requests, and `mypy` type checking is now part of the checks (`hatch check types`). See `docs/contributing.md` for the updated developer workflow.
+- `drvi.utils.port_to_scvi_tools` ports models saved with drvi-py 0.2.8, and raises `DRVIPortError` for a model saved with a drvi-py version it does not know instead of skipping that version's migrations.
+- The documentation now uses `sphinx-design` instead of `sphinx-tabs`, and takes the shared sphinx extensions from [scverse-misc](https://github.com/scverse/scverse-misc) instead of the vendored `docs/extensions/typed_returns.py`.
+
+### Fixed
+- `plot_latent_dims_in_umap` now accepts any sequence as `dim_subset`; passing a tuple previously raised a `KeyError`.
+- `plot_interpretability_scores` now raises an explanatory `ValueError` when a dimension title contains no dimension number, instead of an `AttributeError`.
+- `plot_latent_dims_in_umap(..., directional=True)` no longer fails with `ValueError: Unsupported dimension index ...` on anndata >= 0.13 / scanpy >= 1.12: the `+`/`-` copies of the latent keep unique string var names instead of an integer index.
+
+### Removed
+- Emptied the `drvi.utils.tl` tools namespace (`drvi.utils.tools`): removed `set_latent_dimension_stats`, `traverse_latent`, `calculate_differential_vars`, `get_split_effects`, and `iterate_on_top_differential_vars`. The latent-traversal interpretability pipeline is superseded by the DRVI model's built-in `set_latent_dimension_stats` / `calculate_interpretability_scores` / `get_interpretability_scores`. The `drvi.utils.tl` namespace is kept (now empty) as a stable import location.
+- Removed the traversal-based plotting functions `drvi.utils.pl.show_top_differential_vars`, `plot_relevant_genes_on_umap`, `show_differential_vars_scatter_plot`, `differential_vars_heatmap`, and `make_heatmap_groups` (they consumed the removed traversal outputs). `plot_interpretability_scores` (which visualizes the model's `get_interpretability_scores`) and the latent-dimension plots remain.
 
 
 ## [0.2.7] - 2026-07-09
