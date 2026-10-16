@@ -1,9 +1,9 @@
-"""Training plan for :class:`drvi.internal.DRVI`.
+"""Training plan for :class:`drvi.internal.DRVI` and the shared streaming-metrics logging mixin.
 
-Extends the upstream scvi-tools DRVI training plan (which anneals the KL weight over the whole run)
-to log the module's streaming metrics at the end of each epoch and reset them after training epochs.
-When ``track_streaming_metrics`` is off (the metrics are ``None``) it behaves exactly like the base
-plan. For developmental internal use only.
+:class:`StreamingMetricsLoggingMixin` logs the module's streaming metrics at the end of each epoch
+and resets them after training epochs; when the module has no streaming metrics (``latent_stats`` /
+``mi_metric`` are ``None`` or absent) it is a no-op. :class:`DRVITrainingPlan` mixes it into the
+upstream DRVI plan. For developmental internal use only.
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from __future__ import annotations
 from scvi.external.drvi._trainingplan import DRVITrainingPlan as _UpstreamDRVITrainingPlan
 
 
-class DRVITrainingPlan(_UpstreamDRVITrainingPlan):
-    """scvi-tools DRVI training plan that also logs the module's streaming metrics per epoch."""
+class StreamingMetricsLoggingMixin:
+    """Training-plan mixin: log the module's streaming metrics per epoch (reset after training)."""
 
     def _log_streaming_metrics(self, suffix: str, is_train: bool, reset: bool) -> None:
         latent_stats = getattr(self.module, "latent_stats", None)
@@ -37,3 +37,7 @@ class DRVITrainingPlan(_UpstreamDRVITrainingPlan):
     def on_validation_epoch_end(self):
         self._log_streaming_metrics("validation", is_train=False, reset=False)
         super().on_validation_epoch_end()
+
+
+class DRVITrainingPlan(StreamingMetricsLoggingMixin, _UpstreamDRVITrainingPlan):
+    """Upstream scvi-tools DRVI training plan (KL annealing) plus streaming-metrics logging."""
