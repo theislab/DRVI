@@ -12,7 +12,7 @@ Real `drvi-py < 0.3.0` DRVI checkpoints used by `tests/utils/test_porting.py` to
 | `dispersion_gene_cell` | `dispersion="gene-cell"` |
 
 The in-package DRVI model was removed in 0.3.0, so these cannot be regenerated from the current
-tree. To regenerate them, check out a `drvi-py <= 0.2.7` tag (which still ships the model), then for
+tree. To regenerate them, check out a `drvi-py < 0.3.0` tag (which still ships the model), then for
 each configuration train a tiny model and `model.save(...)`:
 
 ```python
