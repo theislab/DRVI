@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+### Changed
+- `set_latent_dimension_stats` now also stores each cell's total decoder output (log space) in `embed.obs["_decoder_log_total"]`, and `get_reconstruction_effect_of_each_split` returns it as a second value: `(effect, total_effect_per_cell)`.
+
+### Fixed
+- OOD interpretability (`get_effect_of_splits_out_of_distribution`) now scales the `add_to_counts` pseudo-count to the median empirical cell size (`embed.obs["_decoder_log_total"]`) instead of the sum of every factor's maximum, which overestimated the reference cell and inflated the pseudo-count.
+- OOD interpretability with `split_aggregation="sum"` now uses the LFC of the averaging decoder, `(max f_i - min f_i) / n_splits`, instead of the `logsumexp` formula.
 
 ## [0.2.8] - 2026-10-14
 
