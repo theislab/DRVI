@@ -33,16 +33,16 @@
 Please refer to the [documentation][]. In particular, the
 
 - [Tutorials][], specially
-    - [Train DRVI and interpret the latent dimensions](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/general_pipeline.ipynb)
+  - [Train DRVI and interpret the latent dimensions](https://drvi.readthedocs.io/latest/tutorials/external/general_pipeline.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/general_pipeline.ipynb)
     - [Mapping query data into a DRVI reference](https://drvi.readthedocs.io/latest/tutorials/external/query_to_reference_mapping.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/query_to_reference_mapping.ipynb)
     - [Finding rare cell types with DRVI](https://drvi.readthedocs.io/latest/tutorials/external/find_rare_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/find_rare_cell_types.ipynb)
     - Identification and annotation of factors:
-        - [Cell types](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_1_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_1_cell_types.ipynb)
+      - [Cell types](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_1_cell_types.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_1_cell_types.ipynb)
         - [Biological processes](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_2_biological_processes.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_2_biological_processes.ipynb)
         - [Using LLM tools](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_3_llm_tools.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_3_llm_tools.ipynb)
         - [Curation of factor annotations](https://drvi.readthedocs.io/latest/tutorials/external/identification_of_factors_4_curation.html). [![Open In Colab][open-in-colab]](https://colab.research.google.com/github/theislab/DRVI_tutorials/blob/main/identification_of_factors_4_curation.ipynb)
 - [API documentation][], specially
-    - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
+  - [DRVI Model](https://drvi.readthedocs.io/latest/api/generated/drvi.model.DRVI.html)
     - [DRVI plotting functions](https://drvi.readthedocs.io/latest/api/plotting.html)
     - [DRVI metrics](https://drvi.readthedocs.io/latest/api/metrics.html)
 
@@ -133,7 +133,6 @@ Code, notebooks, and instructions to reproduce the results from the paper are av
 [link-tests]: https://github.com/theislab/drvi/actions/workflows/test.yaml
 [link-codecov]: https://codecov.io/gh/theislab/drvi
 [link-pepy]: https://pepy.tech/projects/drvi-py
-
 [uv]: https://github.com/astral-sh/uv
 [scverse discourse]: https://discourse.scverse.org/
 [issue tracker]: https://github.com/theislab/drvi/issues
