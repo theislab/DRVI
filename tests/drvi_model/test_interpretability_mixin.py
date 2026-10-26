@@ -86,18 +86,21 @@ class TestInterpretabilityMixin:
         adata, model, _embed = trained_model_outputs
         n_splits = model.module.n_split_latent
 
-        effects = model.get_reconstruction_effect_of_each_split(adata=adata, aggregate_over_cells=True)
+        effects, decoder_log_total = model.get_reconstruction_effect_of_each_split(
+            adata=adata, aggregate_over_cells=True
+        )
         assert effects.shape == (n_splits,)
         assert np.all(effects >= 0)
+        assert decoder_log_total.shape == (adata.n_obs,)
 
-        cell_effects = model.get_reconstruction_effect_of_each_split(adata=adata, aggregate_over_cells=False)
+        cell_effects, _ = model.get_reconstruction_effect_of_each_split(adata=adata, aggregate_over_cells=False)
         assert cell_effects.shape == (adata.n_obs, n_splits)
 
     def test_get_reconstruction_effect_directional(self, trained_model_outputs):
         adata, model, _embed = trained_model_outputs
         n_splits = model.module.n_split_latent
 
-        effects = model.get_reconstruction_effect_of_each_split(
+        effects, _ = model.get_reconstruction_effect_of_each_split(
             adata=adata, aggregate_over_cells=True, directional=True
         )
         assert effects.shape == (2, n_splits)
@@ -109,6 +112,7 @@ class TestInterpretabilityMixin:
             assert col in embed.var.columns, f"Missing column: {col}"
         assert embed.var.shape[0] == embed.X.shape[1]
         assert np.issubdtype(embed.var["reconstruction_effect"].dtype, np.floating)
+        assert np.isfinite(embed.obs["_decoder_log_total"]).all()
 
     @pytest.fixture(scope="class")
     def trained_model_outputs_with_stats(self, trained_model_outputs):
@@ -134,6 +138,35 @@ class TestInterpretabilityMixin:
         for key in ["min_possible", "max_possible", "combined"]:
             assert key in result
             assert result[key].shape == (2, embed.n_vars, adata.n_vars)
+
+    def test_get_effect_of_splits_out_of_distribution_requires_decoder_log_total(
+        self, trained_model_outputs_with_stats
+    ):
+        _adata, model, embed = trained_model_outputs_with_stats
+        embed_copy = embed.copy()
+        del embed_copy.obs["_decoder_log_total"]
+        with pytest.raises(ValueError, match="_decoder_log_total"):
+            model.get_effect_of_splits_out_of_distribution(embed_copy, n_steps=4, n_samples=2)
+
+    @pytest.mark.parametrize("directional", [True, False])
+    def test_get_effect_of_splits_out_of_distribution_sum_aggregation(self, directional):
+        """With sum (average) aggregation the OOD LFC is the factor's own range, independent of the rest."""
+        adata = self._make_test_adata()
+        model = self._setup_and_train_model(adata, max_epochs=1, split_aggregation="sum")
+        embed = ad.AnnData(model.get_latent_representation(adata), obs=adata.obs.copy())
+        model.set_latent_dimension_stats(embed)
+
+        # n_samples covers every batch, so both calls average over the same combinations
+        scores, scores_more_counts = (
+            model.get_effect_of_splits_out_of_distribution(
+                embed, n_steps=4, n_samples=self.b, directional=directional, add_to_counts=add_to_counts
+            )
+            for add_to_counts in (1.0, 100.0)
+        )
+        assert (scores["max_possible"] >= 0).all()
+        np.testing.assert_allclose(scores["min_possible"], scores["max_possible"])
+        for key in scores:
+            np.testing.assert_allclose(scores[key], scores_more_counts[key], rtol=1e-5)
 
     def test_calculate_interpretability_scores_inplace(self, trained_model_outputs_with_stats):
         adata, model, embed = trained_model_outputs_with_stats
