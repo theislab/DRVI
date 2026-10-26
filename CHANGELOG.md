@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning][].
 ## [Unreleased]
 
 ### Added
+
 - Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: opt-in residual connections between the same-width hidden layers of the encoder/decoder (`residual=True`), streaming (online) training metrics logged per epoch (`track_streaming_metrics`, latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). Its API is unstable and may change or be removed without notice.
 
 ### Changed
+
 - Sync the repository with [cookiecutter-scverse](https://github.com/scverse/cookiecutter-scverse) template v0.8.0: GitHub Actions are pinned to immutable commit hashes and audited by [zizmor](https://github.com/zizmorcore/zizmor), the code-style hooks are run through [prek](https://prek.j178.dev/) locally and [autofix.ci](https://autofix.ci/) on pull requests, and `mypy` type checking is now part of the checks (`hatch check types`). See `docs/contributing.md` for the updated developer workflow.
 - The documentation now uses `sphinx-design` instead of `sphinx-tabs`, and takes the shared sphinx extensions from [scverse-misc](https://github.com/scverse/scverse-misc) instead of the vendored `docs/extensions/typed_returns.py`.
 
@@ -21,9 +23,11 @@ and this project adheres to [Semantic Versioning][].
 ## [0.3.0]
 
 ### Changed
+
 - The DRVI PyTorch model is no longer shipped in this package. It has been contributed to [scvi-tools](https://scvi-tools.org/) and now lives there as `scvi.external.DRVI` (requires `scvi-tools >= 1.5.0`, now the minimum dependency). `drvi.model.DRVI` is kept as an alias for `scvi.external.DRVI` for backward compatibility and may be deprecated from `0.4.0`. New code should import the model directly as `scvi.external.DRVI`. Utility, plotting, metrics, and interpretability tools (`drvi.utils`) continue to be maintained here and work on top of the scvi-tools model.
 
 ### Removed
+
 - Removed the in-package model implementation and its internals: `drvi.scvi_tools_based` (model, module, training plan, neural-network components, data fields), `drvi.nn_modules`, and `drvi.model.DRVIModule`. Model capabilities not supported by `scvi.external.DRVI` are dropped and will not be reinstated. To move a model trained with `drvi-py < 0.3.0` to scvi-tools, use `drvi.utils.port_to_scvi_tools`.
 - Emptied the `drvi.utils.tl` tools namespace (`drvi.utils.tools`): removed `set_latent_dimension_stats`, `traverse_latent`, `calculate_differential_vars`, `get_split_effects`, and `iterate_on_top_differential_vars`. The latent-traversal interpretability pipeline is superseded by the scvi-tools DRVI model's built-in `set_latent_dimension_stats` / `calculate_interpretability_scores` / `get_interpretability_scores`. The `drvi.utils.tl` namespace is kept (now empty) as a stable import location.
 - Removed the traversal-based plotting functions `drvi.utils.pl.show_top_differential_vars`, `plot_relevant_genes_on_umap`, `show_differential_vars_scatter_plot`, `differential_vars_heatmap`, and `make_heatmap_groups` (they consumed the removed traversal outputs). `plot_interpretability_scores` (which visualizes the model's `get_interpretability_scores`) and the latent-dimension plots remain.
@@ -32,6 +36,7 @@ and this project adheres to [Semantic Versioning][].
 ## [0.2.8] - 2026-10-14
 
 ### Fixed
+
 - `plot_latent_dims_in_umap` now accepts any sequence as `dim_subset`; passing a tuple previously raised a `KeyError`.
 - `plot_interpretability_scores` now raises an explanatory `ValueError` when a dimension title contains no dimension number, instead of an `AttributeError`.
 - `plot_latent_dims_in_umap(..., directional=True)` no longer fails with `ValueError: Unsupported dimension index ...` on anndata >= 0.13 / scanpy >= 1.12: the `+`/`-` copies of the latent keep unique string var names instead of an integer index.
@@ -41,33 +46,39 @@ and this project adheres to [Semantic Versioning][].
 ## [0.2.7] - 2026-07-09
 
 ### Added
+
 - Add `drvi.utils.port_to_scvi_tools` to migrate a trained/saved drvi-py model into a checkpoint loadable by `scvi.external.DRVI` (available in scvi-tools 1.5.0). Pure checkpoint surgery — no model is instantiated. Unsupported capabilities raise `DRVIPortError` with a link to open an issue.
 
 
 ## [0.2.6] - 2026-07-02
 
 ### Added
+
 - Add `drvi.utils.pl.plot_interpretability_scores` plotting utility, now reused by `DRVI.plot_interpretability_scores`
 - Add `binary_maximum_mutual_information_score` (BMMI) disentanglement metric
 - Add `min_max_thresholds` argument to `plot_latent_dims_in_umap` to control color-scale clamping
 - Add `"gelu"` option and callable factory support for the encoder `mean_activation`
 
 ### Changed
+
 - In `DiscreteDisentanglementBenchmark`, default metrics are now `("SMI", "SPN")`, samples are shuffled before evaluation, and the benchmark version is bumped to `v3_1`
 - Renamed `discrete_mutual_info_score` to `discrete_scaled_mutual_info_score`.
 - Unknown encoder `mean_activation` values now raise `NotImplementedError` instead of failing an assertion
 - `LatentStats` now logs `non_vanished*` counts as Python scalars
 
 ### Removed
+
 - Remove MI metrics `local_mutual_info_score`, and `global_dim_mutual_info_score`, along with the `SMI-cont`/`SMI-disc` benchmark keys (superseded by `SMI` and `BMMI`)
 
 ### Fixed
+
 - Fix typo in metric name `spearman_correlataion_score` -> `spearman_correlation_score`
 
 
 ## [0.2.5] - 2026-04-21
 
 ### Added
+
 - latent stat (n_vanished) logs during training
 - Disentanglement metric logs during training
 - Relax upper bounds of all dependencies
@@ -75,12 +86,14 @@ and this project adheres to [Semantic Versioning][].
 ## [0.2.4] - 2026-03-02
 
 ### Added
+
 - Allow sparse input as X
 - Allow generating memory efficient sparse tensors as latent
 
 ## [0.2.3] - 2026-02-27
 
 ### Added
+
 - Added within distribution interpretability
 - An efficient implementation of out-of-distribution interpretability is added
 - plotting and getting relevant genes is now possible in DRVI model interface.
@@ -88,6 +101,7 @@ and this project adheres to [Semantic Versioning][].
 - Add tutorial for query to reference mapping
 
 ### Changed
+
 - The default value for vanished threshold in new the interface of `set_latent_dimension_stats` is 0.5 (previously 0.1).
 - Interpretability scores for the other direction of a non-vanished dimension is not shown if that direction is meaningless.
 - Main tutorial updated with the new interpretability interface
@@ -95,16 +109,19 @@ and this project adheres to [Semantic Versioning][].
 ## [0.2.2] - 2026-02-11
 
 ### Added
+
 - Added "tutorials" optional dependency that was accidentally removed.
 - Code to allow loading models from previous versions with no problem
 - Add dispersion parameter to allow modeling batch dependent dispersion
 
 ### Removed
+
 - Removed "x_loglib", "div_lib_x_loglib", "x_loglib_all" library normalization techniques
 - Removed Vamp prior and GMM prior
 - Removed Legacy likelihood functions. Will raise error if used.
 
 ### Changed
+
 - gene_likelihood parameter now accepts different values compared to before. gene_likelihood parameter from old models will be mapped properly, but new users should look into the docs.
 
 ## [0.2.1] - 2025-12-29
@@ -118,6 +135,7 @@ and this project adheres to [Semantic Versioning][].
 - Add support for Python 3.14
 
 ### Removed
+
 - Remove restrict dependencies. To ensure compatibility with old packages run for example: `uvx --exclude-newer 2024-01-01 hatch run pytest`
 
 ### Changed
@@ -151,6 +169,7 @@ and this project adheres to [Semantic Versioning][].
 ## [0.1.10] - 2025-11-18
 
 ### Removed
+
 - Remove merlin data support and all related code
 - Remove merlin-dataloader dependency
 
