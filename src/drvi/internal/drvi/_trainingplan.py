@@ -8,11 +8,22 @@ upstream DRVI plan. For developmental internal use only.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from scvi.external.drvi._trainingplan import DRVITrainingPlan as _UpstreamDRVITrainingPlan
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 class StreamingMetricsLoggingMixin:
     """Training-plan mixin: log the module's streaming metrics per epoch (reset after training)."""
+
+    # provided by the training plan this mixin is combined with
+    module: Any
+    use_sync_dist: bool
+    log: Any
+    log_dict: Any
 
     def _log_streaming_metrics(self, suffix: str, is_train: bool, reset: bool) -> None:
         latent_stats = getattr(self.module, "latent_stats", None)

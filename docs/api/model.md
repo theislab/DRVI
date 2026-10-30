@@ -13,7 +13,7 @@ DRVI extends the standard variational autoencoder architecture with specialized 
 
 As of `drvi-py` version `0.3.0`, the DRVI PyTorch model is no longer maintained in this
 package. It has been contributed to [scvi-tools](https://scvi-tools.org/) and lives there as
-`scvi.external.DRVI` (requires `scvi-tools >= 1.5.0`). New code should import the model directly:
+`scvi.external.DRVI` (requires `scvi-tools >= 1.5.2`). New code should import the model directly:
 
 ```python
 from scvi.external import DRVI

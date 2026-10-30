@@ -30,6 +30,12 @@ class SparseLatentMixin:
       ``|mean| < zero_threshold``).
     """
 
+    # provided by the scvi-tools model class this mixin is combined with
+    module: Any
+    _validate_anndata: Any
+    _make_data_loader: Any
+    _check_if_trained: Any
+
     @torch.inference_mode()
     def iterate_on_encoded_input(
         self,

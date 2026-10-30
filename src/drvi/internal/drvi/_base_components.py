@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch
 from scvi.external.drvi import DecoderDRVI as _UpstreamDecoderDRVI
 from scvi.external.drvi import StackedLinearLayer
@@ -33,15 +35,18 @@ class DecoderDRVI(_UpstreamDecoderDRVI):
         if isinstance(head, StackedLinearLayer):
             return head(h, output_subset=reconstruction_indices)  # per-split head slices natively
         # shared head is a plain nn.Linear: slice its output rows before the matmul
-        bias = None if head.bias is None else head.bias[reconstruction_indices]
-        return linear(h, head.weight[reconstruction_indices], bias)
+        linear_head = cast("nn.Linear", head)
+        bias = None if linear_head.bias is None else linear_head.bias[reconstruction_indices]
+        return linear(h, linear_head.weight[reconstruction_indices], bias)
 
     def forward(self, z: torch.Tensor, *cat_list: int, cont: torch.Tensor | None = None, **kwargs):
         """Decode ``z`` as upstream does, routing the parameter heads through the seam above."""
         z_split = self._apply_split(z, **kwargs)  # (*, n_split, n_split_output)
         h = self.px_decoder(z_split, *cat_list, cont=cont, **kwargs)  # (*, n_split, n_hidden)
 
-        px_scale_logit_per_split = self._apply_head(self.px_scale_decoder, h, **kwargs)  # (*, n_split, n_genes)
+        px_scale_logit_per_split: torch.Tensor | None = self._apply_head(
+            self.px_scale_decoder, h, **kwargs
+        )  # (*, n_split, n_genes)
         px_scale_logit = self._aggregate(px_scale_logit_per_split)  # (*, n_genes)
         px_dropout_logit, px_r_logit = None, None
         if self.px_r_decoder is not None:

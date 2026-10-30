@@ -46,6 +46,9 @@ class LatentStats(Metric):
 
     full_state_update: bool = False
 
+    z_min_accum: torch.Tensor
+    z_max_accum: torch.Tensor
+
     def __init__(
         self,
         n_latent: int,
@@ -103,6 +106,11 @@ class StreamingPairwiseMI(Metric):
     """
 
     full_state_update: bool = False
+
+    train_counts: torch.Tensor
+    train_total_samples: torch.Tensor
+    val_counts: torch.Tensor
+    val_total_samples: torch.Tensor
 
     def __init__(
         self,
@@ -202,7 +210,7 @@ class StreamingPairwiseMI(Metric):
         mi = torch.clamp(mi, min=0.0) / (h_y + self.epsilon)
         return mi.detach().cpu().numpy()
 
-    def compute(self, is_train: bool):
+    def compute(self, is_train: bool):  # type: ignore[override]
         """One-vs-rest normalized MI summary, matched via the training-split score matrix."""
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
 
@@ -230,14 +238,18 @@ class StreamingMetricsMixin:
     (e.g. the deterministic SAE, whose mean lives under ``QZM_KEY``).
     """
 
+    # provided by the module this mixin is combined with
+    n_labels: int
+    training: bool
+
     def _init_streaming_metrics(self, track_streaming_metrics: bool, n_latent: int, n_labels: int) -> None:
         self.track_streaming_metrics = track_streaming_metrics
-        self.latent_stats: LatentStats | None = LatentStats(n_latent=n_latent) if track_streaming_metrics else None
-        self.mi_metric: StreamingPairwiseMI | None = (
-            StreamingPairwiseMI(latent_stats=self.latent_stats, n_label=n_labels)
-            if track_streaming_metrics and n_labels > 1
-            else None
-        )
+        self.latent_stats: LatentStats | None = None
+        self.mi_metric: StreamingPairwiseMI | None = None
+        if track_streaming_metrics:
+            self.latent_stats = LatentStats(n_latent=n_latent)
+            if n_labels > 1:
+                self.mi_metric = StreamingPairwiseMI(latent_stats=self.latent_stats, n_label=n_labels)
 
     def _streaming_latent_mean(self, inference_outputs: dict) -> torch.Tensor:
         """The latent mean fed to the streaming metrics (default: the ``qz`` posterior's ``.loc``)."""

@@ -2,7 +2,9 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+import torch
 from scipy import sparse
+from scvi import REGISTRY_KEYS
 
 import drvi.internal
 from drvi.internal.drvi import DecoderDRVI
@@ -48,13 +50,13 @@ def _train(model_kwargs, *, labels=True, max_epochs=3):
 class TestResidual:
     def test_residual_enabled_on_layers(self):
         _, model = _train({"n_layers": 2, "residual": True}, labels=False)
-        assert getattr(model.module.z_encoder.encoder, "is_residual", False)
-        assert getattr(model.module.decoder.px_decoder, "is_residual", False)
+        assert getattr(model.module.z_encoder.encoder, "residual", False)
+        assert getattr(model.module.decoder.px_decoder, "residual", False)
         assert model.module.residual is True
 
     def test_no_residual_by_default(self):
         _, model = _train({"n_layers": 2}, labels=False)
-        assert not getattr(model.module.z_encoder.encoder, "is_residual", False)
+        assert not getattr(model.module.z_encoder.encoder, "residual", False)
         assert model.module.residual is False
 
     def test_residual_produces_finite_latent(self):
@@ -111,7 +113,11 @@ class TestGeneSubsampledReconstruction:
     def test_dense_by_default(self):
         _, model = _train({"n_layers": 1}, labels=False)
         assert model.module.n_genes_to_reconstruct is None
-        assert not isinstance(model.module.decoder, DecoderDRVI)
+        # the output-subset-capable decoder is always used, but it stays dense without a subset
+        assert isinstance(model.module.decoder, DecoderDRVI)
+        model.module.train()
+        x = torch.ones(4, model.adata.n_vars)
+        assert model.module._get_reconstruction_indices({REGISTRY_KEYS.X_KEY: x}) is None
 
     def test_subsample_trains_and_swaps_decoder(self):
         # 20 genes total, reconstruct 8 per step
@@ -182,6 +188,6 @@ def test_save_load_roundtrip(tmp_path):
     # architecture flags survive the round-trip (init_params_ keyed on the subclass signature)
     assert reloaded.module.n_latent == 8
     assert reloaded.module.residual is True
-    assert getattr(reloaded.module.z_encoder.encoder, "is_residual", False)
+    assert getattr(reloaded.module.z_encoder.encoder, "residual", False)
     assert reloaded.module.latent_stats is not None and reloaded.module.mi_metric is not None
     assert np.allclose(z_before, reloaded.get_latent_representation(), atol=1e-5)
