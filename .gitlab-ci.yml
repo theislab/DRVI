@@ -1,0 +1,107 @@
+# GitLab CI port of .github/workflows/test.yaml and .github/workflows/autofix.yaml.
+# pyproject.toml stays the single point of truth: tests run through the hatch matrix and
+# formatting/linting through the pre-commit config (run with prek), exactly as on GitHub.
+
+# Run pipelines for merge requests, pushes to branches without an open MR, tags and schedules,
+# without creating duplicate branch + MR pipelines.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+  auto_cancel:
+    on_new_commit: interruptible
+
+stages:
+  - lint
+  - test
+
+default:
+  image: ghcr.io/astral-sh/uv:python3.14-bookworm
+  interruptible: true
+
+variables:
+  GIT_DEPTH: 0
+  UV_CACHE_DIR: $CI_PROJECT_DIR/.cache/uv
+  UV_LINK_MODE: copy
+  UV_TOOL_BIN_DIR: /usr/local/bin
+  PREK_HOME: $CI_PROJECT_DIR/.cache/prek
+
+# Equivalent of the autofix.ci workflow: run all pre-commit hooks. If hooks modified files and the
+# CI/CD variable AUTOFIX_TOKEN is set (a project access token with `write_repository` scope, role
+# Developer or higher), the fixes are committed and pushed back to the branch. The job still fails
+# so the pipeline for the fix commit is the one that goes green.
+pre-commit:
+  stage: lint
+  cache:
+    key:
+      files: [.pre-commit-config.yaml]
+      prefix: prek
+    paths: [.cache/prek, .cache/uv]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - when: on_success
+  script:
+    - uv tool install hatch  # needed by the local mypy hook
+    - status=0
+    - uvx prek run --all-files --show-diff-on-failure --color=always || status=$?
+    - |
+      if [ "$status" -ne 0 ] && [ -n "$AUTOFIX_TOKEN" ] && ! git diff --quiet; then
+        # Do not push to forks, and only push to branches (not tags).
+        SOURCE_PROJECT="${CI_MERGE_REQUEST_SOURCE_PROJECT_PATH:-$CI_PROJECT_PATH}"
+        BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
+        if [ "$SOURCE_PROJECT" = "$CI_PROJECT_PATH" ] && [ -n "$BRANCH" ]; then
+          git config user.name "autofix bot"
+          git config user.email "autofix-bot@noreply.${CI_SERVER_HOST}"
+          git commit -am "[autofix] Apply pre-commit fixes"
+          git push "https://autofix:${AUTOFIX_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:refs/heads/${BRANCH}"
+          echo "Pushed pre-commit fixes to ${BRANCH}."
+        fi
+      fi
+    - exit $status
+
+# Mirrors [[tool.hatch.envs.hatch-test.matrix]] in pyproject.toml. GitLab cannot build the matrix
+# dynamically from `hatch env show` without child pipelines, so keep this list in sync with it
+# (`uvx hatch env show --json | jq 'keys[] | select(startswith("hatch-test"))'`).
+test:
+  stage: test
+  needs: []
+  parallel:
+    matrix:
+      - HATCH_ENV: hatch-test.py3.12-stable
+        UV_PYTHON: "3.12"
+      - HATCH_ENV: hatch-test.py3.14-stable
+        UV_PYTHON: "3.14"
+      - HATCH_ENV: hatch-test.py3.14-pre
+        UV_PYTHON: "3.14"
+  cache:
+    key: uv-$HATCH_ENV
+    paths: [.cache/uv]
+  variables:
+    MPLBACKEND: agg
+    PLATFORM: ubuntu-latest
+    DISPLAY: ":42"
+  rules:
+    # Pre-release dependencies may break; don't let that fail the pipeline.
+    - if: $HATCH_ENV =~ /pre/
+      allow_failure: true
+    - when: on_success
+  script:
+    - uv tool install hatch
+    - hatch env create $HATCH_ENV
+    - hatch run $HATCH_ENV:uv pip list
+    - hatch run $HATCH_ENV:run-cov -v --color=yes -n auto
+    # See https://coverage.readthedocs.io/page/config.html#run-patch
+    - test -f .coverage || hatch run $HATCH_ENV:cov-combine
+    - hatch run $HATCH_ENV:cov-report
+    - hatch run $HATCH_ENV:coverage xml
+  coverage: '/^TOTAL.*\s+(\d+(?:\.\d+)?)%/'
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

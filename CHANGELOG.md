@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning][].
 ### Fixed
 - `plot_latent_dims_in_umap` now accepts any sequence as `dim_subset`; passing a tuple previously raised a `KeyError`.
 - `plot_interpretability_scores` now raises an explanatory `ValueError` when a dimension title contains no dimension number, instead of an `AttributeError`.
+- `plot_latent_dims_in_umap(..., directional=True)` no longer fails with `ValueError: Unsupported dimension index ...` on anndata >= 0.13 / scanpy >= 1.12: the `+`/`-` copies of the latent keep unique string var names instead of an integer index.
 
 
 ## [0.3.0]

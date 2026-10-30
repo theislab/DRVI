@@ -336,8 +336,11 @@ def plot_latent_dims_in_umap(
             var_pos[order_col] = var_pos[order_col].astype(str) + "+"
             var_neg[order_col] = var_neg[order_col].astype(str) + "-"
 
+        # Keep var names unique *strings*: an integer index (e.g. from `reset_index`) makes
+        # `sc.pl.umap(..., gene_symbols=...)` fail with anndata>=0.13 ("Unsupported dimension index").
+        embed_pos.var_names = [f"{name}+" for name in embed_pos.var_names]
+        embed_neg.var_names = [f"{name}-" for name in embed_neg.var_names]
         embed = ad.concat([embed_pos, embed_neg], axis=1, join="inner", merge="first")
-        _as_df(embed.var).reset_index(drop=True, inplace=True)
 
     tmp_df = _as_df(embed.var).sort_values(order_col)
     if remove_vanished:
