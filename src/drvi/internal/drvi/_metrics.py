@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 import torch
 from scipy.optimize import linear_sum_assignment
+from scvi import REGISTRY_KEYS
+from scvi.module._constants import MODULE_KEYS
 from torchmetrics import Metric
 
 
@@ -44,8 +46,6 @@ class LatentStats(Metric):
 
     full_state_update: bool = False
 
-    # Declared here (rather than only via add_state/register_buffer) so mypy knows these are
-    # plain tensors, not the generic `Tensor | Module` that `nn.Module.__getattr__` implies.
     z_min_prev: torch.Tensor
     z_max_prev: torch.Tensor
     z_min_accum: torch.Tensor
@@ -232,3 +232,43 @@ class StreamingPairwiseMI(Metric):
             "MSAS_SMI": most_similar_averaging_score(train_score_matrix, val_score_matrix),
             "MSGS_SMI": most_similar_gap_score(train_score_matrix, val_score_matrix),
         }
+
+
+class StreamingMetricsMixin:
+    """Hold the streaming latent metrics on a module and update them per batch.
+
+    Shared by the internal models (DRVI, SparseDRVI, SAD, SAE). Call :meth:`_init_streaming_metrics`
+    at the end of ``__init__`` (after ``self.n_labels`` is set) and :meth:`_streaming_metrics_step`
+    inside ``loss()``. The latent mean is read via :meth:`_streaming_latent_mean` — by default the
+    ``MODULE_KEYS.QZ_KEY`` posterior's ``.loc``; override it for a module without a ``qz`` distribution
+    (e.g. the deterministic SAE, whose mean lives under ``QZM_KEY``).
+    """
+
+    # provided by the module this mixin is combined with
+    n_labels: int
+    training: bool
+
+    def _init_streaming_metrics(self, track_streaming_metrics: bool, n_latent: int, n_labels: int) -> None:
+        self.track_streaming_metrics = track_streaming_metrics
+        self.latent_stats: LatentStats | None = None
+        self.mi_metric: StreamingPairwiseMI | None = None
+        if track_streaming_metrics:
+            self.latent_stats = LatentStats(n_latent=n_latent)
+            if n_labels > 1:
+                self.mi_metric = StreamingPairwiseMI(latent_stats=self.latent_stats, n_label=n_labels)
+
+    def _streaming_latent_mean(self, inference_outputs: dict) -> torch.Tensor:
+        """The latent mean fed to the streaming metrics (default: the ``qz`` posterior's ``.loc``)."""
+        return inference_outputs[MODULE_KEYS.QZ_KEY].loc
+
+    def _streaming_metrics_step(self, tensors: dict, inference_outputs: dict) -> None:
+        """Update the online metrics from one batch (called inside ``loss()``)."""
+        if self.latent_stats is None:
+            return
+        z_mean = self._streaming_latent_mean(inference_outputs)
+        self.latent_stats.update(z_mean)
+        if self.mi_metric is not None:
+            labels = tensors.get(REGISTRY_KEYS.LABELS_KEY)
+            if labels is not None:
+                labels_flat = torch.clamp(labels.view(-1).long(), 0, self.n_labels - 1)
+                self.mi_metric.update(z_mean, labels_flat, is_train=self.training)

@@ -2,7 +2,9 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+import torch
 from scipy import sparse
+from scvi import REGISTRY_KEYS
 
 import drvi.internal
 from drvi.internal.drvi import DecoderDRVI
@@ -48,13 +50,13 @@ def _train(model_kwargs, *, labels=True, max_epochs=3):
 class TestResidual:
     def test_residual_enabled_on_layers(self):
         _, model = _train({"n_layers": 2, "residual": True}, labels=False)
-        assert getattr(model.module.z_encoder.encoder, "is_residual", False)
-        assert getattr(model.module.decoder.px_decoder, "is_residual", False)
+        assert getattr(model.module.z_encoder.encoder, "residual", False)
+        assert getattr(model.module.decoder.px_decoder, "residual", False)
         assert model.module.residual is True
 
     def test_no_residual_by_default(self):
         _, model = _train({"n_layers": 2}, labels=False)
-        assert not getattr(model.module.z_encoder.encoder, "is_residual", False)
+        assert not getattr(model.module.z_encoder.encoder, "residual", False)
         assert model.module.residual is False
 
     def test_residual_produces_finite_latent(self):
@@ -87,6 +89,28 @@ class TestStreamingMetrics:
         assert model.module.mi_metric is None
 
 
+class TestKLWarmup:
+    """scvi's TrainingPlan anneals the KL only for modules whose ``loss`` signature names ``kl_weight``."""
+
+    def test_loss_names_kl_weight(self):
+        from inspect import signature
+
+        from drvi.internal.drvi import DRVIModule
+
+        assert "kl_weight" in signature(DRVIModule.loss).parameters
+
+    def test_kl_weight_is_annealed(self):
+        adata = _make_adata()
+        drvi.internal.DRVI.setup_anndata(adata, layer="counts", batch_key="batch")
+        model = drvi.internal.DRVI(adata, n_latent=8, n_hidden=16, n_layers=1)
+        # kl_weight is logged per step; log every step so the tiny fixture records it
+        model.train(max_epochs=4, accelerator="cpu", batch_size=64, train_size=0.8, log_every_n_steps=1)
+        assert "kl_weight" in model.history  # only logged when the plan passes it to the loss
+        kl_weight = model.history["kl_weight"].iloc[:, 0].to_numpy()
+        assert kl_weight[0] < 1.0
+        assert np.all(np.diff(kl_weight) >= 0)
+
+
 class TestSparseLatent:
     def test_dense_sparse_matches_latent(self):
         adata, model = _train({"n_layers": 1, "mean_activation": "ReLU"}, labels=False)
@@ -111,7 +135,11 @@ class TestGeneSubsampledReconstruction:
     def test_dense_by_default(self):
         _, model = _train({"n_layers": 1}, labels=False)
         assert model.module.n_genes_to_reconstruct is None
-        assert not isinstance(model.module.decoder, DecoderDRVI)
+        # the output-subset-capable decoder is always used, but it stays dense without a subset
+        assert isinstance(model.module.decoder, DecoderDRVI)
+        model.module.train()
+        x = torch.ones(4, model.adata.n_vars)
+        assert model.module._get_reconstruction_indices({REGISTRY_KEYS.X_KEY: x}) is None
 
     def test_subsample_trains_and_swaps_decoder(self):
         # 20 genes total, reconstruct 8 per step
@@ -182,6 +210,6 @@ def test_save_load_roundtrip(tmp_path):
     # architecture flags survive the round-trip (init_params_ keyed on the subclass signature)
     assert reloaded.module.n_latent == 8
     assert reloaded.module.residual is True
-    assert getattr(reloaded.module.z_encoder.encoder, "is_residual", False)
+    assert getattr(reloaded.module.z_encoder.encoder, "residual", False)
     assert reloaded.module.latent_stats is not None and reloaded.module.mi_metric is not None
     assert np.allclose(z_before, reloaded.get_latent_representation(), atol=1e-5)

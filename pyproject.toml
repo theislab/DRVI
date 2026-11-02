@@ -39,7 +39,7 @@ dependencies = [
   "scanpy>=1.9.5",
   "scikit-learn>=1.5.1",
   "scipy>=1.11.3",
-  "scvi-tools>=1.5",
+  "scvi-tools>=1.5.2",
   "session-info2",
   "torch>=2.1",
 ]
@@ -183,7 +183,7 @@ lint.pydocstyle.convention = "numpy"
 files = [ "src", "tests" ]
 overrides = [
   # Third-party dependencies without type stubs or a py.typed marker.
-  { module = [ "scanpy.*", "scipy.*", "scvi.*", "sklearn.*" ], ignore_missing_imports = true }
+  { module = [ "scanpy.*", "scipy.*", "scvi.*", "sklearn.*", "tqdm.*" ], ignore_missing_imports = true }
 ]
 
 [tool.pytest]
