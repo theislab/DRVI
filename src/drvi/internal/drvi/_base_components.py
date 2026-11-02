@@ -44,9 +44,7 @@ class DecoderDRVI(_UpstreamDecoderDRVI):
         z_split = self._apply_split(z, **kwargs)  # (*, n_split, n_split_output)
         h = self.px_decoder(z_split, *cat_list, cont=cont, **kwargs)  # (*, n_split, n_hidden)
 
-        px_scale_logit_per_split: torch.Tensor | None = self._apply_head(
-            self.px_scale_decoder, h, **kwargs
-        )  # (*, n_split, n_genes)
+        px_scale_logit_per_split = self._apply_head(self.px_scale_decoder, h, **kwargs)  # (*, n_split, n_genes)
         px_scale_logit = self._aggregate(px_scale_logit_per_split)  # (*, n_genes)
         px_dropout_logit, px_r_logit = None, None
         if self.px_r_decoder is not None:
@@ -54,7 +52,9 @@ class DecoderDRVI(_UpstreamDecoderDRVI):
         if self.px_dropout_decoder is not None:
             px_dropout_logit = -self._aggregate(-self._apply_head(self.px_dropout_decoder, h, **kwargs))  # heuristic
 
-        if not self.inspect_mode:
-            px_scale_logit_per_split = None
-
-        return px_scale_logit, px_r_logit, px_dropout_logit, px_scale_logit_per_split
+        return (
+            px_scale_logit,
+            px_r_logit,
+            px_dropout_logit,
+            px_scale_logit_per_split if self.inspect_mode else None,
+        )

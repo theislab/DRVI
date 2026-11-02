@@ -117,17 +117,27 @@ class DRVIModule(StreamingMetricsMixin, _UpstreamDRVIModule):
         outputs[DRVI_MODULE_KEYS.RECONSTRUCTION_INDICES_KEY] = reconstruction_indices
         return outputs
 
-    def loss(self, tensors: dict, inference_outputs: dict, generative_outputs: dict, **kwargs) -> LossOutput:
+    def loss(
+        self,
+        tensors: dict,
+        inference_outputs: dict,
+        generative_outputs: dict,
+        kl_weight: torch.Tensor | float = 1.0,
+        **kwargs,
+    ) -> LossOutput:
         """Standard DRVI loss (on the reconstructed gene subset when subsampling) plus metric updates.
 
         Delegates reconstruction + KL to :meth:`scvi.module.VAE.loss`; only adds the gene-subset
         target adjustment and the streaming-metric update.
+
+        ``kl_weight`` must stay a named parameter: scvi's ``TrainingPlan`` only feeds the annealed KL
+        weight to modules whose ``loss`` signature names it, and silently trains at weight 1 otherwise.
         """
         reconstruction_indices = generative_outputs.get(DRVI_MODULE_KEYS.RECONSTRUCTION_INDICES_KEY)
         if reconstruction_indices is not None:
             # match the loss target to the subset the decoder produced
             tensors = {**tensors, REGISTRY_KEYS.X_KEY: tensors[REGISTRY_KEYS.X_KEY][:, reconstruction_indices]}
-        loss_output = super().loss(tensors, inference_outputs, generative_outputs, **kwargs)
+        loss_output = super().loss(tensors, inference_outputs, generative_outputs, kl_weight=kl_weight, **kwargs)
         if self.track_streaming_metrics:
             self._streaming_metrics_step(tensors, inference_outputs)
         return loss_output

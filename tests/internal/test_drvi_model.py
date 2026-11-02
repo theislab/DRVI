@@ -89,6 +89,28 @@ class TestStreamingMetrics:
         assert model.module.mi_metric is None
 
 
+class TestKLWarmup:
+    """scvi's TrainingPlan anneals the KL only for modules whose ``loss`` signature names ``kl_weight``."""
+
+    def test_loss_names_kl_weight(self):
+        from inspect import signature
+
+        from drvi.internal.drvi import DRVIModule
+
+        assert "kl_weight" in signature(DRVIModule.loss).parameters
+
+    def test_kl_weight_is_annealed(self):
+        adata = _make_adata()
+        drvi.internal.DRVI.setup_anndata(adata, layer="counts", batch_key="batch")
+        model = drvi.internal.DRVI(adata, n_latent=8, n_hidden=16, n_layers=1)
+        # kl_weight is logged per step; log every step so the tiny fixture records it
+        model.train(max_epochs=4, accelerator="cpu", batch_size=64, train_size=0.8, log_every_n_steps=1)
+        assert "kl_weight" in model.history  # only logged when the plan passes it to the loss
+        kl_weight = model.history["kl_weight"].iloc[:, 0].to_numpy()
+        assert kl_weight[0] < 1.0
+        assert np.all(np.diff(kl_weight) >= 0)
+
+
 class TestSparseLatent:
     def test_dense_sparse_matches_latent(self):
         adata, model = _train({"n_layers": 1, "mean_activation": "ReLU"}, labels=False)

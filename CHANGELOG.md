@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning][].
 - Sync the repository with [cookiecutter-scverse](https://github.com/scverse/cookiecutter-scverse) template v0.8.0: GitHub Actions are pinned to immutable commit hashes and audited by [zizmor](https://github.com/zizmorcore/zizmor), the code-style hooks are run through [prek](https://prek.j178.dev/) locally and [autofix.ci](https://autofix.ci/) on pull requests, and `mypy` type checking is now part of the checks (`hatch check types`). See `docs/contributing.md` for the updated developer workflow.
 - The documentation now uses `sphinx-design` instead of `sphinx-tabs`, and takes the shared sphinx extensions from [scverse-misc](https://github.com/scverse/scverse-misc) instead of the vendored `docs/extensions/typed_returns.py`.
 
+### Fixed
+- Fix the KL warm-up of `drvi.internal.DRVI`: its `loss` override took `kl_weight` only through `**kwargs`, so the training plan's annealed KL weight never reached it and the KL term stayed at `1.0` throughout training. `scvi.external.DRVI` (and the `drvi.model.DRVI` alias) were not affected.
+
 
 ## [0.3.0]
 

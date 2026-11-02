@@ -46,6 +46,8 @@ class LatentStats(Metric):
 
     full_state_update: bool = False
 
+    z_min_prev: torch.Tensor
+    z_max_prev: torch.Tensor
     z_min_accum: torch.Tensor
     z_max_accum: torch.Tensor
 
@@ -211,7 +213,11 @@ class StreamingPairwiseMI(Metric):
         return mi.detach().cpu().numpy()
 
     def compute(self, is_train: bool):  # type: ignore[override]
-        """One-vs-rest normalized MI summary, matched via the training-split score matrix."""
+        """One-vs-rest normalized MI summary, matched via the training-split score matrix.
+
+        Unlike :meth:`~torchmetrics.Metric.compute`, ``is_train`` is required: this metric is only
+        ever computed explicitly per split (by the training plan), never through ``forward()``.
+        """
         train_score_matrix = self._pairwise_mi(self.train_counts, self.train_total_samples)
 
         if is_train:
