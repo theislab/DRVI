@@ -177,6 +177,16 @@ class TestPortToScviTools:
         # overwrite=True succeeds
         port_to_scvi_tools(src, dest, overwrite=True)
 
+    def test_migrates_0_2_8_checkpoints(self, tmp_path):
+        """drvi-py 0.2.8, the last release with the in-package model, still goes through the migration."""
+        src = _stage(tmp_path, "default")
+        ckpt = torch.load(f"{src}/model.pt", map_location="cpu", weights_only=False)
+        ckpt["attr_dict"]["registry_"]["drvi_version"] = "0.2.8"
+        ckpt["attr_dict"]["init_params_"]["kwargs"]["model_kwargs"] = {"split_aggregation": "max"}
+        torch.save(ckpt, f"{src}/model.pt")
+        with pytest.raises(DRVIPortError, match="split_aggregation 'max'"):
+            port_to_scvi_tools(src)
+
     def test_raises_on_removed_capability(self, tmp_path):
         """A capability with no scvi-tools equivalent must raise DRVIPortError, not silently port."""
         src = _stage(tmp_path, "default")
