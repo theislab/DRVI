@@ -8,24 +8,16 @@ and this project adheres to [Semantic Versioning][].
 [keep a changelog]: https://keepachangelog.com/
 [semantic versioning]: https://semver.org/
 
-## [Unreleased]
+## [0.3.0] - Unreleased
 
 ### Added
-- Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: opt-in residual connections between the same-width hidden layers of the encoder/decoder (`residual=True`), streaming (online) training metrics logged per epoch (`track_streaming_metrics`, latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). Its API is unstable and may change or be removed without notice.
+- Add `drvi.internal.DRVI`, a developmental (internal-use-only) subclass of `scvi.external.DRVI` that re-adds a few experimental features from earlier drvi-py: streaming (online) training metrics logged per epoch (`track_streaming_metrics`; latent-dimension stats plus label/latent mutual information when a `labels_key` is set), a sparse latent representation (`get_sparse_latent_representation`), gene-subsampled reconstruction for scalable training on very wide panels (`n_genes_to_reconstruct=N`), and gradient scaling from the decoder heads into the decoder body/encoder (`gradient_scale`). It is built on the extension hooks of `scvi.external.DRVI` and its API is unstable and may change or be removed without notice.
 
 ### Changed
-- Require `scvi-tools >= 1.5.2` (was `>= 1.5`). `drvi.internal.DRVI` is now built on the extension hooks of `scvi.external.DRVI` introduced in 1.5.2 (e.g. the `residual` flag and the swappable decoder class) instead of re-implementing them, and no longer works with `scvi-tools 1.5.0`/`1.5.1`.
+- The DRVI PyTorch model is no longer shipped in this package. It has been contributed to [scvi-tools](https://scvi-tools.org/) and now lives there as `scvi.external.DRVI`. `drvi.model.DRVI` is kept as an alias for `scvi.external.DRVI` for backward compatibility and may be deprecated from `0.4.0`. New code should import the model directly as `scvi.external.DRVI`. Utility, plotting, metrics, and interpretability tools (`drvi.utils`) continue to be maintained here and work on top of the scvi-tools model.
+- Require `scvi-tools >= 1.5.2` (was `>= 1.0.4`).
 - Sync the repository with [cookiecutter-scverse](https://github.com/scverse/cookiecutter-scverse) template v0.8.0: GitHub Actions are pinned to immutable commit hashes and audited by [zizmor](https://github.com/zizmorcore/zizmor), the code-style hooks are run through [prek](https://prek.j178.dev/) locally and [autofix.ci](https://autofix.ci/) on pull requests, and `mypy` type checking is now part of the checks (`hatch check types`). See `docs/contributing.md` for the updated developer workflow.
 - The documentation now uses `sphinx-design` instead of `sphinx-tabs`, and takes the shared sphinx extensions from [scverse-misc](https://github.com/scverse/scverse-misc) instead of the vendored `docs/extensions/typed_returns.py`.
-
-### Fixed
-- Fix the KL warm-up of `drvi.internal.DRVI`: its `loss` override took `kl_weight` only through `**kwargs`, so the training plan's annealed KL weight never reached it and the KL term stayed at `1.0` throughout training. `scvi.external.DRVI` (and the `drvi.model.DRVI` alias) were not affected.
-
-
-## [0.3.0]
-
-### Changed
-- The DRVI PyTorch model is no longer shipped in this package. It has been contributed to [scvi-tools](https://scvi-tools.org/) and now lives there as `scvi.external.DRVI` (requires `scvi-tools >= 1.5.0`, now the minimum dependency). `drvi.model.DRVI` is kept as an alias for `scvi.external.DRVI` for backward compatibility and may be deprecated from `0.4.0`. New code should import the model directly as `scvi.external.DRVI`. Utility, plotting, metrics, and interpretability tools (`drvi.utils`) continue to be maintained here and work on top of the scvi-tools model.
 
 ### Removed
 - Removed the in-package model implementation and its internals: `drvi.scvi_tools_based` (model, module, training plan, neural-network components, data fields), `drvi.nn_modules`, and `drvi.model.DRVIModule`. Model capabilities not supported by `scvi.external.DRVI` are dropped and will not be reinstated. To move a model trained with `drvi-py < 0.3.0` to scvi-tools, use `drvi.utils.port_to_scvi_tools`.
