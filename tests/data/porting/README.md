@@ -4,12 +4,12 @@ Real `drvi-py < 0.3.0` DRVI checkpoints used by `tests/utils/test_porting.py` to
 `drvi.utils.port_to_scvi_tools`. Each subdirectory is a saved model directory containing a
 `model.pt` in the **old** (pre-0.3.0) drvi-py format — the format the porter consumes.
 
-| fixture | model configuration |
-| --- | --- |
-| `default` | defaults (gene dispersion, `decoder_reuse_weights="everywhere"`) |
-| `reuse_nowhere` | `decoder_reuse_weights="nowhere"` |
-| `dispersion_gene_batch` | `dispersion="gene-batch"` |
-| `dispersion_gene_cell` | `dispersion="gene-cell"` |
+| fixture                 | model configuration                                              |
+| ----------------------- | ---------------------------------------------------------------- |
+| `default`               | defaults (gene dispersion, `decoder_reuse_weights="everywhere"`) |
+| `reuse_nowhere`         | `decoder_reuse_weights="nowhere"`                                |
+| `dispersion_gene_batch` | `dispersion="gene-batch"`                                        |
+| `dispersion_gene_cell`  | `dispersion="gene-cell"`                                         |
 
 The in-package DRVI model was removed in 0.3.0, so these cannot be regenerated from the current
 tree. To regenerate them, check out a `drvi-py < 0.3.0` tag (which still ships the model), then for
