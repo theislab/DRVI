@@ -27,9 +27,6 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
 
     Everything in :class:`scvi.external.DRVI` is inherited unchanged. The additions are:
 
-    * **Residual connections** (``residual=True``) — skip connections between the same-width hidden
-      layers of the encoder and decoder bodies (``n_hidden`` is fixed across hidden layers). Needs
-      ``n_layers >= 2`` to matter. See :class:`drvi.internal.drvi.DRVIModule`.
     * **Streaming (online) metrics** (``track_streaming_metrics=True``, the default) — per-epoch
       latent statistics (non-vanished dimension counts) and, when a ``labels_key`` was registered,
       streaming label/latent mutual-information scores, computed during training and logged via
@@ -48,8 +45,6 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
         AnnData registered via :meth:`~scvi.external.DRVI.setup_anndata`.
     registry
         Setup registry, to initialize without an in-memory AnnData (datamodule path).
-    residual
-        Enable residual connections in the encoder and decoder hidden layers.
     track_streaming_metrics
         Accumulate and log online metrics during training.
     n_genes_to_reconstruct
@@ -65,7 +60,7 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
     --------
     >>> import drvi.internal
     >>> drvi.internal.DRVI.setup_anndata(adata, batch_key="batch", labels_key="cell_type")
-    >>> model = drvi.internal.DRVI(adata, n_latent=32, n_layers=2, residual=True)
+    >>> model = drvi.internal.DRVI(adata, n_latent=32, n_layers=2)
     >>> model.train()
     >>> z_sparse = model.get_sparse_latent_representation(zero_threshold=0.1)
     """
@@ -77,25 +72,11 @@ class DRVI(_UpstreamDRVI, SparseLatentMixin):
         self,
         adata: AnnData | None = None,
         registry: dict | None = None,
-        *,
-        residual: bool = False,
-        track_streaming_metrics: bool = True,
-        n_genes_to_reconstruct: int | None = None,
-        gradient_scale: float = 1.0,
         **kwargs,
     ):
-        # the developmental flags flow through scvi's DRVI.__init__ **kwargs to DRVIModule.
-        super().__init__(
-            adata,
-            registry,
-            residual=residual,
-            track_streaming_metrics=track_streaming_metrics,
-            n_genes_to_reconstruct=n_genes_to_reconstruct,
-            gradient_scale=gradient_scale,
-            **kwargs,
-        )
+        super().__init__(adata, registry, **kwargs)
         # Recompute init_params_ against *this* subclass's signature. scvi's DRVI.__init__ builds it
-        # from its own frame, but keyed on our __init__ signature (which funnels the model args
-        # through **kwargs), so its explicit params (n_latent, split_method, ...) would otherwise be
-        # dropped and reset to defaults on load. Capturing our own locals keeps them in ``kwargs``.
+        # from its own frame, so params it names explicitly (n_latent, split_method, ...) — which we
+        # funnel through **kwargs — would be dropped and reset to defaults on load. Capturing our own
+        # locals keeps them in ``kwargs``.
         self.init_params_ = self._get_init_params(locals())

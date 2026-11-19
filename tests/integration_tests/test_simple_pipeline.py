@@ -125,7 +125,13 @@ class TestSimplePipelineOfTrainingAndInterpretability:
         drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
         plt.close()
 
-        drvi.utils.pl.plot_latent_dims_in_umap(embed, show=False)
+        drvi.utils.pl.plot_latent_dims_in_umap(embed, directional=True, show=False)
+        plt.close()
+
+        first_dim = embed.var.sort_values("order")["title"].iloc[0]
+        drvi.utils.pl.plot_latent_dims_in_umap(
+            embed, dim_subset=[f"{first_dim}+"], directional=True, remove_vanished=False, show=False
+        )
         plt.close()
 
         drvi.utils.pl.plot_latent_dims_in_heatmap(embed, "cell_type", title_col="title", show=False)
