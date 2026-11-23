@@ -15,7 +15,6 @@ external/identification_of_factors_4_curation
 external/porting_drvi_to_scvi_tools
 ```
 
-
 ## Installing tutorial dependencies
 
 The tutorials need a few packages on top of the core DRVI stack. These are
