@@ -27,7 +27,6 @@ and this project adheres to [Semantic Versioning][].
 - Emptied the `drvi.utils.tl` tools namespace (`drvi.utils.tools`): removed `set_latent_dimension_stats`, `traverse_latent`, `calculate_differential_vars`, `get_split_effects`, and `iterate_on_top_differential_vars`. The latent-traversal interpretability pipeline is superseded by the scvi-tools DRVI model's built-in `set_latent_dimension_stats` / `calculate_interpretability_scores` / `get_interpretability_scores`. The `drvi.utils.tl` namespace is kept (now empty) as a stable import location.
 - Removed the traversal-based plotting functions `drvi.utils.pl.show_top_differential_vars`, `plot_relevant_genes_on_umap`, `show_differential_vars_scatter_plot`, `differential_vars_heatmap`, and `make_heatmap_groups` (they consumed the removed traversal outputs). `plot_interpretability_scores` (which visualizes the model's `get_interpretability_scores`) and the latent-dimension plots remain.
 
-
 ## [0.2.8] - 2026-10-14
 
 ### Fixed
@@ -37,13 +36,11 @@ and this project adheres to [Semantic Versioning][].
 - `plot_latent_dims_in_umap(..., directional=True)` no longer fails with `ValueError: Unsupported dimension index ...` on anndata >= 0.13 / scanpy >= 1.12: the `+`/`-` copies of the latent keep unique string var names instead of an integer index.
 - `drvi.utils.port_to_scvi_tools` ports models saved with drvi-py 0.2.8.
 
-
 ## [0.2.7] - 2026-07-09
 
 ### Added
 
 - Add `drvi.utils.port_to_scvi_tools` to migrate a trained/saved drvi-py model into a checkpoint loadable by `scvi.external.DRVI` (available in scvi-tools 1.5.0). Pure checkpoint surgery — no model is instantiated. Unsupported capabilities raise `DRVIPortError` with a link to open an issue.
-
 
 ## [0.2.6] - 2026-07-02
 
@@ -68,7 +65,6 @@ and this project adheres to [Semantic Versioning][].
 ### Fixed
 
 - Fix typo in metric name `spearman_correlataion_score` -> `spearman_correlation_score`
-
 
 ## [0.2.5] - 2026-04-21
 
